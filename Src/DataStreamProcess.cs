@@ -57,6 +57,9 @@ namespace EmotivUnityPlugin
         }
         public event EventHandler<string> UserLogoutNotify;             // inform license valid to date
 
+        // For test
+        public event EventHandler<string> ErrorNotify;
+
         /// <summary>
         /// Gets states when work with cortex.
         /// Currently, the states relate to authorizing.
@@ -163,8 +166,13 @@ namespace EmotivUnityPlugin
                 lock (_locker)
                 {
                     string streamName = (string)ele["streamName"];
+                    List<string> unSubList = new List<string>();
                     if (_streams.Contains(streamName)) {
                         _streams.Remove(streamName);
+                        unSubList.Add(streamName);
+                    }
+                    if (unSubList.Count > 0) {
+                        StreamStopNotify(this, unSubList);
                     }
                 }
             }
@@ -294,6 +302,7 @@ namespace EmotivUnityPlugin
                 _sessionHandler.ClearSessionData();
                 CreateSessionFail(this, message);
             }
+            // ErrorNotify(this, message);
         }
 
         /// <summary>
@@ -305,7 +314,9 @@ namespace EmotivUnityPlugin
             {
                 string cortexToken = _authorizer.CortexToken; 
                 UnityEngine.Debug.Log("Start subscribing data.");
-                _sessionId = sessionId;
+                if (!string.IsNullOrEmpty(sessionId)) {
+                    _sessionId = sessionId;
+                }
                 // subscribe data
                 _ctxClient.Subscribe(cortexToken, _sessionId, _streams);
             }
