@@ -63,7 +63,7 @@ namespace EmotivUnityPlugin
         bool _readyCreateSession = false;
         List<Headset>  _detectedHeadsets = new List<Headset>(); // list of detected headsets
 
-        public event EventHandler<string> SubscribeDataOK;
+        public event EventHandler<string> SessionActivatedOK;
         public event EventHandler<string> HeadsetConnectFail;
         public event EventHandler<DateTime> LicenseValidTo;
 
@@ -222,6 +222,8 @@ namespace EmotivUnityPlugin
                     // subscribe data
                     _isSessActivated    = true;
                     _readyCreateSession = false;
+
+                    SessionActivatedOK(this, _wantedHeadsetId);
                     _dsProcess.SubscribeData(sessionInfo.SessionId);
                 }
                 else {
@@ -435,8 +437,6 @@ namespace EmotivUnityPlugin
                         UnityEngine.Debug.Log("SubscribedOK(): stream " + key);
                     }
                 }
-
-                SubscribeDataOK(this, _wantedHeadsetId);
             }
         }
 
@@ -602,6 +602,37 @@ namespace EmotivUnityPlugin
                     _readyCreateSession = true;
                     _dsProcess.StartConnectToDevice(headsetId);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Subscribe data stream in lists.
+        /// </summary>
+        public void SubscribeMoreData(List<string> streamNameList)
+        {
+            if (_isSessActivated) {
+                foreach(var ele in streamNameList) {
+                    _dsProcess.AddStreams(ele);
+                }
+                // Subscribe data
+                _dsProcess.SubscribeData("");
+            }
+            else {
+                UnityEngine.Debug.Log("SubscribeMoreData: A Session has not been activated.");
+            }
+        }
+
+        /// <summary>
+        /// UnSubscribe data stream in lists.
+        /// </summary>
+        public void UnSubscribeData(List<string> streamNameList)
+        {
+            if (_isSessActivated) {
+                // UnSubscribe data
+                _dsProcess.UnSubscribe(streamNameList);
+            }
+            else {
+                UnityEngine.Debug.Log("UnSubscribeData: A Session has not been activated.");
             }
         }
 
