@@ -693,6 +693,17 @@ namespace EmotivUnityPlugin
         }
 
         //=== EEG data ===
+
+        public List<Channel_t> GetEEGChannels()
+        {
+            if (_eegBuff == null) {
+                return new List<Channel_t>();
+            }
+            else {
+                return _eegBuff.DataChannels;
+            }
+        }
+        
         public double[] GetEEGData(Channel_t chan)
         {
             if (_eegBuff == null) {
