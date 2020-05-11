@@ -1,133 +1,139 @@
 using System;
 using System.Collections.Generic;
 using System.Collections;
-using EmotivUnityPlugin;
 using Newtonsoft.Json.Linq;
 
-
-
-public class PMDataBuffer : DataBuffer
+namespace EmotivUnityPlugin
 {
-    BufferStream[] bufHi;   // high rate buffer
 
-    const int InvalidValue = -1; // for null data value when is poor EEG signal quality 
-
-    List<string> _pmList = new List<string>(); // performance metric lists
-
-    public List<string> PmList { get => _pmList; set => _pmList = value; }
-
-    public int SetChannels(JArray pmLists) 
+    /// <summary>
+    /// Performance metric data buffer .
+    /// </summary>
+    public class PMDataBuffer : DataBuffer
     {
-        string timestamp = ChannelStringList.ChannelToString(Channel_t.CHAN_TIME_SYSTEM);
-        int count = 1;
-        PmList.Add(timestamp);
-        foreach(var item in pmLists){
-            // exclude Active flag
-            string chanStr = item.ToString();
-            if (!chanStr.Contains(".isActive")) {
-                PmList.Add(chanStr);
-                ++count;
-            }
-        }
-        return count;
-    }
+        BufferStream[] bufHi;   // high rate buffer
 
-    public void Clear() {
-        
-        if (bufHi != null) {
-            Array.Clear(bufHi, 0, bufHi.Length);
-            bufHi = null;
-        }
-    }
+        const int InvalidValue = -1; // for null data value when is poor EEG signal quality 
 
-    public override void SettingBuffer(int winSize, int step, int headerCount) {
-        int buffSize = headerCount;
-        bufHi  = new BufferStream[buffSize];
-        // UnityEngine.Debug.Log("PM Setting Buffer size" + bufHi.Length);
-        for (int i = 0; i < buffSize; i++)
+        List<string> _pmList = new List<string>(); // performance metric lists
+
+        public List<string> PmList { get => _pmList; set => _pmList = value; }
+
+        public int SetChannels(JArray pmLists) 
         {
-            if (bufHi[i] == null){
-                bufHi[i] = new BufferStream(winSize, step);
+            string timestamp = ChannelStringList.ChannelToString(Channel_t.CHAN_TIME_SYSTEM);
+            int count = 1;
+            PmList.Add(timestamp);
+            foreach(var item in pmLists){
+                // exclude Active flag
+                string chanStr = item.ToString();
+                if (!chanStr.Contains(".isActive")) {
+                    PmList.Add(chanStr);
+                    ++count;
+                }
             }
-            else {
-                bufHi[i].Reset();
-                bufHi[i].WindowSize = winSize;
-                bufHi[i].StepSize = step;
-            }            
+            return count;
         }
-    }
 
-    // event handler
-    public void OnPMDataReceived(object sender, ArrayList data)
-    {
-        AddDataToBuffer(data);
-    }
+        public void Clear() {
+            
+            if (bufHi != null) {
+                Array.Clear(bufHi, 0, bufHi.Length);
+                bufHi = null;
+            }
+        }
 
-    public override void AddDataToBuffer(ArrayList data)
-    {
-        int i = 0;
-        foreach (var ele in data) {
-            // ignore active flag
-            if (Utils.IsNumericType(ele))
+        public override void SettingBuffer(int winSize, int step, int headerCount) {
+            int buffSize = headerCount;
+            bufHi  = new BufferStream[buffSize];
+            // UnityEngine.Debug.Log("PM Setting Buffer size" + bufHi.Length);
+            for (int i = 0; i < buffSize; i++)
             {
-                try
-                {
-                    double pmData = Convert.ToDouble(ele);
-                    bufHi[i].AppendData(pmData);
-                    i++;
+                if (bufHi[i] == null){
+                    bufHi[i] = new BufferStream(winSize, step);
                 }
-                catch (System.Exception e)
-                {
-                   UnityEngine.Debug.LogError(e.Message + " index " + i + " value " +ele.ToString());
-                   break;
-                }
-                
+                else {
+                    bufHi[i].Reset();
+                    bufHi[i].WindowSize = winSize;
+                    bufHi[i].StepSize = step;
+                }            
             }
         }
-    }
-    public override double[] GetDataFromBuffer(int index)
-    {
-		return bufHi[index].NextWithRemoval();
-    }
-    public override double[] GetLatestDataFromBuffer(int index)
-    {
-        double[] nextSegment = null;
-        double[] lastSegment = null;
-        do
+
+        // event handler
+        public void OnPMDataReceived(object sender, ArrayList data)
         {
-            lastSegment = nextSegment;
-			nextSegment = GetDataFromBuffer(index);
+            AddDataToBuffer(data);
         }
-        while (nextSegment != null);
-        return lastSegment;
-    }
 
-    public double GetData(string label)
-    {
-        int index = GetLabelIndex(label);
-        if (index == -1) {
-            UnityEngine.Debug.LogError(" Invalid label: " + label);
-            return InvalidValue;
+        public override void AddDataToBuffer(ArrayList data)
+        {
+            int i = 0;
+            foreach (var ele in data) {
+                // ignore active flag
+                if (Utils.IsNumericType(ele))
+                {
+                    try
+                    {
+                        double pmData = Convert.ToDouble(ele);
+                        bufHi[i].AppendData(pmData);
+                        i++;
+                    }
+                    catch (System.Exception e)
+                    {
+                    UnityEngine.Debug.LogError(e.Message + " index " + i + " value " +ele.ToString());
+                    break;
+                    }
+                    
+                }
+            }
         }
-        double[] chanData = GetLatestDataFromBuffer(index);
-        if (chanData != null) {
-            return chanData[0];
-        } else {
-            return InvalidValue;
+        public override double[] GetDataFromBuffer(int index)
+        {
+            return bufHi[index].NextWithRemoval();
         }
-    }
+        public override double[] GetLatestDataFromBuffer(int index)
+        {
+            double[] nextSegment = null;
+            double[] lastSegment = null;
+            do
+            {
+                lastSegment = nextSegment;
+                nextSegment = GetDataFromBuffer(index);
+            }
+            while (nextSegment != null);
+            return lastSegment;
+        }
 
-    public int GetLabelIndex(string chan) 
-    {
-        int chanIndex = _pmList.IndexOf(chan);
-        return (int)chanIndex;
-    }
+        public double GetData(string label)
+        {
+            int index = GetLabelIndex(label);
+            if (index == -1) {
+                UnityEngine.Debug.LogError(" Invalid label: " + label);
+                return InvalidValue;
+            }
+            double[] chanData = GetLatestDataFromBuffer(index);
+            if (chanData != null) {
+                return chanData[0];
+            } else {
+                return InvalidValue;
+            }
+        }
 
-    public int GetBufferSize() 
-    {
-        if(bufHi[1] == null)
-            return 0;
+        public int GetLabelIndex(string chan) 
+        {
+            int chanIndex = _pmList.IndexOf(chan);
+            return (int)chanIndex;
+        }
 
-        return bufHi[1].GetBufSize(); // buff size of "boredom"
+        public int GetBufferSize() 
+        {
+            if(bufHi[1] == null)
+                return 0;
+
+            return bufHi[1].GetBufSize(); // buff size of "boredom"
+        }
     }
 }
+
+
