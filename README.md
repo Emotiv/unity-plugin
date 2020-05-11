@@ -1,6 +1,6 @@
 # Emotiv Unity Plugin
 
-There are some pieces of codes as plugin for Unity applications work with Emotiv CortexService.
+There are some pieces of codes as plugin for Unity applications work with Emotiv Cortex Service (shortly called Cortex).
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ For example:
 ```
 git submodule add https://github.com/Emotiv/unity-plugin.git /Assets/Plugins/Emotiv-Unity-Plugin
 ```
-Please reference to [unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity) 
+Please refer to [unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity) 
 
 ## Code structure
 The code structure of Emotiv Unity Plugin as below image:
@@ -24,9 +24,9 @@ The code structure of Emotiv Unity Plugin as below image:
   <img width="460" height="300" src="Documentation/Images/CodeStructure.png">
 </p>
 
-There are 3 classes in interface role. Your application will call methods of the interfaces. The CortexClient will build request message and communicate with Emotiv CortexService. The others are helper classes. 
+There are 3 classes as interface role. Your application will call public methods of the interfaces to work with Emotiv. The CortexClient will build request message and communicate with Cortex. The others are helper classes. 
 
-**DataStreamManager**: Reponsible for managing data streams subscribing from connecting to Emotiv CortexService to data subscribing data.
+**DataStreamManager**: Reponsible for managing data streams subscribing from connecting to Cortex to data subscribing.
 
 **RecordManager**: Reponsible for managing and handling records and markers.
 
@@ -38,11 +38,14 @@ There are 3 classes in interface role. Your application will call methods of the
 
 **HeadsetFinder**: Reponsible for finding headsets.
 
-**DataStreamProcess**: Process data stream scribing. 
+**DataStreamProcess**: Process data stream subscribing.
 
-**CortexClient**: Create a websocket client, build request message to work with Emotiv CortexService.
+**Logger**: Log handler will print log to file with date time prefix format. Currently, The log files are only created at standalone app mode. 
+They are located at "%LocalAppData%/UnityApp/logs/" on Windows and "~/Library/Application Support/UnityApp/logs" on MacOS as default. You also can configure the log directory at Config.cs.
 
-In addition, the plugin create data buffers to keep data return from Cortex. You can change windows size and step size for reading data from the buffers.
+**CortexClient**: Create a websocket client, build request message to work with Cortex.
+
+In addition, After subscribing eeg, motion, dev, pm data successfully, the plugin will create corresponding data buffers to keep data return from Cortex. You can change windows size and step size for reading data from the buffers.
 
 ## How to use
 Please follow the below steps:
@@ -53,7 +56,7 @@ Please follow the below steps:
 
 ```
 // setup App configuration
-DataStreamManager.Instance.SetAppConfig("clientId_Of_App", "clientId_Of_App", "1.0.0", "UnityApp");
+DataStreamManager.Instance.SetAppConfig("clientId_Of_App", "clientSecret_Of_App", "1.0.0", "UnityApp");
 // start connect and authorize
 DataStreamManager.Instance.StartAuthorize();
 
@@ -75,7 +78,7 @@ RecordManager.Instance.StartRecord("record title", "record description")
 
 ```
 
-More detail please reference to [unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity) 
+More detail please refer to [unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity) 
 
 ## Release Notes
 

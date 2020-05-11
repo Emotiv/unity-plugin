@@ -14,7 +14,9 @@ public enum BandPowerType
     Gamma
 };
 
-
+/// <summary>
+/// Band power data buffer.
+/// </summary>
 public class BandPowerDataBuffer : DataBuffer
 {
     BufferStream[] bufHi;   // high rate buffer

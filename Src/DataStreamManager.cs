@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Collections;
-using EmotivUnityPlugin;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 
@@ -146,7 +145,7 @@ namespace EmotivUnityPlugin
                 SysEventUnSubscribed(this, "");
             }
             
-            UnityEngine.Debug.Log("EmotivDataStream:ResetDataBuffers Done");
+            UnityEngine.Debug.Log("DataStreamManager:ResetDataBuffers Done");
         }
 
         //====Handle events
@@ -154,7 +153,7 @@ namespace EmotivUnityPlugin
         {
             lock (_locker)
             {
-                UnityEngine.Debug.Log("EmotivDataStream: OnSessionClosedNotify.");
+                UnityEngine.Debug.Log("DataStreamManager: OnSessionClosedNotify.");
 
                 _isSessActivated    = false;
                 _readyCreateSession = true;
@@ -168,7 +167,7 @@ namespace EmotivUnityPlugin
         {
             lock (_locker)
             {
-                UnityEngine.Debug.Log("EmotivDataStream: OnUserLogoutNotify.");
+                UnityEngine.Debug.Log("DataStreamManager: OnUserLogoutNotify.");
 
                 // reset data
                 _isSessActivated    = false;
@@ -198,7 +197,7 @@ namespace EmotivUnityPlugin
                     }
                     strOut += (headset.HeadsetID + "-" + headset.HeadsetConnection + "-" + headset.Status + "; ");
                 }
-                UnityEngine.Debug.Log("EmotivDataStream-OnQueryHeadsetOK: " + strOut);
+                UnityEngine.Debug.Log("DataStreamManager-OnQueryHeadsetOK: " + strOut);
             }
         }
 
@@ -217,7 +216,7 @@ namespace EmotivUnityPlugin
         {
             lock (_locker)
             {
-                UnityEngine.Debug.Log("EmotivDAtaStream: OnSessionActivedOK " + sessionInfo.HeadsetId);
+                UnityEngine.Debug.Log("DataStreamManager: OnSessionActivedOK " + sessionInfo.HeadsetId);
                 if (sessionInfo.HeadsetId == _wantedHeadsetId) {
                     // subscribe data
                     _isSessActivated    = true;
@@ -312,7 +311,7 @@ namespace EmotivUnityPlugin
                         }
                     }
                     else {
-                        UnityEngine.Debug.Log("EmotivDataStream-OnStreamStopNotify: stream name:" + streamName);
+                        UnityEngine.Debug.Log("DataStreamManager-OnStreamStopNotify: stream name:" + streamName);
                     }
                 }
             }
@@ -347,7 +346,7 @@ namespace EmotivUnityPlugin
         {
             lock (_locker)
             {
-                UnityEngine.Debug.Log("EmotivDataStream: SubscribedOK");
+                UnityEngine.Debug.Log("DataStreamManager: SubscribedOK");
                 foreach (string key in e.Keys)
                 {
                     int headerCount = e[key].Count;
@@ -556,6 +555,11 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Set up App configuration.
         /// </summary>
+        /// <param name="clientId">A clientId of Application.</param>
+        /// <param name="clientSecret">A clientSecret of Application.</param>
+        /// <param name="appVersion">Application version.</param>
+        /// <param name="appName">Application name.</param>
+        /// <param name="tmpAppDataDir">Name of temp application data directory where will keep logs and user data .</param>
         public void SetAppConfig(string clientId, string clientSecret, 
                                  string appVersion, string appName, string tmpAppDataDir,
                                  string appUrl = "", string emotivAppsPath = "") 
@@ -578,11 +582,13 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Start data stream with a given headset.
         /// </summary>
+        /// <param name="streamNameList">Lists of data streams you want to subscribe.</param>
+        /// <param name="headsetId">the id of headset you want to retrieve data.</param>
         public void StartDataStream(List<string> streamNameList, string headsetId)
         {
             lock (_locker)
             {
-                UnityEngine.Debug.Log("EmotivDataStream-StartDataStream: " + headsetId);
+                UnityEngine.Debug.Log("DataStreamManager-StartDataStream: " + headsetId);
                 if (!string.IsNullOrEmpty(_wantedHeadsetId)) {
                     UnityEngine.Debug.Log("The data streams has already started for headset "
                                         + _wantedHeadsetId + ". Please wait...");
@@ -608,6 +614,7 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Subscribe data stream in lists.
         /// </summary>
+        /// <param name="streamNameList">Lists of data streams you want to subscribe.</param>
         public void SubscribeMoreData(List<string> streamNameList)
         {
             if (_isSessActivated) {
@@ -625,6 +632,7 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// UnSubscribe data stream in lists.
         /// </summary>
+        /// <param name="streamNameList">Lists of data streams you want to unsubscribe.</param>
         public void UnSubscribeData(List<string> streamNameList)
         {
             if (_isSessActivated) {
@@ -636,12 +644,18 @@ namespace EmotivUnityPlugin
             }
         }
 
+        /// <summary>
+        /// Get Connect To Cortex State which show the state when connect Cortex and authorize Application
+        /// </summary>
         public ConnectToCortexStates GetConnectToCortexState()
         {
             return _dsProcess.GetConnectToCortexState();
         }
 
         //=== Device data ===
+        /// <summary>
+        /// Get battery level.
+        /// </summary>
         public double Battery()
         {
             if (_devBuff == null)
@@ -650,6 +664,9 @@ namespace EmotivUnityPlugin
                 return _devBuff.Battery;
         }
 
+        /// <summary>
+        /// Get battery maximum level.
+        /// </summary>
         public double BatteryMax()
         {
             if (_devBuff == null)
@@ -658,6 +675,9 @@ namespace EmotivUnityPlugin
                 return _devBuff.BatteryMax;
         }
 
+        /// <summary>
+        /// Get wireless signal strength.
+        /// </summary>
         public double SignalStrength()
         {
             if (_devBuff == null)
@@ -666,6 +686,9 @@ namespace EmotivUnityPlugin
                 return _devBuff.SignalStrength;
         }
 
+        /// <summary>
+        /// Get contact quality by channel.
+        /// </summary>
         public double GetContactQuality(Channel_t channel) {
             if (_devBuff == null)
                 return 0;
@@ -677,6 +700,9 @@ namespace EmotivUnityPlugin
             }
         }
 
+        /// <summary>
+        /// Get contact quality by channelId.
+        /// </summary>
         public double GetContactQuality(int channelId) {
             if (_devBuff == null)
                 return 0;
@@ -684,6 +710,9 @@ namespace EmotivUnityPlugin
                 return _devBuff.GetContactQuality(channelId);
         }
 
+        /// <summary>
+        /// Get the current number of samples of a channel in contact quality or dev buffer.
+        /// </summary>
         public int GetNumberCQSamples()
         {
             if (_devBuff == null)
@@ -694,6 +723,9 @@ namespace EmotivUnityPlugin
 
         //=== EEG data ===
 
+        /// <summary>
+        /// Get EEG channels lists.
+        /// </summary>
         public List<Channel_t> GetEEGChannels()
         {
             if (_eegBuff == null) {
@@ -704,6 +736,9 @@ namespace EmotivUnityPlugin
             }
         }
         
+        /// <summary>
+        /// Get EEG data by channel.
+        /// </summary>
         public double[] GetEEGData(Channel_t chan)
         {
             if (_eegBuff == null) {
@@ -713,6 +748,9 @@ namespace EmotivUnityPlugin
                 return _eegBuff.GetData(chan);
         }
 
+        /// <summary>
+        /// Get the current number of samples of a channel in eeg buffer.
+        /// </summary>
         public int GetNumberEEGSamples()
         {
             if (_eegBuff == null)
@@ -722,6 +760,9 @@ namespace EmotivUnityPlugin
         }
 
         //=== Motion data ===
+        /// <summary>
+        /// Get motion data by channel.
+        /// </summary>
         public double[] GetMotionData(Channel_t chan)
         {
             if (_motionBuff == null) {
@@ -731,6 +772,9 @@ namespace EmotivUnityPlugin
                 return _motionBuff.GetData(chan);
         }
 
+        /// <summary>
+        /// Get Motion channel lists.
+        /// </summary>
         public List<Channel_t> GetMotionChannels()
         {
             if (_motionBuff == null) {
@@ -741,6 +785,9 @@ namespace EmotivUnityPlugin
             }
         }
 
+        /// <summary>
+        /// Get the current number of samples of a channel in motion buffer.
+        /// </summary>
         public int GetNumberMotionSamples()
         {
             if (_motionBuff == null)
@@ -751,6 +798,9 @@ namespace EmotivUnityPlugin
 
         //=== Band power data ===
 
+        /// <summary>
+        /// Get band power label lists.
+        /// </summary>
         public List<string> GetBandPowerLists()
         {
             if (_bandpowerBuff == null)
@@ -759,6 +809,9 @@ namespace EmotivUnityPlugin
                 return _bandpowerBuff.BandPowerList;
         }
 
+        /// <summary>
+        /// Get the current number of samples of a channel in band power buffer.
+        /// </summary>
         public int GetNumberPowerBandSamples()
         {
             if (_bandpowerBuff == null)
@@ -767,6 +820,9 @@ namespace EmotivUnityPlugin
             return _bandpowerBuff.GetBufferSize();
         }
 
+        /// <summary>
+        /// Get Theta data by channel.
+        /// </summary>
         public double GetThetaData(Channel_t channel)
         {
             if (_bandpowerBuff == null)
@@ -775,6 +831,9 @@ namespace EmotivUnityPlugin
                 return _bandpowerBuff.ThetalPower(channel);
         }
 
+        /// <summary>
+        /// Get alpha data by channel.
+        /// </summary>
         public double GetAlphaData(Channel_t channel)
         {
             if (_bandpowerBuff == null)
@@ -783,6 +842,9 @@ namespace EmotivUnityPlugin
                 return _bandpowerBuff.AlphaPower(channel);
         }
 
+        /// <summary>
+        /// Get low beta data by channel.
+        /// </summary>
         public double GetLowBetaData(Channel_t channel)
         {
             if (_bandpowerBuff == null)
@@ -791,6 +853,9 @@ namespace EmotivUnityPlugin
                 return _bandpowerBuff.BetalLPower(channel);
         }
 
+        /// <summary>
+        /// Get high beta data by channel.
+        /// </summary>
         public double GetHighBetaData(Channel_t channel)
         {
             if (_bandpowerBuff == null)
@@ -799,6 +864,9 @@ namespace EmotivUnityPlugin
                 return _bandpowerBuff.BetalHPower(channel);
         }
 
+        /// <summary>
+        /// Get gama data by channel.
+        /// </summary>
         public double GetGammaData(Channel_t channel)
         {
             if (_bandpowerBuff == null)
@@ -808,6 +876,9 @@ namespace EmotivUnityPlugin
         }
 
         //=== Peformance metric data ===
+        /// <summary>
+        /// Get Performance metrics label lists.
+        /// </summary>
         public List<string> GetPMLists()
         {
             if (_pmBuff == null)
@@ -816,6 +887,9 @@ namespace EmotivUnityPlugin
                 return _pmBuff.PmList;
         }
 
+        /// <summary>
+        /// Get the current number of samples of a channel in performance metric buffer.
+        /// </summary>
         public int GetNumberPMSamples()
         {
             if (_pmBuff == null)
@@ -824,6 +898,9 @@ namespace EmotivUnityPlugin
             return _pmBuff.GetBufferSize();
         }
 
+        /// <summary>
+        /// Get peformance metric data by label.
+        /// </summary>
         public double GetPMData(string label)
         {
             if (_pmBuff == null)
@@ -832,12 +909,16 @@ namespace EmotivUnityPlugin
                 return _pmBuff.GetData(label);
         }
 
-
-        //=== Query headset ===
+        /// <summary>
+        /// Query headsets.
+        /// </summary>
         public void QueryHeadsets(string headsetId = "") {
             _dsProcess.QueryHeadsets(headsetId);
         }
 
+        /// <summary>
+        /// Get detected headsets.
+        /// </summary>
         public List<Headset> GetDetectedHeadsets() {
             lock (_locker)
             {
@@ -845,6 +926,9 @@ namespace EmotivUnityPlugin
             }
         }
 
+        /// <summary>
+        /// Close session and stop websocket client.
+        /// </summary>
         public void Stop() {
             // close data stream
             CloseSession();
