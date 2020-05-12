@@ -1,58 +1,58 @@
 # Emotiv Unity Plugin
 
-There are some pieces of codes as plugin for Unity applications work with Emotiv Cortex Service (shortly called Cortex).
+Here is the plugin for Unity application to work with Emotiv Cortex Service (aka Cortex).
 
 ## Prerequisites
 
-Firstly, you must [download and install](https://www.emotiv.com/developer/) the Cortex service. Please note that currently, the Cortex service is only available for Windows and macOS.
+1. [Download and install](https://www.emotiv.com/developer/) the EMOITV App with Cortex service, which is currently available for Windows and macOS.
 
-Secondly, You must install Unity. You can get it for free at [www.unity3d.com](https://unity3d.com/get-unity/download).
+1. Install Unity. You can get it for free at [unity3d.com](https://unity3d.com/get-unity/download).
 
-## Installing
+## Setting up
 
-You can download or add the plugin as submodule of your project.
+You can clone the repo manually or add the plugin as a submodule of your project.
 For example:
 ```
 git submodule add https://github.com/Emotiv/unity-plugin.git /Assets/Plugins/Emotiv-Unity-Plugin
 ```
-Please refer to [unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity) 
+Please refer to the [Unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity).
 
 ## Code structure
-The code structure of Emotiv Unity Plugin as below image:
+Here is the structure of the plugin:
 
 <p align="center">
   <img width="460" height="300" src="Documentation/Images/CodeStructure.png">
 </p>
 
-There are 3 classes as interface role. Your application will call public methods of the interfaces to work with Emotiv. The CortexClient will build request message and communicate with Cortex. The others are helper classes. 
+There are 3 classes as interface role. Your application will call public methods of those interfaces to work with Cortex. The CortexClient will build request messages and communicate with Cortex. The others are helper classes. 
 
-**DataStreamManager**: Reponsible for managing data streams subscribing from connecting to Cortex to data subscribing.
+**DataStreamManager**: Responsible for managing data streams subscription.
 
-**RecordManager**: Reponsible for managing and handling records and markers.
+**RecordManager**: Responsible for handling records and markers.
 
-**BCITraining**: Reponsible for brain–computer interface (BCI) training included mental command and facial expression.
+**BCITraining**: Responsible for brain–computer interface (BCI) training including Mental Commands and Facial Expression.
 
-**Authorizer**: Reponsible for authorizing process and manage cortex token.
+**Authorizer**: Responsible for authorization process and Cortex token management.
 
-**SessionHandler**: Reponsible for handling sessions and records.
+**SessionHandler**: Responsible for handling sessions and records.
 
-**HeadsetFinder**: Reponsible for finding headsets.
+**HeadsetFinder**: Responsible for finding headsets.
 
-**DataStreamProcess**: Process data stream subscribing.
+**DataStreamProcess**: Process data streaming from Cortex.
 
-**Logger**: Log handler will print log to file with date time prefix format. Currently, The log files are only created at standalone app mode. 
-They are located at "%LocalAppData%/UnityApp/logs/" on Windows and "~/Library/Application Support/UnityApp/logs" on MacOS as default. You also can configure the log directory at Config.cs.
+**Logger**: Log handler will print log to file with date time prefix format. Currently, the log files are only created in standalone app mode. 
+They are located at "%LocalAppData%/UnityApp/logs/" on Windows, or "~/Library/Application Support/UnityApp/logs" on macOS by default. You also can configure the log directory at Config.cs.
 
-**CortexClient**: Create a websocket client, build request message to work with Cortex.
+**CortexClient**: Create a websocket client, and build request messages to work with Cortex.
 
-In addition, After subscribing eeg, motion, dev, pm data successfully, the plugin will create corresponding data buffers to keep data return from Cortex. You can change windows size and step size for reading data from the buffers.
+In addition, after subscribing eeg, motion, dev or pm data successfully, the plugin will create corresponding data buffers to keep data return from Cortex. You can set the windows size and step size for reading data from the buffers.
 
 ## How to use
-Please follow the below steps:
-1. Setup App configuration: clientId, clientSecret for indentifying Application and other informations such as appName, appVersion to make temp folder.
-2. Start authorizing procedure: Start connecting Emotiv Cortex then authorize to get token for working with Cortex. After authorizing successfully, the Plugin will find headsets automatically.
-3. Start Data Stream: Create and activate a session with given headset and start subscribe given data streams.
-4. You can subscribe or unsubscribe more data streams and do other tasks such as record and training.
+
+1. Setup clientId, clientSecret, appName, appVersion for identifying application.
+1. Start authorization procedure: start connecting Cortex then authorize to get token to work with Cortex. After authorizing successfully, the plugin will find headsets automatically.
+1. Start data streaming: create and activate a session with a headset and subscribe to particular data streams.
+1. You can subscribe or unsubscribe different data streams, and perform other tasks such as recording and training.
 
 ```
 // setup App configuration
@@ -78,17 +78,11 @@ RecordManager.Instance.StartRecord("record title", "record description")
 
 ```
 
-More detail please refer to [unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity) 
+For more details please refer to [Unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity) 
 
 ## Release Notes
 
 See <a href="Documentation/ReleaseNotes.md">here</a>.
-
-## Authors
-
-* **TungNguyen**
-
-See also the list of [contributors](https://github.com/Emotiv/unity-plugin/contributors) who participated in this project.
 
 ## License
 
