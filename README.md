@@ -50,9 +50,9 @@ In addition, after subscribing eeg, motion, dev or pm data successfully, the plu
 ## How to use
 
 1. Setup clientId, clientSecret, appName, appVersion for identifying application.
-1. Start authorization procedure: start connecting Cortex then authorize to get token to work with Cortex. After authorizing successfully, the plugin will find headsets automatically.
-1. Start data streaming: create and activate a session with a headset and subscribe to particular data streams.
-1. You can subscribe or unsubscribe different data streams, and perform other tasks such as recording and training.
+2. Start authorization procedure: start connecting Cortex then authorize to get token to work with Cortex. After authorizing successfully, the plugin will find headsets automatically.
+3. Start data streaming: create and activate a session with a headset and subscribe to particular data streams.
+4. You can subscribe or unsubscribe different data streams, and perform other tasks such as recording and training.
 
 ```
 // setup App configuration
@@ -73,13 +73,21 @@ DataStreamManager.Instance.SubscribeMoreData(new List<string>(){DataStreamName.E
 // Or unsubscribe data
 DataStreamManager.Instance.UnSubscribeData(new List<string>(){DataStreamName.EEG, DataStreamName.Motion});
 
-// Or start a record or training data
+// Or start a record
 RecordManager.Instance.StartRecord("record title", "record description")
+
+// Or start a training. You have to subscribe "sys" and "com" for mental command or "fac" for facial expression
+BCITraining _bciTraining = new BCITraining();
+_bciTraining.Init();
+_bciTraining.GetDetectionInfo();
+_bciTraining.QueryProfile();
+_bciTraining.LoadProfile(profileName); // load a existed profile or create a new one
+//... Do some training
 
 ```
 
 For more details please refer to [Unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity) 
-
+and [Cortex-API](https://emotiv.gitbook.io/cortex-api/)
 ## Release Notes
 
 See <a href="Documentation/ReleaseNotes.md">here</a>.
