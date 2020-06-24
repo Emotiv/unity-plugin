@@ -26,7 +26,6 @@ namespace EmotivUnityPlugin
 
         public BCITraining()
         {
-            Init();
         }
         /// <summary>
         /// Initial mental command training.
@@ -116,6 +115,12 @@ namespace EmotivUnityPlugin
             _profileLists = new List<string>(profiles);
             UnityEngine.Debug.Log("BCITraining: OnQueryProfileOK - num of profiles " + _profileLists.Count);
 
+            UnityEngine.Debug.Log("List of profiles: ");
+            foreach(var profileName in _profileLists)
+            {
+                UnityEngine.Debug.Log(profileName);
+            }
+            
             // For Test only
             // if (_profileLists.Count > 0)
             // {
@@ -138,6 +143,17 @@ namespace EmotivUnityPlugin
         private void OnProfileSavedOK(object sender, string profileName)
         {
             UnityEngine.Debug.Log("The profile " + profileName + " is saved successfully.");
+        }
+
+        /// <summary>
+        /// Get information about the detection 
+        /// </summary>
+        public void GetDetectionInfo(string detection)
+        {
+            if (string.IsNullOrEmpty(detection))
+                _trainingHandler.GetDetectionInfo(CurrDetection);
+            else
+                _trainingHandler.GetDetectionInfo(detection);
         }
 
         /// <summary>
