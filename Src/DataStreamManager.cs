@@ -936,5 +936,15 @@ namespace EmotivUnityPlugin
             _dsProcess.StopQueryHeadset();
             _dsProcess.ForceCloseWebsocket();
         }
+
+        /// <summary>
+        /// Get current wanted headset.
+        /// </summary>
+        public string GetWantedHeadset() {
+            lock (_locker)
+            {
+                return _wantedHeadsetId;
+            }
+        }
     }
 }

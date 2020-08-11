@@ -128,7 +128,8 @@ namespace EmotivUnityPlugin
                 _wscTimer = null;
             }
             // stop websocket client
-            _wSC.Close();
+            if (_wSC != null)
+                _wSC.Close();
         }
 
         /// <summary>
