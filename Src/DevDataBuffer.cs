@@ -144,11 +144,16 @@ namespace EmotivUnityPlugin
             return (int)chanIndex;
         }
 
+        /// <summary>
+        /// Get the buffer size of one data channel to check data ready for retrieving.
+        /// </summary> 
+        /// <remarks>The data of a channel will start from index 3 after timestamp, battery, signal strength.
+        /// So We choose index 3 to get buffersize</remarks>
         public int GetBufferSize() {
-            if(bufHi[0] == null)
+            if(bufHi[3] == null)
                 return 0;
 
-            return bufHi[0].GetBufSize();
+            return bufHi[3].GetBufSize();
         }
 
         public void PrintDevData() {
