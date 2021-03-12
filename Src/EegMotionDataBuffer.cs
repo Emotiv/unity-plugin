@@ -66,13 +66,12 @@ namespace EmotivUnityPlugin
         
         public override void AddDataToBuffer(ArrayList data)
         {
-            int nChannels;
-            if (_dataType == DataType.EEG)
-                nChannels = data.Count -1; //exclude MARKERS channel
-            else 
-                nChannels = data.Count;
+            if (data.Count > _channels.Count) {
+                UnityEngine.Debug.Log("AddDataToBuffer: data contain markers channels.");
+            }
 
-            for (int i=0 ; i < nChannels; i++) {
+
+            for (int i=0 ; i <  _channels.Count; i++) {
                 if (data[i] != null) {
                     double eegData = Convert.ToDouble(data[i]);
                     bufHi[i].AppendData(eegData);

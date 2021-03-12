@@ -17,11 +17,15 @@ namespace EmotivUnityPlugin
         List<Channel_t> _devChannels = new List<Channel_t>();
 
         double BATTERY_MAX = (double)BatteryLevel.LEVEL_4;
+        bool _hasBatteryPercent = false; // has battery percentage range [0-100]. From Cortex v2.7.0, we add battery percentage to dev stream
 
         public double Battery
         {
             get {
-                return GetContactQuality(Channel_t.CHAN_BATTERY);
+                if (_hasBatteryPercent)
+                    return GetContactQuality(Channel_t.CHAN_BATTERY_PERCENT);
+                else
+                    return GetContactQuality(Channel_t.CHAN_BATTERY);
             }
         }
 
@@ -54,7 +58,12 @@ namespace EmotivUnityPlugin
             _devChannels.Add(Channel_t.CHAN_SIGNAL_STRENGTH);
             foreach(var item in devChannels){
                 string chanStr = item.ToString();
-                if (chanStr != "Battery" &&  chanStr != "Signal") { // added above
+
+                if (chanStr == "BatteryPercent") {
+                    _hasBatteryPercent = true;
+                    _devChannels.Add(Channel_t.CHAN_BATTERY_PERCENT);
+                }
+                else if (chanStr != "Battery" &&  chanStr != "Signal") { // added above
                     _devChannels.Add(ChannelStringList.StringToChannel(chanStr));
                 }
             }
@@ -116,7 +125,7 @@ namespace EmotivUnityPlugin
                 return 0;
             }
             double[] chanData;
-            chanData = GetLatestDataFromBuffer(GetChanIndex(channel));        
+            chanData = GetLatestDataFromBuffer(GetChanIndex(channel));
 
             if (chanData != null) {
                 return chanData[0];

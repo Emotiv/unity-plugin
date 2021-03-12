@@ -222,6 +222,10 @@ namespace EmotivUnityPlugin
                     for (int i = 0; i < tmp.Count; i++) {
                         devCols.Add(tmp[i].ToString());
                     }
+                    if (header.Count == 4) {
+                        UnityEngine.Debug.Log("The dev stream contain BatteryPercent channel.");
+                        devCols.Add(header[3].ToString());
+                    }
                     header.RemoveAll();
                     header = devCols;
                 }
