@@ -196,7 +196,8 @@ namespace EmotivUnityPlugin
                 // send the json message
                 _wSC.Send(request.ToString());
 
-                _methodForRequestId.Add(_nextRequestId, method);
+                // add to dictionary, replace if a key is existed
+                _methodForRequestId[_nextRequestId] = method;
 
                 if (_nextRequestId > 100) {
                     _nextRequestId = 1;
