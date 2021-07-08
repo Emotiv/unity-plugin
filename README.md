@@ -50,9 +50,9 @@ In addition, after subscribing eeg, motion, dev or pm data successfully, the plu
 ## How to use
 
 1. Setup clientId, clientSecret, appName, appVersion for identifying application.
-2. Start authorization procedure: start connecting Cortex then authorize to get token to work with Cortex. After authorizing successfully, the plugin will find headsets automatically.
-3. Start data streaming: create and activate a session with a headset and subscribe to particular data streams.
-4. You can subscribe or unsubscribe different data streams, and perform other tasks such as recording and training.
+1. Start authorization procedure: start connecting Cortex then authorize to get token to work with Cortex. After authorizing successfully, the plugin will find headsets automatically.
+1. Start data streaming: create and activate a session with a headset then subscribe data streams.
+1. You can subscribe or unsubscribe different data streams, and perform other tasks such as recording, injectMarker and training.
 
 ```
 // setup App configuration
