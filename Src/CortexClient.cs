@@ -813,7 +813,9 @@ namespace EmotivUnityPlugin
 
         // InjectMarker
         // Required params: session, cortexToken, label, value, time
-        public void InjectMarker(string cortexToken, string sessionId, string label, JToken value, double time, string port = null)
+        public void InjectMarker(string cortexToken, string sessionId, 
+                                 string label, JToken value, double time,
+                                 string port = null, JObject extras = null)
         {
             JObject param = new JObject();
             param.Add("session", sessionId);
@@ -823,18 +825,23 @@ namespace EmotivUnityPlugin
             param.Add("value", value);
             if (port != null)
                 param.Add("port", port);
+            if (extras != null)
+                param.Add("extras", extras);
             SendTextMessage(param, "injectMarker", true);
         }
 
         // UpdateMarker
         // Required params: session, cortexToken, label, value, time
-        public void UpdateMarker(string cortexToken, string sessionId, string markerId, double time)
+        public void UpdateMarker(string cortexToken, string sessionId, string markerId, 
+                                 double time, JObject extras = null)
         {
             JObject param = new JObject();
             param.Add("session", sessionId);
             param.Add("cortexToken", cortexToken);
             param.Add("markerId", markerId);
             param.Add("time", time);
+            if (extras != null)
+                param.Add("extras", extras);
             SendTextMessage(param, "updateMarker", true);
         }
 
