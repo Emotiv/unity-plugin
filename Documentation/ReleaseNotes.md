@@ -1,6 +1,10 @@
 # <a id="release-notes"></a>Release Notes
 
-## Version 2.7 (17 Apr 2021)
+## Version 2.7 2(10 July 2021)
+### Added
+- Support injectMarker and updateMarker to EEG data stream.
+
+## Version 2.7 0(17 Apr 2021)
 
 ### Added
 - Support data parsing for new channel BatteryPercent of "dev" stream which is new from Cortex version 2.7.0.
@@ -16,6 +20,3 @@ For the moment the following features are supported:
 - Create, load and unload profiles
 - Perform Mental Commands and Facial Expression training
 
-##Upcoming features:
-- Update and delete record
-- Inject marker
