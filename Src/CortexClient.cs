@@ -104,6 +104,8 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> SessionClosedNotify;
         public event EventHandler<string> RefreshTokenOK;
 
+        public event EventHandler<bool> BTLEPermissionGrantedNotify; // notify btle permision grant status
+
         private CortexClient()
         {
             
@@ -241,6 +243,15 @@ namespace EmotivUnityPlugin
                     // handle response
                     JToken data = response["result"];
                     HandleResponse(method, data);
+                    // check bluetooth permisison granted
+                    if (method == "queryHeadsets" && response.ContainsKey("attention")) {
+                        JObject attentionObj =  (JObject)response["attention"];
+                        bool btlePermisionGranted = true;
+                        if ((int)attentionObj["code"] == WarningCode.BTLEPermissionNotGranted) {
+                            btlePermisionGranted = false;
+                        }
+                        BTLEPermissionGrantedNotify(this, btlePermisionGranted);
+                    }
                 }
             }
             else if (response["sid"] != null)
