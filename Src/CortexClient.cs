@@ -377,7 +377,7 @@ namespace EmotivUnityPlugin
                 {
                     JObject warning         = (JObject)data["warning"];
                     string warningMessage   = warning["message"].ToString();
-                    UnityEngine.Debug.Log("User has not accepted eula. Please accept EULA on EMOTIV App to proceed.");
+                    UnityEngine.Debug.Log("User has not accepted eula. Please accept EULA on EMOTIV Launcher to proceed.");
                     EULANotAccepted(this, warningMessage);
                 }
                 AuthorizeOK(this, token);
