@@ -73,6 +73,12 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> SysEventSubscribed;
         public event EventHandler<string> SysEventUnSubscribed;
 
+        public event EventHandler<bool> BTLEPermissionGrantedNotify
+        {
+            add { _dsProcess.BTLEPermissionGrantedNotify += value; }
+            remove { _dsProcess.BTLEPermissionGrantedNotify -= value; }
+        }
+
         private DataStreamManager()
         {
             Init();

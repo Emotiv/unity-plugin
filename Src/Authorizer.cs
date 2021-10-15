@@ -299,7 +299,7 @@ namespace EmotivUnityPlugin
             if (hasAccessRight) {
                 UnityEngine.Debug.Log("The User has access right to this application.");
             } else {
-                UnityEngine.Debug.Log("The User has not granted access right to this application. Please use EMOTIV App to proceed.");
+                UnityEngine.Debug.Log("The User has not granted access right to this application. Please use EMOTIV Launcher to proceed.");
             }
         }
 
@@ -410,7 +410,7 @@ namespace EmotivUnityPlugin
                 SetWaitUserLoginTimer();
                 _waitUserLoginTimer.Start();
                 
-                UnityEngine.Debug.Log("You must login via EMOTIV App before working with Cortex");
+                UnityEngine.Debug.Log("You must login via EMOTIV Launcher before working with Cortex");
             }            
         }
 
