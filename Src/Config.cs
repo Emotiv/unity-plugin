@@ -76,6 +76,7 @@
         public const int HeadsetConnectingTimeout = 102;
         public const int HeadsetDataTimeOut       = 103;
         public const int HeadsetConnected         = 104;
+        public const int BTLEPermissionNotGranted = 31;
     }
 
     public static class DevStreamParams

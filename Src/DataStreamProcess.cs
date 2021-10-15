@@ -60,6 +60,12 @@ namespace EmotivUnityPlugin
         // For test
         public event EventHandler<string> ErrorNotify;
 
+        public event EventHandler<bool> BTLEPermissionGrantedNotify
+        {
+            add { _ctxClient.BTLEPermissionGrantedNotify += value; }
+            remove { _ctxClient.BTLEPermissionGrantedNotify -= value; }
+        }
+
         /// <summary>
         /// Gets states when work with cortex.
         /// Currently, the states relate to authorizing.

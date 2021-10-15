@@ -82,21 +82,21 @@ namespace EmotivUnityPlugin
 
         public static bool CheckEmotivAppInstalled(string emotivAppsPath = "", bool isRequired = false) {
 
-        if (!isRequired)
-            return true;
-        
-        if (string.IsNullOrEmpty(emotivAppsPath)) {
-            UnityEngine.Debug.Log("The emotivAppsPath is empty. So will not check emotiv installed or not.");
-            return true;
-        }
-        else if (!Directory.Exists(emotivAppsPath)) {
-            UnityEngine.Debug.Log("The emotivApps directory is not existed.");
-            return false;
-        }
+            if (!isRequired)
+                return true;
+            
+            if (string.IsNullOrEmpty(emotivAppsPath)) {
+                UnityEngine.Debug.Log("The emotivAppsPath is empty. So will not check emotiv installed or not.");
+                return true;
+            }
+            else if (!Directory.Exists(emotivAppsPath)) {
+                UnityEngine.Debug.Log("The emotivApps directory is not existed.");
+                return false;
+            }
             
         
         #if UNITY_STANDALONE_WIN
-            string emotivAppName     =   "EMOTIV App.exe";
+            string emotivAppName     =   "EMOTIV Launcher.exe";
             string fileDir = Path.Combine(emotivAppsPath, emotivAppName);
             if (File.Exists(fileDir)) {
                 return true;
@@ -104,7 +104,7 @@ namespace EmotivUnityPlugin
             UnityEngine.Debug.Log("IsEmotivAppInstalled: not exists file: " + fileDir);
             return false;
         #elif UNITY_STANDALONE_OSX
-            string emotivAppName     =  "EMOTIV App.app";
+            string emotivAppName     =  "EMOTIV Launcher.app";
             string appDir = Path.Combine(emotivAppsPath, emotivAppName);
             if (Directory.Exists(appDir)) {
                 return true;
