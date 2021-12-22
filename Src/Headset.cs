@@ -27,17 +27,32 @@ namespace EmotivUnityPlugin
         {
             HeadsetID = (string)jHeadset["id"];
 
-            if(HeadsetID.Contains(HeadsetNames.epoc_plus)) {
+            if (HeadsetID.Contains(HeadsetNames.epoc_plus))
+            {
                 HeadsetType = HeadsetTypes.HEADSET_TYPE_EPOC_PLUS;
-            } else if(HeadsetID.Contains(HeadsetNames.epoc_flex)) {
+            }
+            else if (HeadsetID.Contains(HeadsetNames.epoc_flex))
+            {
                 HeadsetType = HeadsetTypes.HEADSET_TYPE_EPOC_FLEX;
-            } else if(HeadsetID.Contains(HeadsetNames.epoc_x)) {
+            }
+            else if (HeadsetID.Contains(HeadsetNames.epoc_x))
+            {
                 HeadsetType = HeadsetTypes.HEADSET_TYPE_EPOC_X;
-            } else if(HeadsetID.Contains(HeadsetNames.insight)) {
+            }
+            else if (HeadsetID.Contains(HeadsetNames.insight2))
+            {
+                HeadsetType = HeadsetTypes.HEADSET_TYPE_INSIGHT2;
+            }
+            else if (HeadsetID.Contains(HeadsetNames.insight))
+            {
                 HeadsetType = HeadsetTypes.HEADSET_TYPE_INSIGHT;
-            } else if(HeadsetID.Contains(HeadsetNames.mn8)) {
+            }
+            else if (HeadsetID.Contains(HeadsetNames.mn8))
+            {
                 HeadsetType = HeadsetTypes.HEADSET_TYPE_MN8;
-            } else if(HeadsetID.Contains(HeadsetNames.epoc)) {
+            }
+            else if (HeadsetID.Contains(HeadsetNames.epoc))
+            {
                 HeadsetType = HeadsetTypes.HEADSET_TYPE_EPOC_STD;
             }
 
