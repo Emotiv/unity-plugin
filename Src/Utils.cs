@@ -197,5 +197,13 @@ namespace EmotivUnityPlugin
                 return false;
             }
         }
+
+        public static bool IsInsightType(HeadsetTypes headsetType)
+        {
+            if (headsetType == HeadsetTypes.HEADSET_TYPE_INSIGHT || headsetType == HeadsetTypes.HEADSET_TYPE_INSIGHT2)
+                return true;
+            else
+                return false;
+        }
     }
 }
