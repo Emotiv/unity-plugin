@@ -16,7 +16,8 @@ namespace EmotivUnityPlugin
         public event EventHandler<SessionEventArgs> SessionActived;
         public event EventHandler<string> SessionClosedOK;
         public event EventHandler<Record> CreateRecordOK;
-        public event EventHandler<string> StopRecordOK;
+        public event EventHandler<Record> StopRecordOK;
+        public event EventHandler<string> SessionClosedNotify;
 
         public static SessionHandler Instance { get; } = new SessionHandler();
 
@@ -42,12 +43,27 @@ namespace EmotivUnityPlugin
             _ctxClient.CreateRecordOK   += OnCreateRecordOK;
             _ctxClient.UpdateRecordOK   += OnUpdateRecordOK;
             _ctxClient.StopRecordOK     += OnStopRecordOK;
+            _ctxClient.SessionClosedNotify += OnSessionClosedNotify;
+        }
+
+        private void OnSessionClosedNotify(object sender, string sessionId)
+        {
+            UnityEngine.Debug.Log("SessionHandler: OnSessionClosedNotify " + sessionId);
+            lock (_locker)
+            {
+                if (_sessionId == sessionId) {
+                    // clear session data
+                    _sessionId = "";
+                    SessionClosedNotify(this, sessionId);
+                }
+            }
+            
         }
 
         private void OnStopRecordOK(object sender, Record record)
         {
             UnityEngine.Debug.Log("OnStopRecordOK: recordId " + record.Uuid);
-            StopRecordOK(this, record.Uuid);
+            StopRecordOK(this, record);
         }
 
         private void OnUpdateRecordOK(object sender, Record record)

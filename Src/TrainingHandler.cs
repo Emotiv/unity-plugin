@@ -13,13 +13,7 @@ namespace EmotivUnityPlugin
 
         static readonly object _locker = new object();
         private CortexClient _ctxClient = CortexClient.Instance;
-        private string _profileName = ""; // must not existed
 
-        private string _currDetection = "";
-        private bool _isProfileLoaded;
-        private string _headsetId; // Id of current headset
-
-        private HeadsetFinder _headsetFinder    = HeadsetFinder.Instance;
         private Authorizer _authorizer          = Authorizer.Instance;
         private SessionHandler _sessionHandler  = SessionHandler.Instance;
         
@@ -30,12 +24,6 @@ namespace EmotivUnityPlugin
         public event EventHandler<bool> ProfileUnLoaded;
         public event EventHandler<bool> TrainingSucceeded;
         public event EventHandler<bool> ReadyForTraning;
-
-        public event EventHandler<string> CreateProfileOK
-        {
-            add { _ctxClient.CreateProfileOK += value; }
-            remove { _ctxClient.CreateProfileOK -= value; }
-        }
 
         public event EventHandler<string> ProfileSavedOK
         {
@@ -49,6 +37,18 @@ namespace EmotivUnityPlugin
             remove { _ctxClient.TrainingOK -= value; }
         }
 
+        public event EventHandler<string> CreateProfileOK
+        {
+            add { _ctxClient.CreateProfileOK += value; }
+            remove { _ctxClient.CreateProfileOK -= value; }
+        }
+
+        public event EventHandler<JObject> GetCurrentProfileDone
+        {
+            add { _ctxClient.GetCurrentProfileDone += value; }
+            remove { _ctxClient.GetCurrentProfileDone -= value; }
+        }
+
         public event EventHandler<DetectionInfo> GetDetectionInfoOK;
 
         public static TrainingHandler Instance { get; } = new TrainingHandler();
@@ -56,7 +56,6 @@ namespace EmotivUnityPlugin
         //Constructor
         public TrainingHandler()
         {
-            _isProfileLoaded = false;
             // Event register
             _ctxClient.GetDetectionInfoDone += OnGetDetectionOk;
             _ctxClient.LoadProfileOK        += OnProfileLoadedOK;
@@ -66,9 +65,6 @@ namespace EmotivUnityPlugin
 
         private void OnUnloadProfileDone(object sender, bool isSuccess)
         {
-            if (isSuccess == true) {
-                lock(_locker) _profileName = "";
-            }
             ProfileUnLoaded(this, isSuccess);
         }
 
@@ -86,15 +82,13 @@ namespace EmotivUnityPlugin
 
         private void OnProfileLoadedOK(object sender, string profileName)
         {
-            _profileName = profileName;
-            _isProfileLoaded = true;
             ProfileLoaded(this, profileName);
         }
 
         private void OnGetDetectionOk(object sender, JObject data)
         {
             UnityEngine.Debug.Log("GetDetectionInfoOK: " + data);
-            DetectionInfo detectioninfo = new DetectionInfo(_currDetection);
+            DetectionInfo detectioninfo = new DetectionInfo("mentalCommand");
 
             JArray actions = (JArray)data["actions"];
             foreach (var ele in actions) {
@@ -120,12 +114,7 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void Clear()
         {
-            lock(_locker)
-            {
-                _headsetId          = "";
-                _profileName        = "";
-                _isProfileLoaded    = false;
-            }
+
         }
 
         public void QueryProfile()
@@ -140,22 +129,21 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void GetDetectionInfo(string detection)
         {
-            lock(_locker) _currDetection = detection;
             string cortexToken = _authorizer.CortexToken;
             _ctxClient.GetDetectionInfo(detection);
         }
-        public void SetHeadset(string headsetId)
+
+        /// <summary>
+        /// Get the training profile that is currently loaded for a specific headset
+        /// </summary>
+        public void GetCurrentProfile(string headsetId)
         {
-            lock(_locker) _headsetId = headsetId; 
+            _ctxClient.GetCurrentProfile(_authorizer.CortexToken, headsetId);
         }
 
         public void DoTraining(string action, string status, string detection)
         {
             UnityEngine.Debug.Log(status + " " + action + " training.");
-            if (!_isProfileLoaded) {
-                UnityEngine.Debug.Log("The profile for training have not still be loaded. Please wait");
-                return;
-            }
             //Do training
             string cortexToken  = _authorizer.CortexToken;
             string sessionId    = _sessionHandler.SessionId;
@@ -168,23 +156,23 @@ namespace EmotivUnityPlugin
             _ctxClient.SetupProfile(cortexToken, profileName, "create");
         }
 
-        public void LoadProfile(string profileName)
+        public void LoadProfile(string profileName, string headsetId)
         {
             
             string cortexToken = _authorizer.CortexToken;
-            _ctxClient.SetupProfile(cortexToken, profileName, "load", _headsetId);
+            _ctxClient.SetupProfile(cortexToken, profileName, "load", headsetId);
         }
 
-        public void UnLoadProfile()
+        public void UnLoadProfile(string profileName, string headsetId)
         {
             string cortexToken = _authorizer.CortexToken;
-            _ctxClient.SetupProfile(cortexToken, _profileName, "unload", _headsetId);
+            _ctxClient.SetupProfile(cortexToken, profileName, "unload", headsetId);
         }
 
-        public void SaveProfile()
+        public void SaveProfile(string profileName, string headsetId)
         {
             string cortexToken = _authorizer.CortexToken;
-            _ctxClient.SetupProfile(cortexToken, _profileName, "save", _headsetId);
+            _ctxClient.SetupProfile(cortexToken, profileName, "save", headsetId);
         }
     }
 }
