@@ -57,6 +57,15 @@ namespace EmotivUnityPlugin
         CHAN_MAGX,  CHAN_MAGY,  CHAN_MAGZ
     }
 
+    public enum BandPowerType
+    {
+        Thetal = 0,
+        Alpha,
+        BetalL,
+        BetalH,
+        Gamma
+    };
+
     public static class ChannelStringList
     {
         public static Dictionary<Channel_t, string> list = new Dictionary<Channel_t, string>() {

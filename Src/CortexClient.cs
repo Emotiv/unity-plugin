@@ -90,7 +90,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<JObject> InjectMarkerOK;
         public event EventHandler<JObject> UpdateMarkerOK;
         public event EventHandler<JObject> GetDetectionInfoDone;
-        public event EventHandler<string> GetCurrentProfileDone;
+        public event EventHandler<JObject> GetCurrentProfileDone;
         public event EventHandler<string> CreateProfileOK;
         public event EventHandler<string> LoadProfileOK;
         public event EventHandler<string> SaveProfileOK;
@@ -235,7 +235,7 @@ namespace EmotivUnityPlugin
                     JObject error = (JObject)response["error"];
                     int code = (int)error["code"];
                     string messageError = (string)error["message"];
-                    UnityEngine.Debug.Log("Received: " + messageError);
+                    UnityEngine.Debug.Log("An error received: " + messageError);
                     //Send Error message event
                     ErrorMsgReceived(this, new ErrorMsgEventArgs(code, messageError, method));
                     
@@ -269,7 +269,13 @@ namespace EmotivUnityPlugin
                         foreach( var ele in property.Value){
                             if (ele.Type == JTokenType.Array){
                                 foreach (var item in ele){
-                                    data.Add(Convert.ToDouble(item));
+                                    if (item.Type == JTokenType.Object)
+                                    {
+                                        // Ignore marker data 
+                                        UnityEngine.Debug.Log("marker object " + item); 
+                                    }
+                                    else
+                                        data.Add(Convert.ToDouble(item));
                                 }
                             }
                             else if (ele.Type == JTokenType.String){
@@ -462,10 +468,7 @@ namespace EmotivUnityPlugin
             }
             else if (method == "getCurrentProfile")
             {
-                if (data["name"] == null)
-                    GetCurrentProfileDone(this, "");
-                else
-                    GetCurrentProfileDone(this, (string)data["name"]);
+                GetCurrentProfileDone(this, (JObject)data);
             }
             else if (method == "setupProfile")
             {
