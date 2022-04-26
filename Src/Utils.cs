@@ -40,7 +40,7 @@ namespace EmotivUnityPlugin
             // TODO
             homePath = Directory.GetCurrentDirectory();
         #endif
-            string targetPath = Path.Combine(homePath, Config.AppName);
+            string targetPath = Path.Combine(homePath, Config.TmpAppDataDir);
             return targetPath;
         }
 

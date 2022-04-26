@@ -17,6 +17,10 @@
         public static string AppVersion             = "1.0.0"; // default
         public static string AppName                = "UnityApp"; // default app name
         
+        /// <summary>
+        /// Name of directory where contain tmp data and logs file.
+        /// </summary>
+        public static string TmpAppDataDir          = "UnityApp";
         public static string EmotivAppsPath         = ""; // location of emotiv Apps . Eg: C:\Program Files\EmotivApps
         public static string TmpVersionFileName     = "version.ini";
         public static string TmpDataFileName        = "data.dat";
