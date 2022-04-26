@@ -489,8 +489,9 @@ namespace EmotivUnityPlugin
         /// <param name="clientSecret">A clientSecret of Application.</param>
         /// <param name="appVersion">Application version.</param>
         /// <param name="appName">Application name.</param>
+        /// <param name="tmpAppDataDir">Name of temp application data directory where will keep logs and user data .</param>
         public void SetAppConfig(string clientId, string clientSecret, 
-                                 string appVersion="", string appName="",
+                                 string appVersion="", string appName="", string tmpAppDataDir="",
                                  string appUrl = "", string emotivAppsPath = "") 
         {
             if (string.IsNullOrEmpty(clientId)) {
@@ -514,6 +515,8 @@ namespace EmotivUnityPlugin
                 Config.EmotivAppsPath = emotivAppsPath;
             if (!string.IsNullOrEmpty(appName))
                 Config.AppName = appName;
+            if (!string.IsNullOrEmpty(tmpAppDataDir))
+                Config.TmpAppDataDir = tmpAppDataDir;
         }
 
         /// <summary>

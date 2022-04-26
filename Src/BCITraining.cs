@@ -121,7 +121,7 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Accept a successful training and add it to the profile.
+        /// Accept for current successful training and add it to the profile.
         /// </summary>
         public void AcceptTraining(string detection)
         {
@@ -137,7 +137,7 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Reject a successful training. It is not added to the profile.
+        /// Reject for current successful training. It is not added to the profile.
         /// </summary>
         public void RejectTraining(string detection)
         {
