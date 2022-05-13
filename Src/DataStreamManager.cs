@@ -57,6 +57,8 @@ namespace EmotivUnityPlugin
             remove { _dsProcess.BTLEPermissionGrantedNotify -= value; }
         }
 
+        public event EventHandler<List<string>> InformSuccessSubscribedData;
+
         // list signal if do not store data to buffer
         public event EventHandler<ArrayList> MotionDataReceived;      // motion data
         public event EventHandler<ArrayList> EEGDataReceived;         // eeg data
@@ -314,6 +316,8 @@ namespace EmotivUnityPlugin
             lock (_locker)
             {
                 UnityEngine.Debug.Log("DataStreamManager: SubscribedOK");
+                List<string> successfulStreams = new List<string>();;
+                
                 foreach (string key in e.Keys)
                 {
                     int headerCount = e[key].Count;
@@ -325,11 +329,11 @@ namespace EmotivUnityPlugin
                             _eegBuff.SettingBuffer(4, 4, headerCount);
                             _eegBuff.SetChannels(e[key]);
                             _dsProcess.EEGDataReceived += _eegBuff.OnDataReceived;
-                            UnityEngine.Debug.Log("Subscribed done EEG Data Stream");
-                            
+                            UnityEngine.Debug.Log("Subscribed done EEG Data Stream");                           
                         }
                         else if (_eegBuff == null) {
                             _dsProcess.EEGDataReceived += this.EEGDataReceived;
+                            successfulStreams.Add(DataStreamName.EEG);
                         }
                     }
                     else if (key == DataStreamName.Motion) {
@@ -344,6 +348,7 @@ namespace EmotivUnityPlugin
                         }
                         else if (_motionBuff == null) {
                             _dsProcess.MotionDataReceived += this.MotionDataReceived;
+                            successfulStreams.Add(DataStreamName.Motion);
                         }
                     }
                     else if (key == DataStreamName.BandPower) {
@@ -357,6 +362,7 @@ namespace EmotivUnityPlugin
                         }
                         else if (_bandpowerBuff == null){
                             _dsProcess.BandPowerDataReceived += this.BandPowerDataReceived;
+                            successfulStreams.Add(DataStreamName.BandPower);
                         }
                     }
                     else if (key == DataStreamName.DevInfos) {
@@ -371,6 +377,7 @@ namespace EmotivUnityPlugin
                         }
                         else if (_devBuff == null){
                             _dsProcess.DevDataReceived += this.DevDataReceived;
+                            successfulStreams.Add(DataStreamName.DevInfos);
                         }
                     }
                     else if (key == DataStreamName.PerformanceMetrics) {
@@ -385,23 +392,32 @@ namespace EmotivUnityPlugin
                         }
                         else if (_pmBuff == null){
                             _dsProcess.PerfDataReceived += this.PerfDataReceived;
+                            successfulStreams.Add(DataStreamName.PerformanceMetrics);
                         }
                     }
                     else if (key == DataStreamName.FacialExpressions) {
                         _dsProcess.FacialExpReceived += OnFacialExpressionReceived;
                         UnityEngine.Debug.Log("Subscribed done: Facial Expression Data Stream");
+                        successfulStreams.Add(DataStreamName.FacialExpressions);
                     }
                     else if (key == DataStreamName.MentalCommands) {
                         _dsProcess.MentalCommandReceived += OnMentalCommandReceived;
                         UnityEngine.Debug.Log("Subscribed done: Mental command Data Stream");
+                        successfulStreams.Add(DataStreamName.MentalCommands);
                     }
                     else if (key == DataStreamName.SysEvents) {
                         _dsProcess.SysEventsReceived += OnSysEventReceived;
                         UnityEngine.Debug.Log("Subscribed done: Sys event Stream");
+                        successfulStreams.Add(DataStreamName.SysEvents);
                     }
                     else {
                         UnityEngine.Debug.Log("SubscribedOK(): stream " + key);
                     }
+                }
+
+                if (!_isDataBufferUsing) {
+                    // inform data success subscribed data to EmotivUnityItf only for case not use data buffer
+                    InformSuccessSubscribedData(this, successfulStreams);
                 }
             }
         }
