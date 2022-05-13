@@ -84,6 +84,7 @@ namespace EmotivUnityPlugin
                 _dsManager.DevDataReceived += OnDevDataReceived;
                 _dsManager.PerfDataReceived += OnPerfDataReceived;
                 _dsManager.BandPowerDataReceived += OnBandPowerDataReceived;
+                _dsManager.InformSuccessSubscribedData += OnInformSuccessSubscribedData;
 
             }
 
@@ -321,7 +322,7 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Load a profile
+        /// Load a profile if is existed or create and load profile if it is not existed
         /// </summary>
         public void LoadProfile(string profileName)
         {
@@ -504,67 +505,91 @@ namespace EmotivUnityPlugin
                 + ", type: " + markerObj["type"].ToString() + ", started at: " + markerObj["startDatetime"].ToString();
         }
 
+        private void OnInformSuccessSubscribedData(object sender, List<string> successStreams)
+        {
+            string tmpText = "The streams: ";
+            foreach (var item in successStreams)
+            {
+                tmpText = tmpText + item + "; ";
+            }
+            tmpText = tmpText + " are subscribed successfully. The output data will be shown on the console log.";
+            _messageLog = tmpText;
+        }
+
         // Handle events  if we do not use data buffer of Emotiv Unity Plugin
         private void OnBandPowerDataReceived(object sender, ArrayList e)
         {
-            string dataText = "pow: ";
+            string dataText = "pow data: ";
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }
-            _messageLog = dataText;
+            // print out data to console
+            UnityEngine.Debug.Log(dataText);
         }
 
         private void OnPerfDataReceived(object sender, ArrayList e)
         {
-            string dataText = "met: ";
+            string dataText = "met data: ";
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }
-            _messageLog = dataText;
+            // print out data to console
+            UnityEngine.Debug.Log(dataText);
         }
 
         private void OnDevDataReceived(object sender, ArrayList e)
         {
-            string dataText = "dev: ";
+            string dataText = "dev data: ";
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }
-            _messageLog = dataText;
+            // print out data to console
+            UnityEngine.Debug.Log(dataText);
         }
 
         private void OnMotionDataReceived(object sender, ArrayList e)
         {
-            string dataText = "mot: ";
+            string dataText = "mot data: ";
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }
-            _messageLog = dataText;
+            // print out data to console
+            UnityEngine.Debug.Log(dataText);
         }
 
         private void OnEEGDataReceived(object sender, ArrayList e)
         {
-            string dataText = "eeg: ";
+            string dataText = "eeg data: ";
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }
-            _messageLog = dataText;
+            // print out data to console
+            UnityEngine.Debug.Log(dataText);
         }
 
         private void OnSysEventsReceived(object sender, SysEventArgs data)
         {
-            _messageLog = "sys: " + data.Detection + ", event: " + data.EventMessage + ", time " + data.Time.ToString();
+            string dataText = "sys data: " + data.Detection + ", event: " + data.EventMessage + ", time " + data.Time.ToString();
+            // print out data to console
+            UnityEngine.Debug.Log(dataText);
+            // show the system event to message log
+            _messageLog = dataText;
         }
 
         private void OnMentalCommandReceived(object sender, MentalCommandEventArgs data)
         {
-            _messageLog = "com: " + data.Act + ", power: " + data.Pow.ToString() + ", time " + data.Time.ToString();
+            string dataText = "com data: " + data.Act + ", power: " + data.Pow.ToString() + ", time " + data.Time.ToString();
+            // print out data to console
+            UnityEngine.Debug.Log(dataText);
         }
 
         private void OnFacialExpReceived(object sender, FacEventArgs data)
         {
-            _messageLog = "fac: eye act " + data.EyeAct+ ", upper act: " +
-                            data.UAct + ", upper act power " + data.UPow.ToString() + ", lower act: " +
-                            data.LAct + ", lower act power " + data.LPow.ToString() + ", time: " + data.Time.ToString();
+            string dataText = "fac data: eye act " + data.EyeAct+ ", upper act: " +
+                                data.UAct + ", upper act power " + data.UPow.ToString() + ", lower act: " +
+                                data.LAct + ", lower act power " + data.LPow.ToString() + ", time: " + data.Time.ToString();
+            // print out data to console
+            UnityEngine.Debug.Log(dataText);
         }
 
     }
