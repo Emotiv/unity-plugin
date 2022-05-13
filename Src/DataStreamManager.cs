@@ -203,7 +203,7 @@ namespace EmotivUnityPlugin
                     }
                     strOut += (headset.HeadsetID + "-" + headset.HeadsetConnection + "-" + headset.Status + "; ");
                 }
-                UnityEngine.Debug.Log("DataStreamManager-OnQueryHeadsetOK: " + strOut);
+                //UnityEngine.Debug.Log("DataStreamManager-OnQueryHeadsetOK: " + strOut);
             }
         }
 
