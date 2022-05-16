@@ -4,9 +4,9 @@ Here is the plugin for Unity application to work with Emotiv Cortex Service (aka
 
 ## Prerequisites
 
-1. [Download and install](https://www.emotiv.com/developer/) the EMOITV App with Cortex service, which is currently available for Windows and macOS.
+1. [Download and install](https://www.emotiv.com/developer/) the EMOITV Launcher with Cortex service, which is currently available for Windows and macOS.
 
-1. Install Unity. You can get it for free at [unity3d.com](https://unity3d.com/get-unity/download).
+2. Install Unity. You can get it for free at [unity3d.com](https://unity3d.com/get-unity/download).
 
 ## Setting up
 
@@ -17,74 +17,25 @@ git submodule add https://github.com/Emotiv/unity-plugin.git /Assets/Plugins/Emo
 ```
 Please refer to the [Unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity).
 
-## Code structure
-Here is the structure of the plugin:
-
-<p align="center">
-  <img width="460" height="300" src="Documentation/Images/CodeStructure.png">
-</p>
-
-There are 3 classes as interface role. Your application will call public methods of those interfaces to work with Cortex. The CortexClient will build request messages and communicate with Cortex. The others are helper classes. 
-
-**DataStreamManager**: Responsible for managing data streams subscription.
-
-**RecordManager**: Responsible for handling records and markers.
-
-**BCITraining**: Responsible for brain–computer interface (BCI) training including Mental Commands and Facial Expression.
-
-**Authorizer**: Responsible for authorization process and Cortex token management.
-
-**SessionHandler**: Responsible for handling sessions and records.
-
-**HeadsetFinder**: Responsible for finding headsets.
-
-**DataStreamProcess**: Process data streaming from Cortex.
-
-**Logger**: Log handler will print log to file with date time prefix format. Currently, the log files are only created in standalone app mode. 
-They are located at "%LocalAppData%/UnityApp/logs/" on Windows, or "~/Library/Application Support/UnityApp/logs" on macOS by default. You also can configure the log directory at Config.cs.
-
-**CortexClient**: Create a websocket client, and build request messages to work with Cortex.
-
-In addition, after subscribing eeg, motion, dev or pm data successfully, the plugin will create corresponding data buffers to keep data return from Cortex. You can set the windows size and step size for reading data from the buffers.
-
 ## How to use
+In the previous version, there were 3 main classes DataStreamManager.cs will handle connect headset and subscribe data, the RecordManager.cs will handle record and marker, and BCITraining.cs will handle training. But now, you only need to care about the EmotivUnityItf.cs. It will help to handle all.  
 
-1. Setup clientId, clientSecret, appName, appVersion for identifying application.
-1. Start authorization procedure: start connecting Cortex then authorize to get token to work with Cortex. After authorizing successfully, the plugin will find headsets automatically.
-1. Start data streaming: create and activate a session with a headset then subscribe data streams.
-1. You can subscribe or unsubscribe different data streams, and perform other tasks such as recording, injectMarker and training.
+1. Firstly, you need to initialize via Init(). You need to set clientId, clientSecret of your application and set isDataBufferUsing = false if you don't want to save subscribed data to DataBuffer before obtaining.
+2. Then call Start() to start connecting to Cortex and authorize the application.
+3. Connect to a headset and create and activate a session with the headset via CreateSessionWithHeadset(string headsetId). The headsetId has a format such as EPOCX-12345. If set an empty string for the headsetId, unity-plugin will use the first headset in the headset list.
+4. After a session is activated successfully, You can create a record, subscribe data or load a profile for training.  
+	- **Start and Stop Record**: create a record via StartRecord(). The record title is a required parameter. You can stop the record via StopRecord().
+	- **Inject Marker**: You can inject an instance marker into the record via InjectMarker(). The markerValue and markerLabel are required parameters. You also can update the current instance marker via UpdateMarker() to make the marker to interval marker.  
+	- **Subscribe and UnSubscribe Data**: You can subscribe to one or more data streams via SubscribeData(list_data_streams). Currently, the unity-plugin support EEG(eeg), Motion (mot),Device Information (dev), Facial Expression(fac), Mental Command (com), Performance metrics(met), System Event (sys), Band power (pow) data streams. There are 2 choices for output data retrieving:
+		- If use DataBuffer by set isDataBufferUsing = true, The received data of EEG, Motion, Device Information, Band Power will be saved to the data buffer when received from Cortex. You need to use GetEEGData(), GetNumberEEGSamples()  .etc.. to get data.
+		- If don't use DataBuffer by set isDataBufferUsing = false, The receive data will be handled at OnEEGDataReceived(), OnMotionDataReceived() .etc..
+		- The subscribed data of Facial Expression, Mental Command, and System Event will be handled at OnFacialExpReceived(), OnMentalCommandReceived(), OnSysEventsReceived() both cases Data Buffer using or not.  
+	- **Setup profile**: There are some functions as below:
+		- The  LoadProfile(string profileName) will help to load a profile if it exists or create and load a profile if it does not exist.  
+		- The SaveProfile() will help to save training data to the profile. You should call the function each training.
+		- The UnLoadProfile() will help unload profile. You should call the function before closing the project to release the loaded profile for the next use.
+	- **Training**: After loading a profile successfully. You can do training via StartMCTraining(), AcceptMCTraining() .etc... You might need to subscribe "sys" first before training to see the training event.
 
-```
-// setup App configuration
-DataStreamManager.Instance.SetAppConfig("clientId_Of_App", "clientSecret_Of_App", "1.0.0", "UnityApp");
-// start connect and authorize
-DataStreamManager.Instance.StartAuthorize();
-
-// ... 
-// authorize successfully then find headsets
-
-// creating session and subscribe data
-List<string> dataStreamList = new List<string>(){DataStreamName.DevInfos};
-DataStreamManager.Instance.StartDataStream(dataStreamList, "headsetId);
-
-// You also can suscribe more data
-DataStreamManager.Instance.SubscribeMoreData(new List<string>(){DataStreamName.EEG, DataStreamName.Motion});
-
-// Or unsubscribe data
-DataStreamManager.Instance.UnSubscribeData(new List<string>(){DataStreamName.EEG, DataStreamName.Motion});
-
-// Or start a record
-RecordManager.Instance.StartRecord("record title", "record description")
-
-// Or start a training. You have to subscribe "sys" and "com" for mental command or "fac" for facial expression
-BCITraining _bciTraining = new BCITraining();
-_bciTraining.Init();
-_bciTraining.GetDetectionInfo();
-_bciTraining.QueryProfile();
-_bciTraining.LoadProfile(profileName); // load a existed profile or create a new one
-//... Do some training
-
-```
 
 For more details please refer to [Unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity) 
 and [Cortex-API](https://emotiv.gitbook.io/cortex-api/)

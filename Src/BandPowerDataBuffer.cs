@@ -5,14 +5,6 @@ using EmotivUnityPlugin;
 using Newtonsoft.Json.Linq;
 
 
-public enum BandPowerType
-{
-    Thetal = 0,
-    Alpha,
-    BetalL,
-    BetalH,
-    Gamma
-};
 
 /// <summary>
 /// Band power data buffer.
