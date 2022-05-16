@@ -14,7 +14,15 @@ namespace EmotivUnityPlugin
         private static string CurrDetection = "mentalCommand";
 
         private TrainingHandler _trainingHandler    = TrainingHandler.Instance;
-        private DataStreamManager _dsManager        = DataStreamManager.Instance;
+
+        private string _wantedProfileName = "";
+
+        private string _workingHeadsetId = "";
+        private string _currAction = "";
+
+
+        // event
+        public event EventHandler<bool> InformLoadUnLoadProfileDone;
 
         /// <summary>
         /// all profiles of user.
@@ -27,122 +35,24 @@ namespace EmotivUnityPlugin
         public BCITraining()
         {
         }
+
+        public static BCITraining Instance { get; } = new BCITraining();
+        public string WantedProfileName { get => _wantedProfileName; set => _wantedProfileName = value; }
+
         /// <summary>
         /// Initial mental command training.
         /// </summary>
         public void Init()
         {
-            _dsManager.SysEventSubscribed       += OnSysEventSubscribed;
-            _dsManager.SysEventReceived         += OnSysEventReceived;
-            _dsManager.SysEventUnSubscribed     += OnSysEventUnSubscribed;
             _trainingHandler.QueryProfileOK     += OnQueryProfileOK;
             _trainingHandler.CreateProfileOK    += OnCreateProfileOK;
             _trainingHandler.ProfileSavedOK     += OnProfileSavedOK;
             _trainingHandler.TrainingOK         += OnTrainingOK;
             _trainingHandler.GetDetectionInfoOK += OnGetDetectionInfoOK;
             _trainingHandler.ProfileLoaded      += OnProfileLoaded;
+            _trainingHandler.ProfileUnLoaded += OnProfileUnLoaded;
+            _trainingHandler.GetCurrentProfileDone += OnGetCurrentProfileDone;
 
-        }
-
-        private void OnProfileLoaded(object sender, string profileName)
-        {
-            UnityEngine.Debug.Log("BCITraining: OnProfileLoaded profile " + profileName);
-
-            // Only for test
-            // StartTraining("neutral", CurrDetection);
-        }
-
-        private void OnSysEventUnSubscribed(object sender, string e)
-        {
-            UnityEngine.Debug.Log("BCITraining: OnSysEventUnSubscribed");
-            _trainingHandler.Clear();
-        }
-
-        private void OnGetDetectionInfoOK(object sender, DetectionInfo detectionInfo)
-        {
-            if (detectionInfo.DetectionName == CurrDetection)
-            {
-                UnityEngine.Debug.Log("OnGetDetectionInfoOK");
-
-                // QueryProfile
-                QueryProfile();
-            }
-        }
-
-        private void OnTrainingOK(object sender, JObject result)
-        {
-            UnityEngine.Debug.Log("TrainingOK: " + result);
-        }
-
-        private void OnSysEventReceived(object sender, SysEventArgs e)
-        {
-            if (e.Detection == "mentalCommand")
-            {
-                string eventType = e.EventMessage;
-                UnityEngine.Debug.Log("OnSysEventReceived: event message " + e.EventMessage + " at " + e.Time);
-
-                
-                if (eventType == "MC_Started")
-                {
-                    UnityEngine.Debug.Log("Start training...");
-                }
-                else if (eventType == "MC_Succeeded")
-                {
-                    UnityEngine.Debug.Log("OnSysEventReceived:TrainingSucceeded ");
-                    //TrainingSucceeded(this, true);
-                    // Only for Test
-                    // AcceptTraining("neutral", CurrDetection);
-                }
-                else if (eventType == "MC_Completed" ||
-                         eventType == "MC_Rejected" ||
-                         eventType == "MC_DataErased" ||
-                         eventType == "MC_Reset")
-                {
-                    UnityEngine.Debug.Log("OnSysEventReceived:  " + eventType);
-                    // save profile
-                    _trainingHandler.SaveProfile();
-                }
-            }
-        }
-
-        private void OnCreateProfileOK(object sender, string profileName)
-        {
-            UnityEngine.Debug.Log("BCITraining: OnCreateProfileOK profilename " + profileName);
-        }
-
-        private void OnQueryProfileOK(object sender, List<string> profiles)
-        {
-            _profileLists = new List<string>(profiles);
-            UnityEngine.Debug.Log("BCITraining: OnQueryProfileOK - num of profiles " + _profileLists.Count);
-
-            UnityEngine.Debug.Log("List of profiles: ");
-            foreach(var profileName in _profileLists)
-            {
-                UnityEngine.Debug.Log(profileName);
-            }
-            
-            // For Test only
-            // if (_profileLists.Count > 0)
-            // {
-            //     LoadProfile(_profileLists[0]);
-            // }
-            // else
-            // {
-            //     CreateProfile("Demo_BCI_Training ");
-            // }
-        }
-
-        private void OnSysEventSubscribed(object sender, string headsetId)
-        {
-            UnityEngine.Debug.Log("BCITraining: OnSysEventSubscribed headsetId " + headsetId);
-            _trainingHandler.SetHeadset(headsetId);
-            // Get detection
-            _trainingHandler.GetDetectionInfo(CurrDetection);
-        }
-
-        private void OnProfileSavedOK(object sender, string profileName)
-        {
-            UnityEngine.Debug.Log("The profile " + profileName + " is saved successfully.");
         }
 
         /// <summary>
@@ -173,55 +83,76 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Load a profile
+        /// Load a profile with a specific headset.
+        /// If the profile is not exited -> create new profile then load profile
         /// </summary>
-        public void LoadProfile(string profileName)
+        public void LoadProfileWithHeadset(string profileName, string headsetId)
         {
-            if (_profileLists.Contains(profileName)) {
-                _trainingHandler.LoadProfile(profileName);
-            }
-            else
-                UnityEngine.Debug.Log("The profile can not be loaded. The name " + profileName + " has not existed.");
+            _wantedProfileName = profileName;
+            _workingHeadsetId = headsetId;
+
+            // query profile after that the profile will be created and loaded
+            QueryProfile();
         }
 
         /// <summary>
         /// UnLoad a profile
         /// </summary>
-        public void UnLoadProfile(string profileName)
+        public void UnLoadProfile(string profileName, string headsetId)
         {
-            if (_profileLists.Contains(profileName)) {
-                _trainingHandler.UnLoadProfile();
-            }
-            else
-                UnityEngine.Debug.Log("The profile can not be unloaded. The name " + profileName + " has not existed.");
+            _trainingHandler.UnLoadProfile(profileName, headsetId);
         }
 
         /// <summary>
-        /// Start a Training
+        /// Save a profile
+        /// </summary>
+        public void SaveProfile(string profileName, string headsetId)
+        {
+            _trainingHandler.SaveProfile(profileName, headsetId);
+        }
+
+        /// <summary>
+        /// Start a new training for the specified action.
         /// </summary>
         public void StartTraining(string action, string detection)
         {
+            _currAction = action;
             _trainingHandler.DoTraining(action, "start", detection);
         }
 
         /// <summary>
-        /// Accept a Training
+        /// Accept for current successful training and add it to the profile.
         /// </summary>
-        public void AcceptTraining(string action, string detection)
+        public void AcceptTraining(string detection)
         {
-            _trainingHandler.DoTraining(action, "accept", detection);
+            if (string.IsNullOrEmpty(_currAction))
+            {
+                UnityEngine.Debug.LogError("AcceptTraining: Invalid action training.");
+            }
+            else
+            {
+                _trainingHandler.DoTraining(_currAction, "accept", detection);
+            }
+            
         }
 
         /// <summary>
-        /// Reject a Training
+        /// Reject for current successful training. It is not added to the profile.
         /// </summary>
-        public void RejectTraining(string action, string detection)
+        public void RejectTraining(string detection)
         {
-            _trainingHandler.DoTraining(action, "reject", detection);
+            if (string.IsNullOrEmpty(_currAction))
+            {
+                UnityEngine.Debug.LogError("RejectTraining: Invalid action training.");
+            }
+            else
+            {
+                _trainingHandler.DoTraining(_currAction, "reject", detection);
+            }
         }
 
         /// <summary>
-        /// Erase a Training
+        /// Erase all the training data for the specified action.
         /// </summary>
         public void EraseTraining(string action, string detection)
         {
@@ -229,11 +160,130 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Reset a Training
+        /// Cancel the current training.
         /// </summary>
         public void ResetTraining(string action, string detection)
         {
             _trainingHandler.DoTraining(action, "reset", detection);
         }
+
+        // Event handers
+        private void OnProfileUnLoaded(object sender, bool e)
+        {
+            UnityEngine.Debug.Log("OnProfileUnLoaded");
+            // TODO: verify unload is for current profile
+            _workingHeadsetId = "";
+            _wantedProfileName = "";
+            InformLoadUnLoadProfileDone(this, false);
+        }
+        private void OnGetCurrentProfileDone(object sender, JObject data)
+        {
+            if (data["name"].Type == JTokenType.Null)
+            {
+                // no profile loaded with the headset. Load profile
+                UnityEngine.Debug.Log("OnGetCurrentProfileDone: no profile loaded with the headset");
+                _trainingHandler.LoadProfile(_wantedProfileName, _workingHeadsetId);
+            }
+            else
+            {
+                string name = data["name"].ToString();
+                bool loadByThisApp = (bool)data["loadedByThisApp"];
+
+                if (name != _wantedProfileName)
+                {
+                    UnityEngine.Debug.LogError("There is profile " + name + " is loaded for headset " + _workingHeadsetId);
+                }
+                else if (loadByThisApp)
+                {
+                    InformLoadUnLoadProfileDone(this, true);
+                }
+                else
+                {
+                    // the profile is loaded by other apps -> unload
+                    _trainingHandler.UnLoadProfile(_wantedProfileName, _workingHeadsetId);
+                }
+            }
+        }
+        private void OnProfileLoaded(object sender, string profileName)
+        {
+            UnityEngine.Debug.Log("BCITraining: OnProfileLoaded profile " + profileName);
+
+            if (profileName == _wantedProfileName)
+            {
+                InformLoadUnLoadProfileDone(this, true);
+            }
+            else
+            {
+                UnityEngine.Debug.LogError("OnProfileLoaded: mismatch profilename");
+            }
+        }
+        private void OnGetDetectionInfoOK(object sender, DetectionInfo detectionInfo)
+        {
+            UnityEngine.Debug.Log("OnGetDetectionInfoOK: " + detectionInfo.DetectionName);
+        }
+
+        private void OnTrainingOK(object sender, JObject result)
+        {
+            UnityEngine.Debug.Log("OnTrainingOK: " + result);
+        }
+        private void OnCreateProfileOK(object sender, string profileName)
+        {
+            UnityEngine.Debug.Log("BCITraining: OnCreateProfileOK profilename " + profileName);
+            if (profileName == _wantedProfileName)
+            {
+                // auto load profile
+                _trainingHandler.LoadProfile(_wantedProfileName, _workingHeadsetId);
+            }
+            else
+            {
+                UnityEngine.Debug.LogError("BCITraining: OnCreateProfileOK: mismatch profilename ");
+            }
+
+
+        }
+
+        private void OnQueryProfileOK(object sender, List<string> profiles)
+        {
+            if (profiles.Count == 0)
+            {
+                // check wanted profile name
+                if (!string.IsNullOrEmpty(_wantedProfileName))
+                {
+                    // create new profile
+                    _trainingHandler.CreateProfile(_wantedProfileName);
+                }
+            }
+            else
+            {
+                _profileLists = new List<string>(profiles);
+                if (string.IsNullOrEmpty(_wantedProfileName))
+                {
+                    return;
+                }
+                bool foundProfile = false;
+
+                foreach (var profileName in _profileLists)
+                {
+                    UnityEngine.Debug.Log("OnQueryProfileOK " + profileName + ", wantedProfile: " + _wantedProfileName);
+                    if (_wantedProfileName == profileName)
+                    {
+                        foundProfile = true;
+                        // get current profile
+                        _trainingHandler.GetCurrentProfile(_workingHeadsetId);
+                    }
+                }
+                if (!foundProfile)
+                {
+                    // create new profile
+                    _trainingHandler.CreateProfile(_wantedProfileName);
+                }
+            }
+        }
+
+        private void OnProfileSavedOK(object sender, string profileName)
+        {
+            UnityEngine.Debug.Log("The profile " + profileName + " is saved successfully.");
+        }
+
     }
 }

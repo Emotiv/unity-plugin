@@ -16,23 +16,20 @@ namespace EmotivUnityPlugin
         private Authorizer     _authorizer      = Authorizer.Instance;
         private SessionHandler _sessionHandler  = SessionHandler.Instance;
 
-        private bool _isSessionActived;
-
         private string _currRecordId;
         private string _currMarkerId;
 
         public static RecordManager Instance { get; } = new RecordManager();
         
         // Event
-        public event EventHandler<string> informRecordResult;
+        public event EventHandler<Record> informStartRecordResult;
+        public event EventHandler<Record> informStopRecordResult;
 
-        public event EventHandler<string> informMarkerResult;
+        public event EventHandler<JObject> informMarkerResult;
 
         // Constructor
         public RecordManager ()
         {
-            _isSessionActived = false;
-            _sessionHandler.SessionActived  += OnSessionActived;
             _sessionHandler.CreateRecordOK  += OnCreateRecordOK;
             _sessionHandler.StopRecordOK    += OnStopRecordOK;
             _ctxClient.InjectMarkerOK += OnInjectMarkerOK;
@@ -40,65 +37,28 @@ namespace EmotivUnityPlugin
             _ctxClient.ErrorMsgReceived += MessageErrorRecieved;
         }
 
-        private void OnStopRecordOK(object sender, string recordId)
+        private void OnStopRecordOK(object sender, Record record)
         {
-            UnityEngine.Debug.Log("RecordManager: OnStopRecordOK recordId: " + recordId + 
-                                   " at: " + Utils.GetEpochTimeNow());
-            if (recordId == _currRecordId) {
-                string stopRecordResult = "The record is stopped successfully.\n";
-                stopRecordResult += "recordId: " + recordId;
-                informRecordResult(this, stopRecordResult);
-                _currRecordId = "";
-            }
+            UnityEngine.Debug.Log("RecordManager: OnStopRecordOK recordId: " + record.Uuid + 
+                                   " at: " + record.EndDateTime);
+            informStopRecordResult(this, record);
+            _currRecordId = "";
         }
 
         private void OnCreateRecordOK(object sender, Record record)
         {
-            UnityEngine.Debug.Log("RecordManager: OnCreateRecordOK recordId: " + record.Uuid 
-                                   + " title: " + record.Title + " at " + Utils.GetEpochTimeNow());
-            
-            string startRecordResult = "The record is created successfully.\n";
-            startRecordResult += "recordId: " + record.Uuid +"\n title: " + record.Title;
-            informRecordResult(this, startRecordResult);
+            informStopRecordResult(this, record);
             _currRecordId = record.Uuid;
+            informStartRecordResult(this, record);
         }
-
-        private void OnSessionActived(object sender, SessionEventArgs e)
-        {
-            _isSessionActived = true;
-            UnityEngine.Debug.Log("RecordManager: OnSessionActived sessionId: " + e.SessionId);
-        }
-
         private void OnInjectMarkerOK(object sender, JObject markerObj)
         {
-            Debug.Log("OnInjectMarkerOK " + markerObj);
             _currMarkerId = markerObj["uuid"].ToString();
-            string markerType = markerObj["type"].ToString();
-            string markerStartTime = markerObj["startDatetime"].ToString();
-            string markerEndTime = markerObj["endDatetime"].ToString();
-            string markerLabel = markerObj["label"].ToString();
-            string markerValue = markerObj["value"].ToString();
-
-            string injectMarkerResult = "The marker is injected successfully.\n";
-            injectMarkerResult += "markerId: " + _currMarkerId +"\n type: " + markerType
-                                 +"\n label: " + markerLabel +"\n value: " + markerValue
-                                 +"\n startDatetime: " + markerStartTime +"\n endDatetime: " + markerEndTime;
-            informMarkerResult(this, injectMarkerResult);
+            informMarkerResult(this, markerObj);
         }
         private void OnUpdateMarkerOK(object sender, JObject markerObj)
         {
-            Debug.Log("OnUpdateMarkerOK " + markerObj);
-            string markerType = markerObj["type"].ToString();
-            string markerStartTime = markerObj["startDatetime"].ToString();
-            string markerEndTime = markerObj["endDatetime"].ToString();
-            string markerLabel = markerObj["label"].ToString();
-            string markerValue = markerObj["value"].ToString();
-
-            string updateMarkerResult = "The marker is updated successfully.\n";
-            updateMarkerResult += "markerId: " + _currMarkerId +"\n type: " + markerType
-                                 +"\n label: " + markerLabel +"\n value: " + markerValue
-                                 +"\n startDatetime: " + markerStartTime +"\n endDatetime: " + markerEndTime;
-            informMarkerResult(this, updateMarkerResult);
+            informMarkerResult(this, markerObj);
         }
 
         private void MessageErrorRecieved(object sender, ErrorMsgEventArgs errorInfo)
@@ -110,13 +70,13 @@ namespace EmotivUnityPlugin
             UnityEngine.Debug.Log("MessageErrorRecieved :code " + errorCode
                                    + " message " + message 
                                    + "method name " + method);
-            string errorMsg = method +" gets error: "+ message;
-            if (method == "injectMarker" || method == "updateMarker") {
-                informMarkerResult(this, errorMsg);
-            }
-            else if (method == "createRecord" || method == "stopRecord") {
-                informRecordResult(this, errorMsg);
-            }
+            //string errorMsg = method +" gets error: "+ message;
+            //if (method == "injectMarker" || method == "updateMarker") {
+            //    informMarkerResult(this, errorMsg);
+            //}
+            //else if (method == "createRecord" || method == "stopRecord") {
+            //    informRecordResult(this, errorMsg);
+            //}
         }
 
 
@@ -128,11 +88,8 @@ namespace EmotivUnityPlugin
         {
             lock(_locker)
             {
-                string cortexToken  = _authorizer.CortexToken;
-                if (!String.IsNullOrEmpty(cortexToken) && _isSessionActived) {
-                    // start record
-                    _sessionHandler.StartRecord(cortexToken, title, description, subjectName, tags);
-                }
+                // start record
+                _sessionHandler.StartRecord(_authorizer.CortexToken, title, description, subjectName, tags);
             }
         }
 
@@ -143,12 +100,7 @@ namespace EmotivUnityPlugin
         {
             lock(_locker)
             {
-                string cortexToken  = _authorizer.CortexToken;
-                if (!String.IsNullOrEmpty(cortexToken))
-                {
-                    _sessionHandler.StopRecord(cortexToken);
-                }
-                
+                _sessionHandler.StopRecord(_authorizer.CortexToken);
             }
         }
         // TODO: Update Record
@@ -163,10 +115,8 @@ namespace EmotivUnityPlugin
                 string cortexToken  = _authorizer.CortexToken;
                 string sessionId = _sessionHandler.SessionId;
 
-                if (!String.IsNullOrEmpty(cortexToken) && !String.IsNullOrEmpty(sessionId)) {
-                    // inject marker
-                    _ctxClient.InjectMarker(cortexToken, sessionId, markerLabel, markerValue, Utils.GetEpochTimeNow());
-                }
+                // inject marker
+                _ctxClient.InjectMarker(cortexToken, sessionId, markerLabel, markerValue, Utils.GetEpochTimeNow());
             }
         }
 
@@ -180,10 +130,8 @@ namespace EmotivUnityPlugin
                 string cortexToken  = _authorizer.CortexToken;
                 string sessionId = _sessionHandler.SessionId;
 
-                if (!String.IsNullOrEmpty(cortexToken) && !String.IsNullOrEmpty(sessionId)) {
-                    // update marker
-                    _ctxClient.UpdateMarker(cortexToken, sessionId, _currMarkerId, Utils.GetEpochTimeNow());
-                }
+                // update marker
+                _ctxClient.UpdateMarker(cortexToken, sessionId, _currMarkerId, Utils.GetEpochTimeNow());
             }
         }
 

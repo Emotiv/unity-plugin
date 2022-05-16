@@ -14,7 +14,6 @@ namespace EmotivUnityPlugin
         static readonly object _locker = new object();
         private CortexClient   _ctxClient  = CortexClient.Instance;
         private List<string>   _streams;
-        private string         _sessionId;
         private HeadsetFinder  _headsetFinder   = HeadsetFinder.Instance;
         private Authorizer     _authorizer      = Authorizer.Instance;
         private SessionHandler _sessionHandler  = SessionHandler.Instance;
@@ -88,7 +87,6 @@ namespace EmotivUnityPlugin
             _ctxClient.StreamDataReceived           += OnStreamDataReceived;
             _ctxClient.SubscribeDataDone            += OnSubscribeDataDone;
             _ctxClient.UnSubscribeDataDone          += OnUnSubscribeDataDone;
-            _ctxClient.SessionClosedNotify          += OnSessionClosedNotify;
             _ctxClient.StreamStopNotify             += OnStreamStopNotify;
 
             _authorizer.UserLogoutNotify            += OnUserLogoutNotify;
@@ -97,6 +95,7 @@ namespace EmotivUnityPlugin
             _authorizer.LicenseExpired              += OnLicenseExpired;
             _authorizer.ConnectServiceStateChanged  += OnConnectServiceStateChanged;
             _sessionHandler.SessionClosedOK         += OnSessionClosedOK;
+            _sessionHandler.SessionClosedNotify     += OnSessionClosedNotify;
         }
 
         private void OnUserLogoutNotify(object sender, string message)
@@ -132,9 +131,10 @@ namespace EmotivUnityPlugin
 
         private void OnStreamStopNotify(object sender, string sessionId)
         {
+            string currSessionId = _sessionHandler.SessionId;
             lock (_locker)
             {
-                if ( _sessionId == sessionId && (_streams.Count > 0)) {
+                if (currSessionId == sessionId && (_streams.Count > 0)) {
                     StreamStopNotify(this, _streams);
                     _streams.Clear();
                 }
@@ -143,26 +143,17 @@ namespace EmotivUnityPlugin
 
         private void OnSessionClosedNotify(object sender, string sessionId)
         {
-            string currSessionId = "";
-            lock(_locker) currSessionId = _sessionId;
-
-            if ( currSessionId == sessionId) {
-                // clear session data
-                Clear();
-                SessionClosedNotify(this, sessionId);
-            }
+            // clear data streams
+            _streams.Clear();
+            SessionClosedNotify(this, sessionId);
         }
 
         private void OnSessionClosedOK(object sender, string sessionId)
         {
-            string currSessionId = "";
-            lock(_locker) currSessionId = _sessionId;
-            if ( currSessionId == sessionId) {
-                // clear session data
-                Clear();
-                SessionClosedNotify(this, sessionId);
-                UnityEngine.Debug.Log("The Session " + sessionId + " has closed successfully.");
-            }
+            // clear data streams
+            _streams.Clear();
+            SessionClosedNotify(this, sessionId);
+            UnityEngine.Debug.Log("The Session " + sessionId + " has closed successfully.");
         }
 
         private void OnUnSubscribeDataDone(object sender, MultipleResultEventArgs e)
@@ -254,8 +245,6 @@ namespace EmotivUnityPlugin
         private void Clear() {
             lock(_locker)
             {
-                // reset sessionId
-                _sessionId = "";
                 // clear session creator
                 _sessionHandler.ClearSessionData();
                 _streams.Clear();
@@ -264,6 +253,7 @@ namespace EmotivUnityPlugin
 
         private void OnStreamDataReceived(object sender, StreamDataEventArgs e)
         {
+            // UnityEngine.Debug.Log("OnStreamDataReceived " + e.StreamName);
             if (e.StreamName == DataStreamName.EEG)
             {
                 EEGDataReceived(this, e.Data);
@@ -318,17 +308,24 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Subscribe data streams. 
         /// </summary>
-        public void SubscribeData(string sessionId) {
+        public void SubscribeData(List<string> streams = null) {
 
             lock (_locker)
             {
                 string cortexToken = _authorizer.CortexToken; 
-                UnityEngine.Debug.Log("Start subscribing data.");
-                if (!string.IsNullOrEmpty(sessionId)) {
-                    _sessionId = sessionId;
-                }
+                string currSessionId = _sessionHandler.SessionId;
                 // subscribe data
-                _ctxClient.Subscribe(cortexToken, _sessionId, _streams);
+                if (streams == null && _streams.Count > 0) {
+                    // subscribe current streams
+                    _ctxClient.Subscribe(cortexToken, currSessionId, _streams);
+                }
+                else if (streams != null) {
+                    // subscribe data streams 
+                    _ctxClient.Subscribe(cortexToken, currSessionId, streams);
+                }
+                else {
+                    UnityEngine.Debug.Log("SubscribeData: No Stream to subscribe.");
+                }
             }
         }
 
@@ -394,12 +391,13 @@ namespace EmotivUnityPlugin
             lock (_locker)
             {
                 string cortexToken = _authorizer.CortexToken;
+                string currSessionId = _sessionHandler.SessionId;
                 if (streams == null) {
                     // unsubscribe all data 
-                    _ctxClient.UnSubscribe(cortexToken, _sessionId, _streams);
+                    _ctxClient.UnSubscribe(cortexToken, currSessionId, _streams);
                 }
                 else {
-                    _ctxClient.UnSubscribe(cortexToken, _sessionId, streams);
+                    _ctxClient.UnSubscribe(cortexToken, currSessionId, streams);
                 }
             }
             

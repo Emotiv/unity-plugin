@@ -47,7 +47,8 @@
         public const string BandPower          = "pow";
         public const string MentalCommands     = "com";
         public const string FacialExpressions  = "fac";
-        public const string SysEvents           = "sys";   // System events of the mental commands and facial expressions
+        public const string SysEvents          = "sys";   // System events of the mental commands and facial expressions
+        public const string EQ                 = "eq"; // EEG quality
     }
 
     public static class WarningCode
