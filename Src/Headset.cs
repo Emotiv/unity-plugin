@@ -51,6 +51,10 @@ namespace EmotivUnityPlugin
             {
                 HeadsetType = HeadsetTypes.HEADSET_TYPE_MN8;
             }
+            else if (HeadsetID.Contains(HeadsetNames.xtrode))
+            {
+                HeadsetType = HeadsetTypes.HEADSET_TYPE_XTRODE;
+            }
             else if (HeadsetID.Contains(HeadsetNames.epoc))
             {
                 HeadsetType = HeadsetTypes.HEADSET_TYPE_EPOC_STD;
