@@ -158,7 +158,8 @@ namespace EmotivUnityPlugin
         HEADSET_TYPE_EPOC_PLUS,
         HEADSET_TYPE_EPOC_FLEX,
         HEADSET_TYPE_EPOC_X,
-        HEADSET_TYPE_MN8
+        HEADSET_TYPE_MN8,
+        HEADSET_TYPE_XTRODE
     };
 
     // From old code. keep it here for now. will use Channel_t soon
@@ -206,6 +207,7 @@ namespace EmotivUnityPlugin
         public static string epoc_x     = "EPOCX";
         public static string mn8        = "MN8";
         public static string epoc_flex  = "EPOCFLEX";
+        public static string xtrode  = "BGX";
     }
 
     public struct HeadsetConnectionStatus
