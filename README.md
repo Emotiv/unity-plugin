@@ -4,7 +4,7 @@ Here is the plugin for Unity application to work with Emotiv Cortex Service (aka
 
 ## Prerequisites
 
-1. [Download and install](https://www.emotiv.com/developer/) the EMOITV Launcher with Cortex service, which is currently available for Windows and macOS.
+1. [Download and install](https://www.emotiv.com/developer/) the EMOTIV Launcher with Cortex service, which is currently available for Windows and macOS.
 
 2. Install Unity. You can get it for free at [unity3d.com](https://unity3d.com/get-unity/download).
 
@@ -22,7 +22,7 @@ In the previous version, there were 3 main classes DataStreamManager.cs will han
 
 1. Firstly, you need to initialize via Init(). You need to set clientId, clientSecret of your application and set isDataBufferUsing = false if you don't want to save subscribed data to DataBuffer before obtaining.
 2. Then call Start() to start connecting to Cortex and authorize the application.
-3. Connect to a headset and create and activate a session with the headset via CreateSessionWithHeadset(string headsetId). The headsetId has a format such as EPOCX-12345. If set an empty string for the headsetId, unity-plugin will use the first headset in the headset list.
+3. Connect to a headset and create and activate a session with the headset via CreateSessionWithHeadset(string headsetId). The headsetId has a format such as EPOCX-12345. If you set an empty string for the headsetId, unity-plugin will use the first headset in the headset list.
 4. After a session is activated successfully, You can create a record, subscribe data or load a profile for training.  
 	- **Start and Stop Record**: create a record via StartRecord(). The record title is a required parameter. You can stop the record via StopRecord().
 	- **Inject Marker**: You can inject an instance marker into the record via InjectMarker(). The markerValue and markerLabel are required parameters. You also can update the current instance marker via UpdateMarker() to make the marker to interval marker.  
