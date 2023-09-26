@@ -636,6 +636,11 @@ namespace EmotivUnityPlugin
             return _dsProcess.GetConnectToCortexState();
         }
 
+        public string GetConnectToCortexWarningMessage()
+        {
+            return _dsProcess.GetConnectToCortexWarningMessage();
+        }
+
         //=== Device data ===
         /// <summary>
         /// Get battery level.
