@@ -575,6 +575,11 @@ namespace EmotivUnityPlugin
                 string message = messageData["behavior"].ToString();
                 HeadsetConnectNotify(this, new HeadsetConnectEventArgs(false, message, headsetId));
             }
+            else if (code == WarningCode.CortexAutoUnloadProfile)
+            {
+                // the current profile is unloaded automatically
+                UnloadProfileDone(this, true);
+            }
         }
 
         /// <summary>
