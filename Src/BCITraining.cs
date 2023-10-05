@@ -79,7 +79,7 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void CreateProfile(string profileName)
         {
-            _trainingHandler.CreateProfile(profileName);
+            _trainingHandler.CreateProfile(profileName, _workingHeadsetId);
         }
 
         /// <summary>
@@ -250,7 +250,7 @@ namespace EmotivUnityPlugin
                 if (!string.IsNullOrEmpty(_wantedProfileName))
                 {
                     // create new profile
-                    _trainingHandler.CreateProfile(_wantedProfileName);
+                    _trainingHandler.CreateProfile(_wantedProfileName, _workingHeadsetId);
                 }
             }
             else
@@ -262,20 +262,23 @@ namespace EmotivUnityPlugin
                 }
                 bool foundProfile = false;
 
+                UnityEngine.Debug.Log("OnQueryProfileOK: number of profiles " +_profileLists.Count.ToString());
+
                 foreach (var profileName in _profileLists)
                 {
-                    UnityEngine.Debug.Log("OnQueryProfileOK " + profileName + ", wantedProfile: " + _wantedProfileName);
                     if (_wantedProfileName == profileName)
                     {
+                        UnityEngine.Debug.Log("OnQueryProfileOK: the profile" + _wantedProfileName + " is existed.");
                         foundProfile = true;
                         // get current profile
                         _trainingHandler.GetCurrentProfile(_workingHeadsetId);
+                        return;
                     }
                 }
                 if (!foundProfile)
                 {
                     // create new profile
-                    _trainingHandler.CreateProfile(_wantedProfileName);
+                    _trainingHandler.CreateProfile(_wantedProfileName, _workingHeadsetId);
                 }
             }
         }

@@ -16,10 +16,9 @@ namespace EmotivUnityPlugin
         private DataStreamManager _dsManager = DataStreamManager.Instance;
         private BCITraining _bciTraining = BCITraining.Instance;
         private RecordManager _recordMgr = RecordManager.Instance;
+        private CortexClient   _ctxClient  = CortexClient.Instance;
 
         bool _isAuthorizedOK = false;
-        bool _isSessionCreated = false;
-
         bool _isRecording = false;
 
         bool _isProfileLoaded = false;
@@ -33,7 +32,7 @@ namespace EmotivUnityPlugin
 
         public bool IsAuthorizedOK => _isAuthorizedOK;
 
-        public bool IsSessionCreated => _isSessionCreated;
+        public bool IsSessionCreated => _dsManager.IsSessionCreated;
 
         public bool IsProfileLoaded => _isProfileLoaded;
 
@@ -99,6 +98,8 @@ namespace EmotivUnityPlugin
 
             // bci training
             _bciTraining.InformLoadUnLoadProfileDone += OnInformLoadUnLoadProfileDone;
+            // get error message
+            _ctxClient.ErrorMsgReceived             += MessageErrorRecieved;
         }
 
         /// <summary>
@@ -117,7 +118,6 @@ namespace EmotivUnityPlugin
             _dsManager.Stop();
             _isAuthorizedOK = false;
             _isProfileLoaded = false;
-            _isSessionCreated = false;
             _workingHeadsetId = "";
         }
 
@@ -138,7 +138,7 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void SubscribeData(List<string> streamNameList)
         {
-            if (_isSessionCreated)
+            if (_dsManager.IsSessionCreated)
                 _dsManager.SubscribeMoreData(streamNameList);
             else
                 UnityEngine.Debug.LogWarning("Please wait session created successfully before subscribe data ");
@@ -462,7 +462,6 @@ namespace EmotivUnityPlugin
 
         private void OnSessionActiveOK(object sender, string headsetId)
         {
-            _isSessionCreated = true;
             _workingHeadsetId = headsetId;
             _messageLog = "A session working with " + headsetId + " is activated successfully.";
         }
@@ -590,6 +589,15 @@ namespace EmotivUnityPlugin
                                 data.LAct + ", lower act power " + data.LPow.ToString() + ", time: " + data.Time.ToString();
             // print out data to console
             UnityEngine.Debug.Log(dataText);
+        }
+
+        private void MessageErrorRecieved(object sender, ErrorMsgEventArgs errorInfo)
+        {
+            string message  = errorInfo.MessageError;
+            string method   = errorInfo.MethodName;
+            int errorCode   = errorInfo.Code;
+
+            _messageLog = "Get Error: errorCode " + errorCode.ToString() + ", message: " + message + ", API: " + method;  
         }
 
     }

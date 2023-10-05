@@ -79,6 +79,7 @@ namespace EmotivUnityPlugin
         }
         public static DataStreamManager Instance { get; } = new DataStreamManager();
         public bool IsDataBufferUsing { get => _isDataBufferUsing; set => _isDataBufferUsing = value; }
+        public bool IsSessionCreated {get => _isSessActivated;}
 
         private void Init()
         {
