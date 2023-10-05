@@ -150,10 +150,10 @@ namespace EmotivUnityPlugin
             _ctxClient.Training(cortexToken, sessionId, status, detection, action);
         }
 
-        public void CreateProfile(string profileName)
+        public void CreateProfile(string profileName, string headsetId)
         {
             string cortexToken  = _authorizer.CortexToken;
-            _ctxClient.SetupProfile(cortexToken, profileName, "create");
+            _ctxClient.SetupProfile(cortexToken, profileName, "create", headsetId);
         }
 
         public void LoadProfile(string profileName, string headsetId)
