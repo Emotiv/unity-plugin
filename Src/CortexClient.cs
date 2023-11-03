@@ -114,9 +114,9 @@ namespace EmotivUnityPlugin
         {
             _nextRequestId = 1;
             _wSC = new WebSocket(Config.AppUrl);
-            // Update sslProtocol because Emotiv Cortex version 3.7  doesn't support Tls1.0, Tls1.1 anymore
+            // Since Emotiv Cortex 3.7.0, the supported SSL Protocol will be TLS1.2 or later
             _wSC.Security.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
-            
+
             _methodForRequestId = new Dictionary<int, string>();
 
             _wSC.Opened += new EventHandler(WebSocketClient_Opened);
