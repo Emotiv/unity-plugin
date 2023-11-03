@@ -48,6 +48,8 @@ namespace EmotivUnityPlugin
         bool _isDataBufferUsing = true; // use data buffer to store subscribed data for eeg, pm, cq, eq, pow, motion
         List<Headset>  _detectedHeadsets = new List<Headset>(); // list of detected headsets
 
+        private bool _isHeadsetScanning = false;
+
         public event EventHandler<string> SessionActivatedOK;
         public event EventHandler<string> HeadsetConnectFail;
         public event EventHandler<DateTime> LicenseValidTo;
@@ -69,6 +71,8 @@ namespace EmotivUnityPlugin
         public event EventHandler<MentalCommandEventArgs> MentalCommandReceived;     // mental command
         public event EventHandler<SysEventArgs> SysEventsReceived;  // System events for training
 
+        public event EventHandler<string> HeadsetScanFinished;
+
         private DataStreamManager()
         {
             Init();
@@ -80,6 +84,8 @@ namespace EmotivUnityPlugin
         public static DataStreamManager Instance { get; } = new DataStreamManager();
         public bool IsDataBufferUsing { get => _isDataBufferUsing; set => _isDataBufferUsing = value; }
         public bool IsSessionCreated {get => _isSessActivated;}
+
+        public bool IsHeadsetScanning { get => _isHeadsetScanning;}
 
         private void Init()
         {
@@ -94,6 +100,7 @@ namespace EmotivUnityPlugin
             _dsProcess.QueryHeadsetOK           += OnQueryHeadsetOK;
             _dsProcess.UserLogoutNotify         += OnUserLogoutNotify;
             _dsProcess.SessionClosedNotify      += OnSessionClosedNotify;
+            _dsProcess.HeadsetScanFinished      += OnHeadsetScanFinished;
         }
 
         /// <summary>
@@ -202,7 +209,6 @@ namespace EmotivUnityPlugin
                 if (sessionInfo.HeadsetId == _wantedHeadsetId) {
                     _isSessActivated    = true;
                     _readyCreateSession = false;
-
                     SessionActivatedOK(this, _wantedHeadsetId);
                     // subscribe data
                     _dsProcess.SubscribeData();
@@ -483,6 +489,13 @@ namespace EmotivUnityPlugin
                     Thread.Sleep(Config.TIME_CLOSE_STREAMS);
                 }
             }
+        }
+
+        private void OnHeadsetScanFinished(object sender, string message)
+        {
+            UnityEngine.Debug.Log(message);
+            // Reset _isHeadsetScanning when get headset scan finished
+            _isHeadsetScanning = false;
         }
 
         /// <summary>
@@ -935,6 +948,15 @@ namespace EmotivUnityPlugin
             {
                 return _wantedHeadsetId;
             }
+        }
+
+        /// <summary>
+        /// ScanHeadsets to trigger scan headsets from Cortex
+        /// </summary>
+        public void ScanHeadsets() {
+            UnityEngine.Debug.Log("Start scanning headset.");
+            _isHeadsetScanning = true;
+            _dsProcess.RefreshHeadset();
         }
     }
 }
