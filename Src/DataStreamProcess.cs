@@ -65,6 +65,11 @@ namespace EmotivUnityPlugin
             add { _ctxClient.BTLEPermissionGrantedNotify += value; }
             remove { _ctxClient.BTLEPermissionGrantedNotify -= value; }
         }
+        public event EventHandler<string> HeadsetScanFinished
+        {
+            add { _ctxClient.HeadsetScanFinished += value; }
+            remove { _ctxClient.HeadsetScanFinished -= value; }
+        }
 
         /// <summary>
         /// Gets states when work with cortex.
@@ -129,6 +134,7 @@ namespace EmotivUnityPlugin
         private void OnGetLicenseInfoDone(object sender, License lic)
         {
             LicenseValidTo(this, lic.validTo);
+            // auto scan headset
             _headsetFinder.FinderInit();
         }
 
@@ -438,6 +444,13 @@ namespace EmotivUnityPlugin
         public void ForceCloseWebsocket()
         {
             _ctxClient.ForceCloseWSC();
+        }
+
+        /// <summary>
+        /// Refresh headset to trigger scan btle devices from Cortex
+        /// </summary>
+        public void RefreshHeadset() {
+            _headsetFinder.RefreshHeadset();
         }
     }
 }
