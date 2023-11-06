@@ -147,6 +147,7 @@ namespace EmotivUnityPlugin
                 _isSessActivated    = false;
                 _readyCreateSession = true;
                 _wantedHeadsetId    = "";
+                _isHeadsetScanning = false;
                 _detectedHeadsets.Clear();
                 ResetDataBuffers();
             }
@@ -162,6 +163,7 @@ namespace EmotivUnityPlugin
                 _isSessActivated    = false;
                 _readyCreateSession = true;
                 _wantedHeadsetId    = "";
+                _isHeadsetScanning = false;
                 _detectedHeadsets.Clear();
                 ResetDataBuffers();
             }
