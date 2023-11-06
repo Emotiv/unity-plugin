@@ -13,7 +13,6 @@ namespace EmotivUnityPlugin
     public class HeadsetFinder
     {
         private CortexClient _ctxClient = CortexClient.Instance;
-        
 
         /// <summary>
         /// Timer for querying headsets
@@ -56,6 +55,9 @@ namespace EmotivUnityPlugin
                 UnityEngine.Debug.Log("Stop query headset");
                 _aTimer.Stop();
             }
+        }
+        public void RefreshHeadset() {
+            _ctxClient.ControlDevice("refresh", "", null);
         }
 
         /// <summary>
