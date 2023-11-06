@@ -103,6 +103,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> StreamStopNotify;
         public event EventHandler<string> SessionClosedNotify;
         public event EventHandler<string> RefreshTokenOK;
+        public event EventHandler<string> HeadsetScanFinished;
 
         public event EventHandler<bool> BTLEPermissionGrantedNotify; // notify btle permision grant status
 
@@ -329,11 +330,7 @@ namespace EmotivUnityPlugin
             else if (method == "controlDevice")
             {
                 string command = (string)data["command"];
-                if (command == "connect") 
-                {
-                    string message = (string)data["message"];
-                }
-                else if (command == "disconnect")
+                if (command == "disconnect")
                 {
                     HeadsetDisConnectedOK(this, true);
                 }
@@ -560,11 +557,6 @@ namespace EmotivUnityPlugin
                 string message = messageData.ToString();
                 UserLogoutNotify(this, message);
             }
-            else if (code == WarningCode.UserLogout)
-            {
-                string message = messageData.ToString();
-                UserLogoutNotify(this, message);
-            }
             else if (code == WarningCode.HeadsetConnected) {
                 string headsetId = messageData["headsetId"].ToString();
                 string message = messageData["behavior"].ToString();
@@ -582,6 +574,11 @@ namespace EmotivUnityPlugin
             {
                 // the current profile is unloaded automatically
                 UnloadProfileDone(this, true);
+            }
+            else if (code == WarningCode.HeadsetScanFinished)
+            {
+                string message = messageData["behavior"].ToString();
+                HeadsetScanFinished(this, message);
             }
         }
 

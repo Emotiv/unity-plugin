@@ -1,5 +1,9 @@
 # <a id="release-notes"></a>Release Notes
 
+## Version 3.7 (November 2023)
+### Added
+- Support new headset refreshing flow where App need to to call ScanHeadsets() to start headset scanning.
+
 ## Version 2.7 2(10 July 2021)
 ### Added
 - Support injectMarker and updateMarker to EEG data stream.
