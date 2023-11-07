@@ -59,6 +59,10 @@ namespace EmotivUnityPlugin
             {
                 HeadsetType = HeadsetTypes.HEADSET_TYPE_EPOC_STD;
             }
+            else if (HeadsetID.Contains(HeadsetNames.flex2))
+            {
+                HeadsetType = HeadsetTypes.HEADSET_TYPE_FLEX2;
+            }
 
             Status = (string)jHeadset["status"];
             FirmwareVersion = (string)jHeadset["firmware"];
