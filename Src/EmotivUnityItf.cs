@@ -41,7 +41,11 @@ namespace EmotivUnityPlugin
         public string TrainingLog { get => _trainingLog; set => _trainingLog = value; }
         public string MessageLog { get => _messageLog; set => _messageLog = value; }
 
-
+        public class MentalComm{
+            public string act = "NULL";
+            public double pow = 0;
+        }
+        public MentalComm LatestMentalCommand { get; private set; } = new MentalComm();
 
         /// <summary>
         /// Set up App configuration.
@@ -580,6 +584,8 @@ namespace EmotivUnityPlugin
             string dataText = "com data: " + data.Act + ", power: " + data.Pow.ToString() + ", time " + data.Time.ToString();
             // print out data to console
             UnityEngine.Debug.Log(dataText);
+            LatestMentalCommand.act = data.Act;
+            LatestMentalCommand.pow = data.Pow;
         }
 
         private void OnFacialExpReceived(object sender, FacEventArgs data)
