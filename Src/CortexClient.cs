@@ -25,43 +25,30 @@
 
 using System;
 using System.Threading;
-using WebSocket4Net;
 using Newtonsoft.Json.Linq;
+
 using System.Collections.Generic;
 using System.Collections;
-using System.Timers;
+using UnityEngine;
 
 namespace EmotivUnityPlugin
 {
-    /// <summary>
-    /// Represents a simple client for the Cortex service.
-    /// </summary>
-    public class CortexClient
+    public abstract class CortexClient
     {
-        const string Url = "wss://localhost:6868";
-        static readonly object _locker = new object();
-        private Dictionary<int, string> _methodForRequestId;
+        protected Dictionary<int, string> _methodForRequestId;
 
-        /// <summary>
-        /// Websocket Client.
-        /// </summary>
-        private WebSocket _wSC;
+        static readonly object _locker = new object();
 
         /// <summary>
         /// Unique id for each request
         /// </summary>
         /// <remarks>The id will be reset to 0 when reach to 100</remarks>
-        private int _nextRequestId;
+        protected int _nextRequestId;
         
-        /// <summary>
-        /// Timer for connecting to Emotiv Cortex Service
-        /// </summary>
-        private System.Timers.Timer _wscTimer = null;
-        
-        private AutoResetEvent m_MessageReceiveEvent = new AutoResetEvent(false);
-        private AutoResetEvent m_OpenedEvent = new AutoResetEvent(false);
+        public AutoResetEvent m_MessageReceiveEvent = new AutoResetEvent(false);
+        public AutoResetEvent m_OpenedEvent = new AutoResetEvent(false);
 
-        public event EventHandler<bool> WSConnectDone;
+        public event EventHandler<bool>  WSConnectDone;
         public event EventHandler<ErrorMsgEventArgs> ErrorMsgReceived;
         public event EventHandler<StreamDataEventArgs> StreamDataReceived;
         public event EventHandler<List<Headset>> QueryHeadsetOK;
@@ -106,122 +93,69 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> HeadsetScanFinished;
 
         public event EventHandler<bool> BTLEPermissionGrantedNotify; // notify btle permision grant status
+        
+        public virtual void Init(object context = null) {}
 
-        private CortexClient()
+        public virtual void Open() {}
+        
+        public virtual void Close() {}
+
+        public virtual void SendTextMessage(JObject param, string method, bool hasParam = true) {}
+
+        protected static CortexClient instance;
+    
+        public static CortexClient Instance
         {
-            
-        }
-        public void InitWebSocketClient()
-        {
-            _nextRequestId = 1;
-            _wSC = new WebSocket(Config.AppUrl);
-            // Since Emotiv Cortex 3.7.0, the supported SSL Protocol will be TLS1.2 or later
-            _wSC.Security.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
-
-            _methodForRequestId = new Dictionary<int, string>();
-
-            _wSC.Opened += new EventHandler(WebSocketClient_Opened);
-            _wSC.Error  += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>(WebSocketClient_Error);
-            _wSC.Closed += WebSocketClient_Closed;
-            _wSC.MessageReceived += WebSocketClient_MessageReceived;
-            _wSC.DataReceived += WebSocketClient_DataReceived;
-        }
-
-        public void ForceCloseWSC()
-        {
-            UnityEngine.Debug.Log("Force close websocket client.");
-            if (_wscTimer != null) {
-                _wscTimer = null;
-            }
-            // stop websocket client
-            if (_wSC != null)
-                _wSC.Close();
-        }
-
-        /// <summary>
-        /// Singleton Instance of Cortex Client
-        /// </summary>
-        public static CortexClient Instance { get; } = new CortexClient();
-
-
-        /// <summary>
-        /// Set up timer for connecting to Emotiv Cortex service
-        /// </summary>
-        private void SetWSCTimer() {
-            if (_wscTimer != null)
-                return;
-            _wscTimer = new System.Timers.Timer(Config.RETRY_CORTEXSERVICE_TIME);
-            // Hook up the Elapsed event for the timer.
-            _wscTimer.Elapsed       += OnTimerEvent;
-            _wscTimer.AutoReset     = false; // do not auto reset
-            _wscTimer.Enabled       = true; 
-        }
-
-        /// <summary>
-        /// Handle for _wscTimer timer timeout
-        //  Retry Connect when time out 
-        /// </summary>
-        private void OnTimerEvent(object sender, ElapsedEventArgs e)
-        {
-            UnityEngine.Debug.Log("OnTimerEvent: Retry connect to CortexService....");
-            RetryConnect();
-        }
-
-        private void RetryConnect() {
-           m_OpenedEvent.Reset();
-            if (_wSC == null || (_wSC.State != WebSocketState.None && _wSC.State != WebSocketState.Closed))
-                return;
-            
-            _wSC.Open();
-        }
-
-        private void WebSocketClient_DataReceived(object sender, DataReceivedEventArgs e)
-        {
-            // TODO
-            UnityEngine.Debug.Log("WebSocketClient_DataReceived");
-        }
-
-        /// <summary>
-        /// Build a json rpc request and send message via websocket
-        /// </summary>
-        private void SendTextMessage(JObject param, string method, bool hasParam = true)
-        {
-            lock(_locker)
+            get
             {
-                JObject request = new JObject(
-                new JProperty("jsonrpc", "2.0"),
-                new JProperty("id", _nextRequestId),
-                new JProperty("method", method));
-
-                if (hasParam) {
-                    request.Add("params", param);
+                if (instance == null)
+                {
+                    #if UNITY_ANDROID || UNITY_IOS
+                        instance = new EmbeddedCortexClient();
+                    #else
+                        instance = new WebsocketCortexClient();
+                    #endif
                 }
-                // UnityEngine.Debug.Log("Send " + method);
-                // UnityEngine.Debug.Log(request.ToString());
-
-                // send the json message
-                _wSC.Send(request.ToString());
-
-                // add to dictionary, replace if a key is existed
-                _methodForRequestId[_nextRequestId] = method;
-
-                if (_nextRequestId > 100) {
-                    _nextRequestId = 1;
-                }
-                else
-                    _nextRequestId++;
+                return instance;
             }
         }
 
-        /// <summary>
-        /// Handle message received return from Emotiv Cortex Service
-        /// </summary> 
-        private void WebSocketClient_MessageReceived(object sender, MessageReceivedEventArgs e)
-        {
-            string receievedMsg = e.Message;
-            //UnityEngine.Debug.Log("WebSocketClient_MessageReceived " + receievedMsg);
+        // prepare json rpc request
+        protected string PrepareRequest(string method, JObject param, bool hasParam = true) {
+            JObject request = new JObject(
+            new JProperty("jsonrpc", "2.0"),
+            new JProperty("id", _nextRequestId),
+            new JProperty("method", method));
 
-            JObject response = JObject.Parse(e.Message);
+            if (hasParam) {
+                request.Add("params", param);
+            }
+            // add to dictionary, replace if a key is existed
+            _methodForRequestId[_nextRequestId] = method;
+
+            if (_nextRequestId > 100) {
+                _nextRequestId = 1;
+            }
+            else
+                _nextRequestId++;
+                
+            return request.ToString();
+        }
+
+        protected void OnWSConnected(bool isConnected)
+        {
+            WSConnectDone(this, isConnected);
+        }
+
+        /// <summary>
+        /// Handle message received return from Emotiv Cortex
+        /// </summary> 
+        public void OnMessageReceived(string receievedMsg)
+        {
+            // string receievedMsg = "";//e.Message;
+            UnityEngine.Debug.Log("OnMessageReceived " + receievedMsg);
+
+            JObject response = JObject.Parse(receievedMsg);
 
             if (response["id"] != null)
             {
@@ -524,6 +458,10 @@ namespace EmotivUnityPlugin
                 string sessionId = messageData["sessionId"].ToString();
                StreamStopNotify(this, sessionId);
             }
+            else if (code == WarningCode.CortexIsReady ) {
+                // get user login info
+                GetUserLogin();
+            }
             else if (code == WarningCode.SessionAutoClosed ) {
                 string sessionId = messageData["sessionId"].ToString();
                SessionClosedNotify(this, sessionId);
@@ -582,63 +520,6 @@ namespace EmotivUnityPlugin
             }
         }
 
-        /// <summary>
-        /// Handle when socket close
-        /// </summary>
-        private void WebSocketClient_Closed(object sender, EventArgs e)
-        {
-            WSConnectDone(this, false);
-            // start connecting cortex service again
-            if (_wscTimer != null)
-                _wscTimer.Start();
-        }
-        
-        /// <summary>
-        /// Handle when socket open
-        /// </summary>
-        private void WebSocketClient_Opened(object sender, EventArgs e)
-        {
-            m_OpenedEvent.Set();
-            if (_wSC.State == WebSocketState.Open) {
-                WSConnectDone(this, true);
-                // stop timer
-                _wscTimer.Stop();
-
-            } else {
-                UnityEngine.Debug.Log("Open Websocket unsuccessfully.");
-            }
-        }
-
-        /// <summary>
-        /// Handle error when try to open socket
-        /// </summary>
-        private void WebSocketClient_Error(object sender, SuperSocket.ClientEngine.ErrorEventArgs e)
-        {
-            UnityEngine.Debug.Log(e.Exception.GetType() + ":" + e.Exception.Message + Environment.NewLine + e.Exception.StackTrace);
-
-            if (e.Exception.InnerException != null) {
-                UnityEngine.Debug.Log(e.Exception.InnerException.GetType());
-                WSConnectDone(this, false);
-                // start connecting cortex service again
-                _wscTimer.Start();
-            }
-        }
-
-        /// <summary>
-        /// Open a websocket client.
-        /// </summary>
-        public void Open()
-        {
-            // set timer for connect cortex service
-            SetWSCTimer();
-            //Open websocket
-            m_OpenedEvent.Reset();
-            if (_wSC == null || (_wSC.State != WebSocketState.None && _wSC.State != WebSocketState.Closed))
-                return;
-            
-            _wSC.Open();
-        }
-
         // Has Access Right
         public void HasAccessRights()
         {
@@ -684,6 +565,17 @@ namespace EmotivUnityPlugin
                 );
             SendTextMessage(param, "getUserInformation", true);
         }
+
+        // Login
+        public void Login (string username, string password)
+        {
+            JObject param = new JObject(
+                    new JProperty("username", username),
+                    new JProperty("password", password)
+                );
+            SendTextMessage(param, "login", true);
+        }
+
 
         // GetUserLogin
         public void GetUserLogin()

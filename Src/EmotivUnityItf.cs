@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace EmotivUnityPlugin
 {
@@ -41,7 +42,11 @@ namespace EmotivUnityPlugin
         public string TrainingLog { get => _trainingLog; set => _trainingLog = value; }
         public string MessageLog { get => _messageLog; set => _messageLog = value; }
 
-
+        public class MentalComm{
+            public string act = "NULL";
+            public double pow = 0;
+        }
+        public MentalComm LatestMentalCommand { get; private set; } = new MentalComm();
 
         /// <summary>
         /// Set up App configuration.
@@ -59,7 +64,7 @@ namespace EmotivUnityPlugin
 
         // Init
         public void Init(string clientId, string clientSecret, string appName, 
-                         string appVersion = "", bool isDataBufferUsing = true)
+                         string appVersion = "", bool isDataBufferUsing = true, object context = null)
         {
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
@@ -105,9 +110,9 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Start program: open websocket, authorize process
         /// </summary>
-        public void Start()
+        public void Start(object context = null)
         {
-            _dsManager.StartAuthorize();
+            _dsManager.StartAuthorize("", context);
         }
 
         /// <summary>
@@ -580,6 +585,8 @@ namespace EmotivUnityPlugin
             string dataText = "com data: " + data.Act + ", power: " + data.Pow.ToString() + ", time " + data.Time.ToString();
             // print out data to console
             UnityEngine.Debug.Log(dataText);
+            LatestMentalCommand.act = data.Act;
+            LatestMentalCommand.pow = data.Pow;
         }
 
         private void OnFacialExpReceived(object sender, FacEventArgs data)
@@ -598,6 +605,11 @@ namespace EmotivUnityPlugin
             int errorCode   = errorInfo.Code;
 
             _messageLog = "Get Error: errorCode " + errorCode.ToString() + ", message: " + message + ", API: " + method;  
+        }
+
+        public ConnectToCortexStates GetConnectToCortexState()
+        {
+            return _dsManager.GetConnectToCortexState();
         }
 
     }

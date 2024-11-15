@@ -503,7 +503,7 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Start authorizing process.
         /// </summary>
-        public void StartAuthorize(string licenseKey = "")
+        public void StartAuthorize(string licenseKey = "", object context = null)
         {
             if (string.IsNullOrEmpty(Config.AppClientId) || 
                 string.IsNullOrEmpty(Config.AppClientSecret) || 
@@ -511,7 +511,7 @@ namespace EmotivUnityPlugin
                 UnityEngine.Debug.Log(" Can not start App because invalid application configuration.");
                 return;
             }
-            _dsProcess.StartAuthorize(licenseKey);
+            _dsProcess.StartAuthorize(licenseKey, context);
         }
 
         /// <summary>
@@ -939,7 +939,7 @@ namespace EmotivUnityPlugin
             CloseSession();
             // stop query headset
             _dsProcess.StopQueryHeadset();
-            _dsProcess.ForceCloseWebsocket();
+            _dsProcess.CloseCortexClient();
         }
 
         /// <summary>

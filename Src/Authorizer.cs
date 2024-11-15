@@ -14,7 +14,7 @@ namespace EmotivUnityPlugin
         private CortexClient _ctxClient = CortexClient.Instance;
         private static string _cortexToken = "";
         private static string _emotivId = "";
-        private static string _licenseID = "";
+        private string _licenseID = "";
         private static int _debitNo = 5000; // default value
 
         /// <summary>
@@ -44,6 +44,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<string>  UserLogoutNotify;
 
         public static Authorizer Instance { get; } = new Authorizer();
+        public string LicenseID { get => _licenseID; set => _licenseID = value; }
 
         public Authorizer()
         {
@@ -391,37 +392,34 @@ namespace EmotivUnityPlugin
                 UnityEngine.Debug.Log("Refresh token for next using.");
                 // genereate new token
                 _ctxClient.GenerateNewToken(tokenInfo.CortexToken);
-            } else {
+            } 
+            else {
 
-                
-                bool checkEmotivAppRequire = true; // require to check emotiv apps installed or not
-                #if UNITY_EDITOR
-                    checkEmotivAppRequire = false;
-                #endif
-                // check EmotivApp has installed
-                if (Utils.CheckEmotivAppInstalled(Config.EmotivAppsPath, checkEmotivAppRequire)) {
+                // for embedded cortex lib need to call login 
+                UnityEngine.Debug.Log("No emotiv user login.");
+                #if UNITY_ANDROID || UNITY_IOS
+                    UnityEngine.Debug.Log("Should call login for embedded cortex lib " + loginData.EmotivId);
                     ConnectServiceStateChanged(this, ConnectToCortexStates.Login_notYet);
-                }
-                else {
-                    // EMOTIVApp not found
-                    ConnectServiceStateChanged(this, ConnectToCortexStates.EmotivApp_NotFound);
-                }
-                // start waiting user login
-                SetWaitUserLoginTimer();
-                _waitUserLoginTimer.Start();
-                
-                UnityEngine.Debug.Log("You must login via EMOTIV Launcher before working with Cortex");
-            }            
-        }
-
-        /// <summary>
-        /// Start opening a websocket client to work with Emotiv cortex service. 
-        /// </summary>
-        public void StartAction(string licenseID ="")
-        {
-            if (!string.IsNullOrEmpty(licenseID))
-                _licenseID = licenseID;
-            _ctxClient.Open();
+                #else
+                    bool checkEmotivAppRequire = true; // require to check emotiv apps installed or not
+                    #if UNITY_EDITOR
+                        checkEmotivAppRequire = false;
+                    #endif
+                    // check EmotivApp has installed
+                    if (Utils.CheckEmotivAppInstalled(Config.EmotivAppsPath, checkEmotivAppRequire)) {
+                        ConnectServiceStateChanged(this, ConnectToCortexStates.Login_notYet);
+                    }
+                    else {
+                        // EMOTIVApp not found
+                        ConnectServiceStateChanged(this, ConnectToCortexStates.EmotivApp_NotFound);
+                    }
+                    // start waiting user login
+                    SetWaitUserLoginTimer();
+                    _waitUserLoginTimer.Start();
+                    
+                    UnityEngine.Debug.Log("You must login via EMOTIV Launcher before working with Cortex");
+                #endif
+            }           
         }
     }
 }

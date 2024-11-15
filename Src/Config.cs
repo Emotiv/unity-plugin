@@ -13,7 +13,7 @@
         public static string AppClientId            = "";
         public static string AppClientSecret        = "";
 
-         public static string AppUrl                 = "wss://localhost:6868"; // default
+         public static string AppUrl                 = "wss://localhost:7070"; // default
         public static string AppVersion             = "1.0.0"; // default
         public static string AppName                = "UnityApp"; // default app name
         
@@ -72,6 +72,7 @@
         public const int UserLoginOnAnotherOsUser = 16;
         public const int EULAAccepted             = 17;
         public const int StreamWritingClosed      = 18;
+        public const int CortexIsReady            = 23;
         public const int HeadsetWrongInformation  = 100;
         public const int HeadsetCannotConnected   = 101;
         public const int HeadsetConnectingTimeout = 102;

@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -383,14 +383,12 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Start authorizing process. 
         /// </summary>
-        public void StartAuthorize(string licenseID = "")
+        public void StartAuthorize(string licenseID = "", object context = null)
         {
             UnityEngine.Debug.Log("DataStreamProcess: Start...");
+            _authorizer.LicenseID = licenseID; 
             // Init websocket client
-            _ctxClient.InitWebSocketClient();
-
-            // Start connecting to cortex service
-            _authorizer.StartAction(licenseID);
+            _ctxClient.Init(context);
         }
 
         /// <summary>
@@ -441,9 +439,9 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Force close websocket client. 
         /// </summary>
-        public void ForceCloseWebsocket()
+        public void CloseCortexClient()
         {
-            _ctxClient.ForceCloseWSC();
+            _ctxClient.Close();
         }
 
         /// <summary>
