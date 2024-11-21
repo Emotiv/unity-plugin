@@ -35,7 +35,7 @@ namespace EmotivUnityPlugin
 {
     public abstract class CortexClient
     {
-        protected Dictionary<int, string> _methodForRequestId;
+        protected Dictionary<int, string> _methodForRequestId = new Dictionary<int, string>();
 
         static readonly object _locker = new object();
 
@@ -43,7 +43,7 @@ namespace EmotivUnityPlugin
         /// Unique id for each request
         /// </summary>
         /// <remarks>The id will be reset to 0 when reach to 100</remarks>
-        protected int _nextRequestId;
+        protected int _nextRequestId = 1;
         
         public AutoResetEvent m_MessageReceiveEvent = new AutoResetEvent(false);
         public AutoResetEvent m_OpenedEvent = new AutoResetEvent(false);
@@ -133,16 +133,12 @@ namespace EmotivUnityPlugin
             // add to dictionary, replace if a key is existed
             _methodForRequestId[_nextRequestId] = method;
 
-            if (_nextRequestId > 100) {
-                _nextRequestId = 1;
-            }
-            else
-                _nextRequestId++;
-                
+            _nextRequestId++;
+
             return request.ToString();
         }
 
-        protected void OnWSConnected(bool isConnected)
+        public void OnWSConnected(bool isConnected)
         {
             WSConnectDone(this, isConnected);
         }
@@ -152,7 +148,6 @@ namespace EmotivUnityPlugin
         /// </summary> 
         public void OnMessageReceived(string receievedMsg)
         {
-            // string receievedMsg = "";//e.Message;
             UnityEngine.Debug.Log("OnMessageReceived " + receievedMsg);
 
             JObject response = JObject.Parse(receievedMsg);
@@ -164,7 +159,11 @@ namespace EmotivUnityPlugin
                 {
                     int id = (int)response["id"];
                     method = _methodForRequestId[id];
-                    _methodForRequestId.Remove(id);
+                    bool remove_res = _methodForRequestId.Remove(id);
+                    if (!remove_res)
+                    {
+                        UnityEngine.Debug.Log("qCannot remove key " + id + " method:" + method);
+                    }
                 }
                 
                 
@@ -188,7 +187,8 @@ namespace EmotivUnityPlugin
                         if ((int)attentionObj["code"] == WarningCode.BTLEPermissionNotGranted) {
                             btlePermisionGranted = false;
                         }
-                        BTLEPermissionGrantedNotify(this, btlePermisionGranted);
+                        UnityEngine.Debug.Log("BTLEPermissionGrantedNotify: " + btlePermisionGranted);
+                        // BTLEPermissionGrantedNotify(this, btlePermisionGranted);
                     }
                 }
             }
@@ -284,6 +284,14 @@ namespace EmotivUnityPlugin
                         }
                     }
                 }
+                GetUserLoginDone(this, loginData);
+            }
+            else if (method == "login")
+            {
+                UserDataInfo loginData = new UserDataInfo();
+                loginData.EmotivId = data["username"].ToString();
+                String message = data["message"].ToString();
+                UnityEngine.Debug.Log("login message: " + message);
                 GetUserLoginDone(this, loginData);
             }
             else if (method == "hasAccessRight")
@@ -547,7 +555,8 @@ namespace EmotivUnityPlugin
             if (!String.IsNullOrEmpty(licenseID)) {
                 param.Add("license", licenseID);
             }
-            param.Add("debit", debitNumber);
+            if (debitNumber > 0)
+                param.Add("debit", debitNumber);
             SendTextMessage(param, "authorize", true);
         }
         // get license information
@@ -570,6 +579,8 @@ namespace EmotivUnityPlugin
         public void Login (string username, string password)
         {
             JObject param = new JObject(
+                    new JProperty("clientId", Config.AppClientId),
+                    new JProperty("clientSecret", Config.AppClientSecret),
                     new JProperty("username", username),
                     new JProperty("password", password)
                 );
@@ -601,7 +612,7 @@ namespace EmotivUnityPlugin
             if (!String.IsNullOrEmpty(headsetId)) {
                 param.Add("id", headsetId);
             }
-            SendTextMessage(param, "queryHeadsets", false);
+            SendTextMessage(param, "queryHeadsets", true);
         }
 
         // controlDevice

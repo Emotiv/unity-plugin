@@ -3,6 +3,7 @@ using System.Threading;
 using System.Collections;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
+using ModestTree;
 
 namespace EmotivUnityPlugin
 {
@@ -11,7 +12,7 @@ namespace EmotivUnityPlugin
     /// </summary>
     public class DataStreamManager
     {
-        static DataStreamProcess _dsProcess = new DataStreamProcess();
+        private DataStreamProcess _dsProcess = DataStreamProcess.Instance;
         static readonly object _locker = new object();
         
         /// <summary>
@@ -72,6 +73,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<SysEventArgs> SysEventsReceived;  // System events for training
 
         public event EventHandler<string> HeadsetScanFinished;
+        public event EventHandler<string> MessageQueryHeadsetOK;
 
         private DataStreamManager()
         {
@@ -186,9 +188,12 @@ namespace EmotivUnityPlugin
                         // create session
                         _dsProcess.CreateSession(headsetId, true);
                     }
-                    strOut += (headset.HeadsetID + "-" + headset.HeadsetConnection + "-" + headset.Status + "; ");
+                    strOut += headset.HeadsetID + "-" + headset.HeadsetConnection + "-" + headset.Status + "; ";
                 }
-                //UnityEngine.Debug.Log("DataStreamManager-OnQueryHeadsetOK: " + strOut);
+                UnityEngine.Debug.Log("DataStreamManager-OnQueryHeadsetOK: " + strOut);
+                if (strOut.IsEmpty())
+                    strOut = "No headset available at "  + DateTime.Now.ToString("HH:mm:ss");
+                MessageQueryHeadsetOK(this, strOut);
             }
         }
 
@@ -212,6 +217,10 @@ namespace EmotivUnityPlugin
                     _isSessActivated    = true;
                     _readyCreateSession = false;
                     SessionActivatedOK(this, _wantedHeadsetId);
+
+                    // stop query headset if session is created
+                    _dsProcess.StopQueryHeadset();
+
                     // subscribe data
                     _dsProcess.SubscribeData();
                 }
@@ -522,8 +531,8 @@ namespace EmotivUnityPlugin
         /// <param name="appVersion">Application version.</param>
         /// <param name="appName">Application name.</param>
         /// <param name="tmpAppDataDir">Name of temp application data directory where will keep logs and user data .</param>
-        public void SetAppConfig(string clientId, string clientSecret, 
-                                 string appVersion="", string appName="", string tmpAppDataDir="",
+        public void SetAppConfig(string clientId, string clientSecret,
+                                 string appVersion="", string appName="", string userName = "", string password = "", string tmpAppDataDir="",
                                  string appUrl = "", string emotivAppsPath = "") 
         {
             if (string.IsNullOrEmpty(clientId)) {
@@ -538,6 +547,8 @@ namespace EmotivUnityPlugin
 
             Config.AppClientId      = clientId;
             Config.AppClientSecret  = clientSecret;
+            Config.UserName         = userName;
+            Config.Password         = password;
 
             if (!string.IsNullOrEmpty(appVersion))
                 Config.AppVersion       = appVersion;
@@ -560,11 +571,11 @@ namespace EmotivUnityPlugin
         {
             lock (_locker)
             {
-                if (!string.IsNullOrEmpty(_wantedHeadsetId)) {
-                    UnityEngine.Debug.Log("The data streams has already started for headset "
-                                        + _wantedHeadsetId + ". Please wait...");
-                    return;
-                }
+                // if (!string.IsNullOrEmpty(_wantedHeadsetId)) {
+                //     UnityEngine.Debug.Log("The data streams has already started for headset "
+                //                         + _wantedHeadsetId + ". Please wait...");
+                //     return;
+                // }
 
                 if (string.IsNullOrEmpty(headsetId)) {
                     if (_detectedHeadsets.Count > 0) {
@@ -573,6 +584,8 @@ namespace EmotivUnityPlugin
                     }
                     else {
                         UnityEngine.Debug.LogError("No headset available.");
+                        // query headset
+                        // _dsProcess.QueryHeadsets("");
                         return;
                     }
 
@@ -599,14 +612,14 @@ namespace EmotivUnityPlugin
                     _dsProcess.AddStreams(curStream);
                 }
                 // check headset connected
-                if (isConnectedHeadset(_wantedHeadsetId)) {
+                if (!isConnectedHeadset(_wantedHeadsetId)) {
+                    _readyCreateSession = true;
+                    _dsProcess.StartConnectToDevice(_wantedHeadsetId);
+                }  
+                else if (!_isSessActivated) {
                     UnityEngine.Debug.Log("The headset " + _wantedHeadsetId + " has already connected. Start creating session.");
                     _readyCreateSession = false;
                     _dsProcess.CreateSession(_wantedHeadsetId, true);
-                }
-                else {
-                    _readyCreateSession = true;
-                    _dsProcess.StartConnectToDevice(_wantedHeadsetId);
                 }
             }
         }

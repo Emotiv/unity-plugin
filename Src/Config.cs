@@ -30,6 +30,9 @@
         public static int TIME_CLOSE_STREAMS        = 1000;
         public static int RETRY_CORTEXSERVICE_TIME  = 5000;
         public static int WAIT_USERLOGIN_TIME       = 5000;
+
+        public static string UserName            = "";
+        public static string Password            = "";
         
         // If you use an Epoc Flex headset, then you must put your configuration here
         // TODO: need detail here

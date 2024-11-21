@@ -132,9 +132,11 @@ namespace EmotivUnityPlugin
         private void OnWSConnectDone(object sender, bool isConnected)
         {
             if (isConnected) {
-                UnityEngine.Debug.Log("Websocket is opened.");
-                // get user login
-                _ctxClient.GetUserLogin();
+                #if UNITY_ANDROID || UNITY_IOS
+                    UnityEngine.Debug.Log("Embedded cortex lib is started.");
+                #else
+                    UnityEngine.Debug.Log("Websocket is opened.");
+                #endif
                 ConnectServiceStateChanged(this, ConnectToCortexStates.Login_waiting);
             } else {
                 lock(_locker)
@@ -165,12 +167,15 @@ namespace EmotivUnityPlugin
                     tokenInfo.EmotivId  = _emotivId;
                     _cortexToken        = cortexToken;
                 }
-                // save token
-                SaveToken(tokenInfo);
 
-                // Save App version
-                Utils.SaveAppVersion(Config.AppVersion);
-                
+                // do not save token for mobile platform
+                #if !UNITY_ANDROID && !UNITY_IOS
+                    UnityEngine.Debug.Log("Save token for next using.");
+                    // Save App version
+                    Utils.SaveAppVersion(Config.AppVersion);
+                    SaveToken(tokenInfo);
+                #endif
+
                 // get license information
                 _ctxClient.GetLicenseInfo(cortexToken);
             } else {
@@ -363,6 +368,12 @@ namespace EmotivUnityPlugin
                 // notify change sate
                 ConnectServiceStateChanged(this, ConnectToCortexStates.Authorizing);
 
+                #if UNITY_ANDROID || UNITY_IOS
+                    // for embedded cortex lib need to call check request access 
+                    _ctxClient.Authorize(_licenseID, _debitNo);
+                    return;
+                #endif
+
                 // If app version different saved app version
                 if (!Utils.IsSameAppVersion(Config.AppVersion)) {
                     // re authorize again
@@ -396,10 +407,11 @@ namespace EmotivUnityPlugin
             else {
 
                 // for embedded cortex lib need to call login 
-                UnityEngine.Debug.Log("No emotiv user login.");
                 #if UNITY_ANDROID || UNITY_IOS
-                    UnityEngine.Debug.Log("Should call login for embedded cortex lib " + loginData.EmotivId);
+                    UnityEngine.Debug.Log("No emotiv user login. Need to call login for username " + Config.UserName);
                     ConnectServiceStateChanged(this, ConnectToCortexStates.Login_notYet);
+                    _ctxClient.Login(Config.UserName, Config.Password);
+
                 #else
                     bool checkEmotivAppRequire = true; // require to check emotiv apps installed or not
                     #if UNITY_EDITOR

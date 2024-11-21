@@ -63,15 +63,15 @@ namespace EmotivUnityPlugin
         }
 
         // Init
-        public void Init(string clientId, string clientSecret, string appName, 
-                         string appVersion = "", bool isDataBufferUsing = true, object context = null)
+        public void Init(string clientId, string clientSecret, string appName,
+                         string appVersion = "", string username = "", string password = "", bool isDataBufferUsing = true, object context = null)
         {
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
                 UnityEngine.Debug.LogError("The clientId or clientSecret is empty. Please fill them before starting.");
                 return;
             }
-            _dsManager.SetAppConfig(clientId, clientSecret, appVersion, appName);
+            _dsManager.SetAppConfig(clientId, clientSecret, appVersion, appName, username, password);
             _dsManager.IsDataBufferUsing = isDataBufferUsing;
             // init bcitraining
             _bciTraining.Init();
@@ -89,6 +89,7 @@ namespace EmotivUnityPlugin
                 _dsManager.PerfDataReceived += OnPerfDataReceived;
                 _dsManager.BandPowerDataReceived += OnBandPowerDataReceived;
                 _dsManager.InformSuccessSubscribedData += OnInformSuccessSubscribedData;
+                _dsManager.MessageQueryHeadsetOK +=OnMessageQueryHeadsetOK;
 
             }
 
@@ -124,6 +125,24 @@ namespace EmotivUnityPlugin
             _isAuthorizedOK = false;
             _isProfileLoaded = false;
             _workingHeadsetId = "";
+        }
+
+
+        // login
+        public void Login(string username = "", string password = "")
+        {
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+                // login with config username and password
+                _ctxClient.Login(AppConfig.UserName, AppConfig.Password);
+            }
+            else {
+                _ctxClient.Login(username, password);
+            }
+        }
+
+        public void QueryHeadsets(string headsetId = "") {
+            _dsManager.QueryHeadsets(headsetId);
         }
 
         /// <summary>
@@ -509,6 +528,10 @@ namespace EmotivUnityPlugin
                 + ", type: " + markerObj["type"].ToString() + ", started at: " + markerObj["startDatetime"].ToString();
         }
 
+        private void OnMessageQueryHeadsetOK(object sender, string headsetsInfo)
+        {
+            _messageLog = headsetsInfo;
+        }
         private void OnInformSuccessSubscribedData(object sender, List<string> successStreams)
         {
             string tmpText = "The streams: ";
@@ -527,6 +550,7 @@ namespace EmotivUnityPlugin
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }
+            _messageLog = dataText;
             // print out data to console
             UnityEngine.Debug.Log(dataText);
         }
@@ -537,6 +561,7 @@ namespace EmotivUnityPlugin
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }
+            _messageLog = dataText;
             // print out data to console
             UnityEngine.Debug.Log(dataText);
         }
@@ -547,6 +572,7 @@ namespace EmotivUnityPlugin
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }
+            _messageLog = dataText;
             // print out data to console
             UnityEngine.Debug.Log(dataText);
         }
@@ -557,6 +583,7 @@ namespace EmotivUnityPlugin
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }
+            _messageLog = dataText;
             // print out data to console
             UnityEngine.Debug.Log(dataText);
         }
@@ -567,6 +594,7 @@ namespace EmotivUnityPlugin
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }
+            _messageLog = dataText;
             // print out data to console
             UnityEngine.Debug.Log(dataText);
         }

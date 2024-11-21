@@ -59,13 +59,9 @@ namespace EmotivUnityPlugin
         // override the init method
         public override void Init(object context = null)
         {
-            _nextRequestId = 1;
             _wSC = new WebSocket(Config.AppUrl);
             // Since Emotiv Cortex 3.7.0, the supported SSL Protocol will be TLS1.2 or later
             _wSC.Security.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
-
-            _methodForRequestId = new Dictionary<int, string>();
-
             _wSC.Opened += new EventHandler(WebSocketClient_Opened);
             _wSC.Error  += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>(WebSocketClient_Error);
             _wSC.Closed += WebSocketClient_Closed;

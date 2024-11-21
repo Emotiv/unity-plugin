@@ -34,6 +34,8 @@ namespace EmotivUnityPlugin
         public event EventHandler<DateTime> LicenseExpired;             // inform license expired
         public event EventHandler<DateTime> LicenseValidTo;             // inform license valid to date
 
+        public static DataStreamProcess Instance { get; } = new DataStreamProcess();
+        
         // notify headset connecting status
         public event EventHandler<HeadsetConnectEventArgs> HeadsetConnectNotify
         {
@@ -119,7 +121,7 @@ namespace EmotivUnityPlugin
         {
             UnityEngine.Debug.Log("OnConnectServiceStateChanged: " + state);
             if (state == ConnectToCortexStates.Service_connecting) {
-                StopQueryHeadset();
+                // StopQueryHeadset();
                 // TODO: should check change state at Connect headset controllers
             }
 
@@ -135,7 +137,7 @@ namespace EmotivUnityPlugin
         {
             LicenseValidTo(this, lic.validTo);
             // auto scan headset
-            _headsetFinder.FinderInit();
+            // _headsetFinder.FinderInit();
         }
 
         private void OnStreamStopNotify(object sender, string sessionId)

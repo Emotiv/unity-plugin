@@ -47,10 +47,10 @@ namespace EmotivUnityPlugin
             EmbeddedCortexClient.Instance.OnMessageReceived(msg);
         }
 
-        void onCortexLibStart() {
+        void onCortexStarted() {
             Debug.Log("Cortex Lib Started");
             // Start your timer or perform other initialization
-            // EmbeddedCortexClient.Instance.OnCortexLibStarted();
+            EmbeddedCortexClient.Instance.OnWSConnected(true);
         }
     }
     #endif
@@ -73,12 +73,11 @@ namespace EmotivUnityPlugin
         // override the init method
         public override void Init(object context = null)
         {
-            _nextRequestId = 1;
-            _methodForRequestId = new Dictionary<int, string>();
 
             #if UNITY_ANDROID
-            if (context is AndroidJavaObject application)
+            if (context is AndroidJavaObject activity)
             {
+                AndroidJavaObject application = activity.Call<AndroidJavaObject>("getApplication");
                 LoadCortexLibAndroid(application);
             }
             else
@@ -93,10 +92,6 @@ namespace EmotivUnityPlugin
         public override void Close()
         {
             // TODO
-        }
-
-        public void OnCortexLibStarted() {
-            OnWSConnected(true);
         }
 
         #if UNITY_ANDROID
@@ -124,6 +119,7 @@ namespace EmotivUnityPlugin
         public override void SendTextMessage(JObject param, string method, bool hasParam = true)
         {
             string request = PrepareRequest(method, param, hasParam);
+            // UnityEngine.Debug.Log("SendTextMessage: " + request);
             _cortexLibManager.Call("sendRequest", request);
         }
     }
