@@ -45,6 +45,10 @@ public class CortexLibActivity implements CortexLibInterface {
         }
     }
 
+    public void stop() {
+        CortexLibManager.stop();
+    }
+
     public void sendRequest(String contentRequest) {
         if (mCortexConnection != null) {
             mCortexConnection.sendRequest(contentRequest);

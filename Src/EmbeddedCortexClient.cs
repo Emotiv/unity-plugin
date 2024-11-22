@@ -41,9 +41,7 @@ namespace EmotivUnityPlugin
         public CortexLibInterfaceProxy() : base("com.emotiv.unityplugin.CortexConnectionInterface") { }
 
         void onReceivedMessage(String msg) {
-            Debug.Log("onReceivedMessage: " + msg);
             // Handle the callback in Unity
-            // convert string to json object
             EmbeddedCortexClient.Instance.OnMessageReceived(msg);
         }
 
@@ -56,7 +54,7 @@ namespace EmotivUnityPlugin
     #endif
 
     /// <summary>
-    /// Represents a simple client for the Cortex service.
+    /// Represents a Client that connects with embedded CortexLib
     /// </summary>
     public class EmbeddedCortexClient : CortexClient
     {
@@ -91,7 +89,13 @@ namespace EmotivUnityPlugin
         // override the close method
         public override void Close()
         {
-            // TODO
+            // stop the cortex lib
+            #if UNITY_ANDROID
+            if (_cortexLibManager != null)
+            {
+                _cortexLibManager.Call("stop");
+            }
+            #endif
         }
 
         #if UNITY_ANDROID

@@ -103,7 +103,8 @@ namespace EmotivUnityPlugin
             _recordMgr.informStopRecordResult += OnInformStopRecordResult;
 
             // bci training
-            _bciTraining.InformLoadUnLoadProfileDone += OnInformLoadUnLoadProfileDone;
+            _bciTraining.InformLoadProfileDone += OnInformLoadProfileDone;
+            _bciTraining.InformUnLoadProfileDone += OnInformUnLoadProfileDone;
             // get error message
             _ctxClient.ErrorMsgReceived             += MessageErrorRecieved;
         }
@@ -490,16 +491,17 @@ namespace EmotivUnityPlugin
             _messageLog = "A session working with " + headsetId + " is activated successfully.";
         }
 
-        private void OnInformLoadUnLoadProfileDone(object sender, bool isProfileLoaded)
+        private void OnInformLoadProfileDone(object sender, string profileName)
         {
-            _isProfileLoaded = isProfileLoaded;
-            if (isProfileLoaded)
-            {
-                _messageLog = "The profile is loaded successfully.";
-            }
-            else {
-                _messageLog = "The profile is unloaded successfully.";
-            }
+            _messageLog = "The profile "+ profileName + " is loaded successfully.";
+            _isProfileLoaded = true;
+            
+        }
+
+        private void OnInformUnLoadProfileDone(object sender, string profileName)
+        {
+            _messageLog = "The profile " + profileName + " is unloaded successfully.";
+            _isProfileLoaded = false;
         }
 
         private void OnInformStartRecordResult(object sender, Record record)

@@ -345,10 +345,11 @@ namespace EmotivUnityPlugin
         private void OnUserLoginNotify(object sender, string message)
         {
             // stop wait user login
-            if (_waitUserLoginTimer!= null &&  _waitUserLoginTimer.Enabled)
+            if (_waitUserLoginTimer!= null &&  _waitUserLoginTimer.Enabled) {
+                UnityEngine.Debug.Log("User has logged in. Stop waiting user login.");
                 _waitUserLoginTimer.Stop();
-            // retry get user login
-            _ctxClient.GetUserLogin();
+                _ctxClient.GetUserLogin();
+            }
         }
 
         private void OnGetUserLoginDone(object sender, UserDataInfo loginData)

@@ -22,7 +22,8 @@ namespace EmotivUnityPlugin
 
 
         // event
-        public event EventHandler<bool> InformLoadUnLoadProfileDone;
+        public event EventHandler<string> InformLoadProfileDone;
+        public event EventHandler<string> InformUnLoadProfileDone;
 
         /// <summary>
         /// all profiles of user.
@@ -172,9 +173,9 @@ namespace EmotivUnityPlugin
         {
             UnityEngine.Debug.Log("OnProfileUnLoaded");
             // TODO: verify unload is for current profile
+            InformUnLoadProfileDone(this, _wantedProfileName);
             _workingHeadsetId = "";
             _wantedProfileName = "";
-            InformLoadUnLoadProfileDone(this, false);
         }
         private void OnGetCurrentProfileDone(object sender, JObject data)
         {
@@ -195,7 +196,7 @@ namespace EmotivUnityPlugin
                 }
                 else if (loadByThisApp)
                 {
-                    InformLoadUnLoadProfileDone(this, true);
+                    InformLoadProfileDone(this, name);
                 }
                 else
                 {
@@ -210,7 +211,7 @@ namespace EmotivUnityPlugin
 
             if (profileName == _wantedProfileName)
             {
-                InformLoadUnLoadProfileDone(this, true);
+                InformLoadProfileDone(this, profileName);
             }
             else
             {
