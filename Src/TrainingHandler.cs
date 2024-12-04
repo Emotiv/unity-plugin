@@ -48,6 +48,11 @@ namespace EmotivUnityPlugin
             add { _ctxClient.GetCurrentProfileDone += value; }
             remove { _ctxClient.GetCurrentProfileDone -= value; }
         }
+        public event EventHandler<bool> SetMentalCommandActionSensitivityOK
+        {
+            add { _ctxClient.SetMentalCommandActionSensitivityOK += value; }
+            remove { _ctxClient.SetMentalCommandActionSensitivityOK -= value; }
+        }
 
         public event EventHandler<DetectionInfo> GetDetectionInfoOK;
 
@@ -173,6 +178,14 @@ namespace EmotivUnityPlugin
         {
             string cortexToken = _authorizer.CortexToken;
             _ctxClient.SetupProfile(cortexToken, profileName, "save", headsetId);
+        }
+
+        // set mental command sensitivity
+        public void SetMentalCommandSensitivity(string profileName, List<int> levels)
+        {
+            string cortexToken = _authorizer.CortexToken;
+            string sessionId    = _sessionHandler.SessionId;
+            _ctxClient.MentalCommandActionSensitivity(cortexToken, "set", sessionId, profileName, levels);
         }
     }
 }

@@ -25,6 +25,12 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> InformLoadProfileDone;
         public event EventHandler<string> InformUnLoadProfileDone;
 
+        public event EventHandler<bool> SetMentalCommandActionSensitivityOK
+        {
+            add { _trainingHandler.SetMentalCommandActionSensitivityOK += value; }
+            remove { _trainingHandler.SetMentalCommandActionSensitivityOK -= value; }
+        }
+
         /// <summary>
         /// all profiles of user.
         /// </summary>
@@ -166,6 +172,13 @@ namespace EmotivUnityPlugin
         public void ResetTraining(string action, string detection)
         {
             _trainingHandler.DoTraining(action, "reset", detection);
+        }
+
+
+        // Set sensitivity for mental command
+        public void SetMentalCommandActionSensitivity(string profileName, List<int> levels)
+        {
+            _trainingHandler.SetMentalCommandSensitivity( profileName, levels);
         }
 
         // Event handers

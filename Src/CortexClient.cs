@@ -91,6 +91,8 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> SessionClosedNotify;
         public event EventHandler<string> RefreshTokenOK;
         public event EventHandler<string> HeadsetScanFinished;
+        public event EventHandler<List<int>> GetMentalCommandActionSensitivityOK;
+        public event EventHandler<bool> SetMentalCommandActionSensitivityOK;
 
         public event EventHandler<bool> BTLEPermissionGrantedNotify; // notify btle permision grant status
         
@@ -452,6 +454,20 @@ namespace EmotivUnityPlugin
             else if (method == "getTrainingTime")
             {
                 GetTrainingTimeDone(this, (double)data["time"]);
+            }
+            else if (method  == "mentalCommandActionSensitivity") {
+                // check data is array or string
+                if (data.Type == JTokenType.Array) {
+                    JArray dataList = (JArray)data;
+                    List<int> sensitivityList = new List<int>();
+                    foreach (int val in dataList) {
+                        sensitivityList.Add(val);
+                    }
+                    GetMentalCommandActionSensitivityOK(this, sensitivityList);
+                }
+                else {
+                    SetMentalCommandActionSensitivityOK(this, true);
+                }
             }
         }
 
@@ -862,6 +878,21 @@ namespace EmotivUnityPlugin
             param.Add("action", action);
 
             SendTextMessage(param, "training", true);
+        }
+
+        public void MentalCommandActionSensitivity (string cortexToken, string status, string sessionId, string profileName, List<int> values)
+        {
+            JObject param = new JObject();
+            param.Add("session", sessionId);
+            param.Add("cortexToken", cortexToken);
+            param.Add("status", status);
+            param.Add("profile", profileName);
+            JArray valuesArr = new JArray();
+            foreach (int ele in values){
+                valuesArr.Add(ele);
+            }
+            param.Add("values", valuesArr);
+            SendTextMessage(param, "mentalCommandActionSensitivity", true);
         }
     }
 }
