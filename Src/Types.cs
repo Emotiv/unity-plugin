@@ -47,7 +47,7 @@ namespace EmotivUnityPlugin
 
         CHAN_COUNTER,       CHAN_INTERPOLATED, CHAN_RAW_CQ,      CHAN_CQ_OVERALL ,  CHAN_MARKER, CHAN_MARKER_HARDWARE,
         CHAN_TIME_SYSTEM,   CHAN_MARKER_RANGE, CHAN_MARKER_TYPE, CHAN_MARKER_TITLE, CHAN_RESERVED,
-        CHAN_FLEX_HIGH_BIT, CHAN_BATTERY, CHAN_SIGNAL_STRENGTH, CHAN_BATTERY_PERCENT, CHAN_UNKNOWN,
+        CHAN_FLEX_HIGH_BIT, CHAN_BATTERY, CHAN_SIGNAL_STRENGTH, CHAN_BATTERY_PERCENT, CHAN_BATTERY_LEFT_PERCENT, CHAN_BATTERY_RIGHT_PERCENT, CHAN_UNKNOWN,
 
         // Motion channels
         CHAN_COUNTER_MEMS, CHAN_INTERPOLATED_MEMS,
@@ -110,7 +110,10 @@ namespace EmotivUnityPlugin
             {Channel_t.CHAN_ACCX, "ACCX"},   {Channel_t.CHAN_ACCY, "ACCY"},   {Channel_t.CHAN_ACCZ, "ACCZ"},
             {Channel_t.CHAN_MAGX, "MAGX"},   {Channel_t.CHAN_MAGY, "MAGY"},   {Channel_t.CHAN_MAGZ, "MAGZ"},
 
-            {Channel_t.CHAN_BATTERY, "BATTERY"},
+            {Channel_t.CHAN_BATTERY, "Battery"},
+            {Channel_t.CHAN_BATTERY_PERCENT, "BatteryPercent"},
+            {Channel_t.CHAN_BATTERY_LEFT_PERCENT, "batteryLeftPercent"},
+            {Channel_t.CHAN_BATTERY_RIGHT_PERCENT, "batteryRightPercent"},
             {Channel_t.CHAN_RESERVED, "RESERVED"},
             {Channel_t.CHAN_MARKER, "MARKER"},
             {Channel_t.CHAN_MARKER_HARDWARE, "MARKER_HARDWARE"},
@@ -121,7 +124,7 @@ namespace EmotivUnityPlugin
 
         public static Channel_t StringToChannel(string chanStr) {
             foreach (KeyValuePair<Channel_t, string> kvp in list){
-                if (kvp.Value == chanStr){
+                if (kvp.Value.Equals(chanStr, StringComparison.OrdinalIgnoreCase)){
                     return kvp.Key;
                 }
             }
@@ -159,6 +162,7 @@ namespace EmotivUnityPlugin
         HEADSET_TYPE_EPOC_FLEX,
         HEADSET_TYPE_EPOC_X,
         HEADSET_TYPE_MN8,
+        HEADSET_TYPE_MW20,
         HEADSET_TYPE_XTRODE,
         HEADSET_TYPE_FLEX2
     };
@@ -207,6 +211,7 @@ namespace EmotivUnityPlugin
         public static string insight2   = "INSIGHT2";
         public static string epoc_x     = "EPOCX";
         public static string mn8        = "MN8";
+        public static string mw20       = "MW20";
         public static string epoc_flex  = "EPOCFLEX";
         public static string xtrode  = "BGX";
         public static string flex2  = "FLEX2";

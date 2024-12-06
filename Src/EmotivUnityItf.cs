@@ -19,7 +19,7 @@ namespace EmotivUnityPlugin
         public double batteryLeft = 0;
         public double batteryRight = 0;
         public double overallBattery = 0;
-        public bool isTwoSideBattery = false;
+        public bool isTwoSideBatteryType = false;
         public double batteryMaxLevel = 0;
     }
 
@@ -72,14 +72,6 @@ namespace EmotivUnityPlugin
         {
             return _dsManager.GetDetectedHeadsets();
         }
-
-
-        // is headset scanning
-        public bool IsHeadsetScanning()
-        {
-            return _dsManager.IsHeadsetScanning;
-        }
-
 
         // profile list
         public List<string> GetProfileList()
@@ -134,6 +126,7 @@ namespace EmotivUnityPlugin
             _dsManager.FacialExpReceived += OnFacialExpReceived;
             _dsManager.MentalCommandReceived += OnMentalCommandReceived;
             _dsManager.SysEventsReceived += OnSysEventsReceived;
+            _dsManager.HeadsetConnectFail += OnHeadsetConnectFail;
 
             // bind to record manager 
             _recordMgr.informMarkerResult += OnInformMarkerResult;
@@ -358,11 +351,16 @@ namespace EmotivUnityPlugin
         public BatteryInfo GetBattery()
         {
             BatteryInfo batteryInfo = new BatteryInfo();
-            batteryInfo.isTwoSideBattery = false; // TODO: Update for mw20
-            batteryInfo.batteryLeft = _dsManager.Battery();
-            batteryInfo.batteryRight = 0; // TODO : Update for mw20
-            batteryInfo.overallBattery = batteryInfo.batteryLeft; // TODO: Calculate later
-            batteryInfo.batteryMaxLevel = _dsManager.BatteryMax();
+            
+            batteryInfo.batteryLeft = _dsManager.BatteryLeft();
+            batteryInfo.batteryRight = _dsManager.BatteryRight();
+            batteryInfo.isTwoSideBatteryType = (batteryInfo.batteryLeft >= 0)  || (batteryInfo.batteryRight >= 0);
+            if  (batteryInfo.isTwoSideBatteryType) {
+                batteryInfo.overallBattery = Math.Min(batteryInfo.batteryLeft, batteryInfo.batteryRight);
+            }
+            else {
+                batteryInfo.overallBattery = _dsManager.Battery();
+            }
             return batteryInfo;
         }
 
@@ -559,6 +557,12 @@ namespace EmotivUnityPlugin
 
 
         // Event handlers
+
+        private void OnHeadsetConnectFail(object sender, string headsetId)
+        {
+            UnityEngine.Debug.Log("OnHeadsetConnectFail: headsetId " + headsetId);
+            _messageLog = "The headset " + headsetId + " is failed to connect.";
+        }
         private void OnLicenseValidTo(object sender, DateTime validTo)
         {
             UnityEngine.Debug.Log("OnLicenseValidTo: the license valid to " + Utils.ISODateTimeToString(validTo));

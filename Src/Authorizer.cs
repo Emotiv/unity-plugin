@@ -60,11 +60,23 @@ namespace EmotivUnityPlugin
             _ctxClient.EULANotAccepted          += OnEULANotAccepted;
             _ctxClient.RefreshTokenOK           += OnRefreshTokenOK;
             _ctxClient.GetLicenseInfoDone       += OnGetLicenseInfoDone;
+            _ctxClient.ErrorMsgReceived        += OnErrorMsgReceived;
         }
 
         private void OnEULANotAccepted(object sender, string message)
         {
             UnityEngine.Debug.Log("OnEULANotAccepted: " + message);
+        }
+
+        private void OnErrorMsgReceived(object sender, ErrorMsgEventArgs errorInfo) {
+            if (errorInfo.Code == ErrorCode.AuthorizeTokenError || errorInfo.Code == ErrorCode.LoginTokenError)
+            {
+                UnityEngine.Debug.LogError("OnErrorMsgReceived error: " + errorInfo.MessageError  + ". Need to re-login for user " + Config.UserName);
+                if (Config.UserName == "")
+                    return;
+                // logout user
+                _ctxClient.Logout(Config.UserName);
+            }
         }
 
         /// <summary>
@@ -411,6 +423,9 @@ namespace EmotivUnityPlugin
                 #if UNITY_ANDROID || UNITY_IOS
                     UnityEngine.Debug.Log("No emotiv user login. Need to call login for username " + Config.UserName);
                     ConnectServiceStateChanged(this, ConnectToCortexStates.Login_notYet);
+                    if (Config.UserName == "")
+                        return;
+                    
                     _ctxClient.Login(Config.UserName, Config.Password);
 
                 #else

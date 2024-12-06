@@ -18,7 +18,7 @@ namespace EmotivUnityPlugin
 
         double BATTERY_MAX = (double)BatteryLevel.LEVEL_4;
         bool _hasBatteryPercent = false; // has battery percentage range [0-100]. From Cortex v2.7.0, we add battery percentage to dev stream
-
+        bool _hasTwoSideBattery = false; // has two side battery level
         public double Battery
         {
             get {
@@ -26,6 +26,28 @@ namespace EmotivUnityPlugin
                     return GetContactQuality(Channel_t.CHAN_BATTERY_PERCENT);
                 else
                     return GetContactQuality(Channel_t.CHAN_BATTERY);
+            }
+        }
+
+        // left battery level
+        public double BatteryLeft
+        {
+            get {
+                if (_hasTwoSideBattery)
+                    return GetContactQuality(Channel_t.CHAN_BATTERY_LEFT_PERCENT);
+                else
+                    return -1;
+            }
+        }
+
+         // right battery level
+        public double BatteryRight
+        {
+            get {
+                if (_hasTwoSideBattery)
+                    return GetContactQuality(Channel_t.CHAN_BATTERY_RIGHT_PERCENT);
+                else
+                    return -1;
             }
         }
 
@@ -56,15 +78,23 @@ namespace EmotivUnityPlugin
             _devChannels.Add(Channel_t.CHAN_TIME_SYSTEM);
             _devChannels.Add(Channel_t.CHAN_BATTERY);
             _devChannels.Add(Channel_t.CHAN_SIGNAL_STRENGTH);
+            _hasTwoSideBattery = false;
+            _hasBatteryPercent = false;
             foreach(var item in devChannels){
                 string chanStr = item.ToString();
-
-                if (chanStr == "BatteryPercent") {
+                Channel_t chan = ChannelStringList.StringToChannel(chanStr);
+                if (chan == Channel_t.CHAN_BATTERY_PERCENT) {
                     _hasBatteryPercent = true;
-                    _devChannels.Add(Channel_t.CHAN_BATTERY_PERCENT);
                 }
-                else if (chanStr != "Battery" &&  chanStr != "Signal") { // added above
-                    _devChannels.Add(ChannelStringList.StringToChannel(chanStr));
+
+                if (chan == Channel_t.CHAN_BATTERY_LEFT_PERCENT || chan == Channel_t.CHAN_BATTERY_RIGHT_PERCENT) {
+                    _hasTwoSideBattery = true;
+                    _hasBatteryPercent = true;
+                }
+
+                // check chan is not Battery and Signal
+                if (chanStr != "Battery" &&  chanStr != "Signal") {
+                    _devChannels.Add(chan);
                 }
             }
         }

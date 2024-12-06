@@ -49,8 +49,6 @@ namespace EmotivUnityPlugin
         bool _isDataBufferUsing = true; // use data buffer to store subscribed data for eeg, pm, cq, eq, pow, motion
         List<Headset>  _detectedHeadsets = new List<Headset>(); // list of detected headsets
 
-        private bool _isHeadsetScanning = false;
-
         public event EventHandler<string> SessionActivatedOK;
         public event EventHandler<string> HeadsetConnectFail;
         public event EventHandler<DateTime> LicenseValidTo;
@@ -86,8 +84,6 @@ namespace EmotivUnityPlugin
         public static DataStreamManager Instance { get; } = new DataStreamManager();
         public bool IsDataBufferUsing { get => _isDataBufferUsing; set => _isDataBufferUsing = value; }
         public bool IsSessionCreated {get => _isSessActivated;}
-
-        public bool IsHeadsetScanning { get => _isHeadsetScanning;}
 
         private void Init()
         {
@@ -149,7 +145,6 @@ namespace EmotivUnityPlugin
                 _isSessActivated    = false;
                 _readyCreateSession = true;
                 _wantedHeadsetId    = "";
-                _isHeadsetScanning = false;
                 _detectedHeadsets.Clear();
                 ResetDataBuffers();
             }
@@ -165,7 +160,6 @@ namespace EmotivUnityPlugin
                 _isSessActivated    = false;
                 _readyCreateSession = true;
                 _wantedHeadsetId    = "";
-                _isHeadsetScanning = false;
                 _detectedHeadsets.Clear();
                 ResetDataBuffers();
             }
@@ -239,7 +233,12 @@ namespace EmotivUnityPlugin
 
         private void OnLicenseValidTo(object sender, DateTime validTo)
         {
+            if (!_isSessActivated) {
+                // start scanning headset again
+                _dsProcess.RefreshHeadset();
+            }
             LicenseValidTo(this, validTo);
+
         }
 
         private void OnStreamStopNotify(object sender, List<string> streams)
@@ -505,8 +504,11 @@ namespace EmotivUnityPlugin
         private void OnHeadsetScanFinished(object sender, string message)
         {
             UnityEngine.Debug.Log(message);
-            // Reset _isHeadsetScanning when get headset scan finished
-            _isHeadsetScanning = false;
+            if (!_isSessActivated) {
+                // start scanning headset again
+                UnityEngine.Debug.Log("Start scanning headset again.");
+                _dsProcess.RefreshHeadset();
+            }
         }
 
         /// <summary>
@@ -677,9 +679,28 @@ namespace EmotivUnityPlugin
         public double Battery()
         {
             if (_devBuff == null)
-                return -1;
+                return 0;
             else 
                 return _devBuff.Battery;
+        }
+
+        // battery left level
+        public double BatteryLeft()
+        {
+            if (_devBuff == null)
+                return 0;
+            else 
+                return _devBuff.BatteryLeft;
+        }
+
+
+        // battery right level
+        public double BatteryRight()
+        {
+            if (_devBuff == null)
+                return 0;
+            else 
+                return _devBuff.BatteryRight;
         }
 
         /// <summary>
@@ -963,15 +984,6 @@ namespace EmotivUnityPlugin
             {
                 return _wantedHeadsetId;
             }
-        }
-
-        /// <summary>
-        /// ScanHeadsets to trigger scan headsets from Cortex
-        /// </summary>
-        public void ScanHeadsets() {
-            UnityEngine.Debug.Log("Start scanning headset.");
-            _isHeadsetScanning = true;
-            _dsProcess.RefreshHeadset();
         }
     }
 }

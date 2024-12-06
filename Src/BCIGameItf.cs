@@ -49,14 +49,6 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Check if headset scanning.
-        /// </summary>
-        public bool IsHeadsetScanning()
-        {
-            return emotivUnityItf.IsHeadsetScanning();
-        }
-
-        /// <summary>
         /// Get log message.
         /// </summary>
         public string GetLogMessage()

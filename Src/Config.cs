@@ -85,6 +85,12 @@
         public const int HeadsetScanFinished      = 142;
     }
 
+    // error code
+    public static class ErrorCode {
+        public const int LoginTokenError = -32108;
+        public const int AuthorizeTokenError = -32109;
+    }
+
     public static class DevStreamParams
     {
         public const string battery = "Battery";

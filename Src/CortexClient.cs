@@ -296,6 +296,11 @@ namespace EmotivUnityPlugin
                 UnityEngine.Debug.Log("login message: " + message);
                 GetUserLoginDone(this, loginData);
             }
+            else if (method == "logout")
+            {
+                // get user login info
+                GetUserLogin();
+            }
             else if (method == "hasAccessRight")
             {
                 bool hasAccessRight = (bool)data["accessGranted"];
@@ -603,6 +608,14 @@ namespace EmotivUnityPlugin
             SendTextMessage(param, "login", true);
         }
 
+        // Logout
+        public void Logout(string username)
+        {
+            JObject param = new JObject(
+                    new JProperty("username", username)
+                );
+            SendTextMessage(param, "logout", true);
+        }
 
         // GetUserLogin
         public void GetUserLogin()
