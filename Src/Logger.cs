@@ -28,6 +28,8 @@ public class Logger : ILogHandler
         string logPath      = Utils.GetLogPath();
         string filePath     = Path.Combine(logPath, fileName);
 
+        UnityEngine.Debug.Log("Logger: Log file path: " + filePath);
+
         m_FileStream    = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
         m_StreamWriter  = new StreamWriter(m_FileStream);
         // Replace the default debug log handler

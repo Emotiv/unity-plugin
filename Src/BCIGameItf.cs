@@ -89,11 +89,19 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Check if training is completed.
+        /// Check if training is completed or not. It will falses when training started then it will be true when training is completed both success and fail.
         /// </summary>
         public bool IsTrainingCompleted()
         {
             return emotivUnityItf.IsMCTrainingCompleted;
+        }
+
+        /// <summary>
+        /// Check if training is success or fail. But it should check after training is completed.
+        /// </summary>
+        public bool IsTrainingSuccess()
+        {
+            return emotivUnityItf.IsMCTrainingSuccess;
         }
 
         /// <summary>

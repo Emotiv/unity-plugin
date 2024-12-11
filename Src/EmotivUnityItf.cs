@@ -42,6 +42,8 @@ namespace EmotivUnityPlugin
 
         bool _isMCTrainingCompleted = false;
 
+        bool _isMCTrainingSuccess = false;
+
         bool _isProfileLoaded = false;
         string _loadedProfileName = "";
 
@@ -66,6 +68,7 @@ namespace EmotivUnityPlugin
 
         public MentalComm LatestMentalCommand { get; private set; } = new MentalComm();
         public bool IsMCTrainingCompleted { get => _isMCTrainingCompleted; set => _isMCTrainingCompleted = value; }
+        public bool IsMCTrainingSuccess { get => _isMCTrainingSuccess; set => _isMCTrainingSuccess = value; }
 
         // get headset lists
         public List<Headset> GetDetectedHeadsets()
@@ -459,6 +462,7 @@ namespace EmotivUnityPlugin
                 _isAutoAcceptTraining = isAutoAccept;
                 _isAutoSaveProfile = isAutoSave;
                 _isMCTrainingCompleted = false;
+                _isMCTrainingSuccess = false;
                 _bciTraining.StartTraining(action, "mentalCommand");
             }
             else
@@ -697,13 +701,19 @@ namespace EmotivUnityPlugin
 
             if (_isAutoAcceptTraining && data.Detection == "mentalCommand")
             {
-                if (data.EventMessage == "MC_Succeeded" || data.EventMessage == "MC_Failed") {
+                if (data.EventMessage == "MC_Succeeded") {
                     AcceptMCTraining();
+                }
+                else if (data.EventMessage == "MC_Failed")
+                {
+                    _isMCTrainingCompleted = true;
+                    _isMCTrainingSuccess = false;
                 }
                 else if (data.EventMessage == "MC_Completed")
                 {
                     UnityEngine.Debug.Log("The training is completed.");
                     _isMCTrainingCompleted = true;
+                    _isMCTrainingSuccess = true;
                     if (_isAutoSaveProfile && _loadedProfileName != "")
                     {
                         SaveProfile(_loadedProfileName);

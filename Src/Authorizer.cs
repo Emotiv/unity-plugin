@@ -69,13 +69,27 @@ namespace EmotivUnityPlugin
         }
 
         private void OnErrorMsgReceived(object sender, ErrorMsgEventArgs errorInfo) {
-            if (errorInfo.Code == ErrorCode.AuthorizeTokenError || errorInfo.Code == ErrorCode.LoginTokenError)
+            if (errorInfo.Code == ErrorCode.AuthorizeTokenError || errorInfo.Code == ErrorCode.LoginTokenError || errorInfo.Code == ErrorCode.CloudTokenIsRefreshing)
             {
                 UnityEngine.Debug.LogError("OnErrorMsgReceived error: " + errorInfo.MessageError  + ". Need to re-login for user " + Config.UserName);
                 if (Config.UserName == "")
                     return;
                 // logout user
                 _ctxClient.Logout(Config.UserName);
+            }
+            else if (errorInfo.Code == ErrorCode.CloudTokenIsRefreshing && errorInfo.MethodName == "authorize")
+            {
+                if (Config.UserName != "") {
+                    UnityEngine.Debug.Log("OnErrorMsgReceived error: " + errorInfo.MessageError + ". Need logout and login again.");
+                    // logout user
+                    _ctxClient.Logout(Config.UserName);
+                }
+                else  {
+                    UnityEngine.Debug.Log("OnErrorMsgReceived error: " + errorInfo.MessageError + ". Need to authorize again after 3 seconds.");
+                    // wait 3 seconds to authorize again
+                    System.Threading.Thread.Sleep(3000);
+                    _ctxClient.Authorize(_licenseID, _debitNo);
+                }
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using UnityEngine;
 
 namespace EmotivUnityPlugin
 {
@@ -35,7 +36,8 @@ namespace EmotivUnityPlugin
         #elif UNITY_IOS
             // TODO
         #elif UNITY_ANDROID
-            // TODO
+            // return application data path on android
+            return Application.persistentDataPath;
         #else
             // TODO
             homePath = Directory.GetCurrentDirectory();

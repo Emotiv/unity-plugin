@@ -25,7 +25,7 @@
         public static string TmpVersionFileName     = "version.ini";
         public static string TmpDataFileName        = "data.dat";
         public static string ProfilesDir            = "Profiles";
-        public static string LogsDir                = "logs";
+        public static string LogsDir                = "UnityLogs";
         public static int QUERY_HEADSET_TIME        = 1000;
         public static int TIME_CLOSE_STREAMS        = 1000;
         public static int RETRY_CORTEXSERVICE_TIME  = 5000;
@@ -89,6 +89,7 @@
     public static class ErrorCode {
         public const int LoginTokenError = -32108;
         public const int AuthorizeTokenError = -32109;
+        public const int CloudTokenIsRefreshing = -32130;
     }
 
     public static class DevStreamParams
