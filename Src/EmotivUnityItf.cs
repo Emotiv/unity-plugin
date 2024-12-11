@@ -82,6 +82,12 @@ namespace EmotivUnityPlugin
             return _bciTraining.ProfileLists;
         }
 
+        // get connect state
+        public ConnectHeadsetStates GetConnectHeadsetState()
+        {
+            return _dsManager.ConnectHeadsetState;
+        }
+
         /// <summary>
         /// Set up App configuration.
         /// </summary>

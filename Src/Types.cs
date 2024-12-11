@@ -237,6 +237,13 @@ namespace EmotivUnityPlugin
         License_HardLimited
     }
 
+    public enum ConnectHeadsetStates : int {
+        No_Connect, 
+        Headset_Connecting, // start connecting to headset
+        Session_Created,
+        Session_Failed
+    }
+
     public class License
     {
         public License(JToken licObj) {

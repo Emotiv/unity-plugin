@@ -32,6 +32,12 @@ namespace EmotivUnityPlugin
             return emotivUnityItf.GetDetectedHeadsets();
         }
 
+        // connect headset state
+        public ConnectHeadsetStates GetConnectHeadsetState()
+        {
+            return emotivUnityItf.GetConnectHeadsetState();
+        }
+
         /// <summary>
         /// Check if authorized.
         /// </summary>

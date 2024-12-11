@@ -47,6 +47,9 @@ namespace EmotivUnityPlugin
         bool _isSessActivated    = false;
         bool _readyCreateSession = false;
         bool _isDataBufferUsing = true; // use data buffer to store subscribed data for eeg, pm, cq, eq, pow, motion
+
+        ConnectHeadsetStates _connectHeadsetState = ConnectHeadsetStates.No_Connect;
+
         List<Headset>  _detectedHeadsets = new List<Headset>(); // list of detected headsets
 
         public event EventHandler<string> SessionActivatedOK;
@@ -84,6 +87,7 @@ namespace EmotivUnityPlugin
         public static DataStreamManager Instance { get; } = new DataStreamManager();
         public bool IsDataBufferUsing { get => _isDataBufferUsing; set => _isDataBufferUsing = value; }
         public bool IsSessionCreated {get => _isSessActivated;}
+        public ConnectHeadsetStates ConnectHeadsetState { get => _connectHeadsetState; set => _connectHeadsetState = value; }
 
         private void Init()
         {
@@ -145,6 +149,7 @@ namespace EmotivUnityPlugin
                 _isSessActivated    = false;
                 _readyCreateSession = true;
                 _wantedHeadsetId    = "";
+                _connectHeadsetState = ConnectHeadsetStates.No_Connect;
                 _detectedHeadsets.Clear();
                 ResetDataBuffers();
             }
@@ -161,6 +166,7 @@ namespace EmotivUnityPlugin
                 _readyCreateSession = true;
                 _wantedHeadsetId    = "";
                 _detectedHeadsets.Clear();
+                _connectHeadsetState = ConnectHeadsetStates.No_Connect;
                 ResetDataBuffers();
             }
         }
@@ -198,6 +204,7 @@ namespace EmotivUnityPlugin
                 _wantedHeadsetId    = ""; // reset headset
                 _readyCreateSession = true;
                 _detectedHeadsets.Clear();
+                _connectHeadsetState = ConnectHeadsetStates.Session_Failed;
                 UnityEngine.Debug.Log("Create session unsuccessfully. Message " + errorMsg);
             }
         }
@@ -211,6 +218,8 @@ namespace EmotivUnityPlugin
                     _isSessActivated    = true;
                     _readyCreateSession = false;
                     SessionActivatedOK(this, _wantedHeadsetId);
+
+                    _connectHeadsetState = ConnectHeadsetStates.Session_Created;
 
                     // stop query headset if session is created
                     _dsProcess.StopQueryHeadset();
@@ -247,6 +256,8 @@ namespace EmotivUnityPlugin
             {
                 _wantedHeadsetId    = "" ; // reset headset
                 _readyCreateSession = true;
+                _connectHeadsetState = ConnectHeadsetStates.No_Connect;
+
                 UnityEngine.Debug.Log("OnStreamStopNotify: Stop data stream from Cortex.");
                 foreach (string streamName in streams) {
                     if (streamName == DataStreamName.EEG) {
@@ -321,6 +332,8 @@ namespace EmotivUnityPlugin
                     HeadsetConnectFail(this, headsetId);
                     _wantedHeadsetId = ""; // reset headsetId
                     _isSessActivated = false;
+
+                    _connectHeadsetState = ConnectHeadsetStates.Session_Failed;
                 }
                 else {
                     UnityEngine.Debug.Log("Connect a headset " + headsetId + " unsuccessfully. Message : " + e.Message);
@@ -609,6 +622,8 @@ namespace EmotivUnityPlugin
                 }
 
                 UnityEngine.Debug.Log("DataStreamManager-StartDataStream: " + _wantedHeadsetId);
+
+                _connectHeadsetState = ConnectHeadsetStates.Headset_Connecting;
 
                 foreach(var curStream in streamNameList) {
                     _dsProcess.AddStreams(curStream);
