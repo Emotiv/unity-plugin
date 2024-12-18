@@ -31,6 +31,15 @@ namespace EmotivUnityPlugin
             remove { _trainingHandler.SetMentalCommandActionSensitivityOK -= value; }
         }
 
+        // forward event InformTrainedSignatureActions
+        public event EventHandler<Dictionary<string, int>> InformTrainedSignatureActions
+        {
+            add { _trainingHandler.InformTrainedSignatureActions += value; }
+            remove { _trainingHandler.InformTrainedSignatureActions -= value; }
+        }
+
+        public event EventHandler<string> InformEraseDone; // inform erase done for action
+
         /// <summary>
         /// all profiles of user.
         /// </summary>
@@ -181,6 +190,12 @@ namespace EmotivUnityPlugin
             _trainingHandler.SetMentalCommandSensitivity( profileName, levels);
         }
 
+        // get trained signature actions
+        public void GetTrainedSignatureActions(string detection, string profileName = "")
+        {
+            _trainingHandler.GetTrainedSignatureActions(detection, profileName);
+        }
+
         // Event handers
         private void OnProfileUnLoaded(object sender, bool e)
         {
@@ -238,7 +253,14 @@ namespace EmotivUnityPlugin
 
         private void OnTrainingOK(object sender, JObject result)
         {
-            UnityEngine.Debug.Log("OnTrainingOK: " + result);
+            string action = result["action"].ToString();
+            string status = result["status"].ToString();
+            string message = result["message"].ToString();
+            if (status == "erase")
+            {
+                InformEraseDone(this, action);
+            }
+            UnityEngine.Debug.Log("OnTrainingOK: " + action + " status:" + status + " message:" + message);
         }
         private void OnCreateProfileOK(object sender, string profileName)
         {

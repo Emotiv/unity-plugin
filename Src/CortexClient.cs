@@ -93,6 +93,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> HeadsetScanFinished;
         public event EventHandler<List<int>> GetMentalCommandActionSensitivityOK;
         public event EventHandler<bool> SetMentalCommandActionSensitivityOK;
+        public event EventHandler<Dictionary<string, int>> InformTrainedSignatureActions;
 
         public event EventHandler<bool> BTLEPermissionGrantedNotify; // notify btle permision grant status
         
@@ -455,6 +456,19 @@ namespace EmotivUnityPlugin
             else if (method == "training")
             {
                 TrainingOK(this, (JObject)data);
+            }
+            else if (method == "getTrainedSignatureActions")
+            {
+                JArray trainedActions = (JArray)data["trainedActions"];
+                Dictionary<string, int> trainedActionsDict = new Dictionary<string, int>();
+                foreach (JObject actionObj in trainedActions)
+                {
+                    string action = actionObj["action"].ToString();
+                    int times = (int)actionObj["times"];
+                    trainedActionsDict[action] = times;
+                }
+                InformTrainedSignatureActions(this, trainedActionsDict);
+                
             }
             else if (method == "getTrainingTime")
             {
@@ -891,6 +905,21 @@ namespace EmotivUnityPlugin
             param.Add("action", action);
 
             SendTextMessage(param, "training", true);
+        }
+
+        // getTrainedSignatureActions
+        // Required params: cortexToken, detection, sessionId or profileName
+        public void GetTrainedSignatureActions(string cortexToken, string detection, string sessionId, string profileName)
+        {
+            JObject param = new JObject();
+            param.Add("cortexToken", cortexToken);
+            param.Add("detection", detection);
+            // if (sessionId != "")
+            //     param.Add("session", sessionId);
+
+            if (profileName != "")
+                param.Add("profile", profileName);
+            SendTextMessage(param, "getTrainedSignatureActions", true);
         }
 
         public void MentalCommandActionSensitivity (string cortexToken, string status, string sessionId, string profileName, List<int> values)

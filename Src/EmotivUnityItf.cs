@@ -44,6 +44,8 @@ namespace EmotivUnityPlugin
 
         bool _isMCTrainingSuccess = false;
 
+        string _desiredRetrainMCAction = ""; // desired action to retrain after erasing
+
         bool _isProfileLoaded = false;
         string _loadedProfileName = "";
 
@@ -52,6 +54,9 @@ namespace EmotivUnityPlugin
         private string _trainingLog = ""; // training log
 
         private string _messageLog = "";
+
+        // trained signature actions
+        private Dictionary<string, int> _trainedSignatureActions = new Dictionary<string, int>();
 
         public static EmotivUnityItf Instance { get; } = new EmotivUnityItf();
 
@@ -74,6 +79,12 @@ namespace EmotivUnityPlugin
         public List<Headset> GetDetectedHeadsets()
         {
             return _dsManager.GetDetectedHeadsets();
+        }
+
+        // get number training time for signature action
+        public int GetTrainingTimeForAction(string action)
+        {
+            return _trainedSignatureActions.ContainsKey(action) ? _trainedSignatureActions[action] : 0;
         }
 
         // profile list
@@ -147,8 +158,33 @@ namespace EmotivUnityPlugin
             _bciTraining.InformLoadProfileDone += OnInformLoadProfileDone;
             _bciTraining.InformUnLoadProfileDone += OnInformUnLoadProfileDone;
             _bciTraining.SetMentalCommandActionSensitivityOK += OnSetMentalCommandActionSensitivityOK;
+            _bciTraining.InformEraseDone += OnInformEraseDone;
+            _bciTraining.InformTrainedSignatureActions += OnInformTrainedSignatureActions;
             // get error message
             _ctxClient.ErrorMsgReceived             += MessageErrorRecieved;
+        }
+
+        private void OnInformTrainedSignatureActions(object sender, Dictionary<string, int> trainedActions)
+        {
+            // print out trained actions to message log
+            string trainedActionsText = "Trained actions: ";
+            foreach (var item in trainedActions)
+            {
+                trainedActionsText += item.Key + " (" + item.Value + "), ";
+            }
+            _messageLog = trainedActionsText;
+
+            _trainedSignatureActions = trainedActions;
+        }
+
+        private void OnInformEraseDone(object sender, string action)
+        {
+            if (_desiredRetrainMCAction == action) {
+                _messageLog = "The training data of " + action + " is erased successfully.";
+                // Start training again
+                _bciTraining.StartTraining(action, "mentalCommand");
+                _desiredRetrainMCAction = "";
+            }
         }
 
         private void OnSetMentalCommandActionSensitivityOK(object sender, bool e)
@@ -474,7 +510,7 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Start a Mental command Training
         /// </summary>
-        public void StartMCTraining(string action, bool isAutoAccept = false, bool isAutoSave = false)
+        public void StartMCTraining(string action, bool isAutoAccept = false, bool isAutoSave = false, bool isAddative = false)
         {
             if (_isProfileLoaded)
             {
@@ -482,7 +518,25 @@ namespace EmotivUnityPlugin
                 _isAutoSaveProfile = isAutoSave;
                 _isMCTrainingCompleted = false;
                 _isMCTrainingSuccess = false;
-                _bciTraining.StartTraining(action, "mentalCommand");
+
+                UnityEngine.Debug.Log("StartMCTraining: " + action + " isAddative" + isAddative);
+
+                if (isAddative) {
+                    // add training data to the previous training data
+                    _bciTraining.StartTraining(action, "mentalCommand");
+                }
+                else {
+                    // earse previous training data if signature action is trained
+                    if (_trainedSignatureActions.ContainsKey(action) && _trainedSignatureActions[action] > 0)
+                    {
+                        _desiredRetrainMCAction = action;
+                        EraseMCTraining(action);
+                    }
+                    else {
+                        
+                        _bciTraining.StartTraining(action, "mentalCommand");
+                    }
+                }
             }
             else
             {
@@ -512,6 +566,20 @@ namespace EmotivUnityPlugin
         public void EraseMCTraining(string action)
         {
             _bciTraining.EraseTraining(action, "mentalCommand");
+        }
+
+        // erase all signature actions
+        public void EraseAllMCTraining()
+        {
+            // earse all training data of signature actions which has training time > 0
+            Dictionary<string, int> trainedActions = _trainedSignatureActions;
+            foreach (var item in trainedActions)
+            {
+                if (item.Value > 0)
+                {
+                    EraseMCTraining(item.Key);
+                }
+            }
         }
 
         /// <summary>
@@ -576,6 +644,12 @@ namespace EmotivUnityPlugin
             _bciTraining.SetMentalCommandActionSensitivity(_loadedProfileName, levels);
         }
 
+        // get trained signature actions
+        public void GetTrainedSignatureActions(string detection)
+        {
+            _bciTraining.GetTrainedSignatureActions(detection, _loadedProfileName);
+        }
+
         // other BCI APIs
 
 
@@ -604,6 +678,8 @@ namespace EmotivUnityPlugin
             _messageLog = "The profile "+ profileName + " is loaded successfully.";
             _isProfileLoaded = true;
             _loadedProfileName = profileName;
+            // get trained signature actions
+            GetTrainedSignatureActions("mentalCommand");
         }
 
         private void OnInformUnLoadProfileDone(object sender, string profileName)
@@ -748,6 +824,19 @@ namespace EmotivUnityPlugin
                     {
                         SaveProfile(_loadedProfileName);
                     }
+
+                    // get signature actions
+                    GetTrainedSignatureActions("mentalCommand");
+                }
+                else if (data.EventMessage == "MC_DataErased")
+                {
+                    if (_isAutoSaveProfile && _loadedProfileName != "")
+                    {
+                        SaveProfile(_loadedProfileName);
+                    }
+
+                    // call to get signature actions
+                    GetTrainedSignatureActions("mentalCommand");
                 }
             }
         }

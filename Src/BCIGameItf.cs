@@ -147,7 +147,7 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void StartStreamData(string desiredHeadsetId = "")
         {
-            List<string> streamNameList = new List<string> { "sys", "com", "dev" };
+            List<string> streamNameList = new List<string> { "sys"};
             emotivUnityItf.StartDataStream(streamNameList, desiredHeadsetId);
         }
 
@@ -202,19 +202,36 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Start training for a specific action.
+        /// Start training for a specific action. It will erase the previous training data. then start training for a specific action.
         /// </summary>
         public void StartTraining(string action = "push", bool isAutoAccept = true, bool isAutoSave = true)
         {
-            emotivUnityItf.StartMCTraining(action, isAutoAccept, isAutoSave);
+            emotivUnityItf.StartMCTraining(action, isAutoAccept, isAutoSave, false);
         }
 
         /// <summary>
-        /// Start neutral training.
+        /// Start neutral training. It will erase the previous training data. then start training for a neutral action.
         /// </summary>
         public void StartNeutralTraining(bool isAutoAccept = true, bool isAutoSave = true)
         {
-            emotivUnityItf.StartMCTraining("neutral", isAutoAccept, isAutoSave);
+            emotivUnityItf.StartMCTraining("neutral", isAutoAccept, isAutoSave, false);
+        }
+
+
+        /// <summary>
+        /// Start training addative for a specific action. It will add training data to the previous training data.
+        /// </summary>
+        public void StartTrainingAddative(string action = "push", bool isAutoAccept = true, bool isAutoSave = true)
+        {
+            emotivUnityItf.StartMCTraining(action, isAutoAccept, isAutoSave, true);
+        }
+
+        /// <summary>
+        /// Start neutral training. It will add training data to the previous training data.
+        /// </summary>
+        public void StartNeutralTrainingAddtive(bool isAutoAccept = true, bool isAutoSave = true)
+        {
+            emotivUnityItf.StartMCTraining("neutral", isAutoAccept, isAutoSave, true);
         }
 
         /// <summary>
@@ -265,5 +282,24 @@ namespace EmotivUnityPlugin
         {
             emotivUnityItf.UnLoadProfile();
         }
+
+        // get number training time for neutral action
+        public int GetNumberTrainingOfNeutral()
+        {
+            return emotivUnityItf.GetTrainingTimeForAction("neutral");
+        }
+
+        // get number training time for specific action
+        public int GetNumberTrainingOfAction(string action = "push")
+        {
+            return emotivUnityItf.GetTrainingTimeForAction(action);
+        }
+
+        // erase all training of all actions
+        public void EraseAllMCTraining()
+        {
+            emotivUnityItf.EraseAllMCTraining();
+        }
+
     }
 }
