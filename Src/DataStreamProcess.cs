@@ -25,6 +25,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<ArrayList> MotionDataReceived;      // motion data
         public event EventHandler<ArrayList> EEGDataReceived;         // eeg data
         public event EventHandler<ArrayList> DevDataReceived;         // contact quality
+        public event EventHandler<ArrayList> EQDataReceived;         // EEG quality
         public event EventHandler<ArrayList> PerfDataReceived;        // performance metric
         public event EventHandler<ArrayList> BandPowerDataReceived;   // band power
         public event EventHandler<ArrayList> FacialExpReceived;         // Facial expressions
@@ -284,6 +285,10 @@ namespace EmotivUnityPlugin
             else if (e.StreamName == DataStreamName.DevInfos)
             {
                 DevDataReceived(this, e.Data);
+            }
+            else if (e.StreamName == DataStreamName.EQ)
+            {
+                EQDataReceived(this, e.Data);
             } 
             else if (e.StreamName == DataStreamName.FacialExpressions) 
             {

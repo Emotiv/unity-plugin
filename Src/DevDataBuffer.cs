@@ -73,11 +73,14 @@ namespace EmotivUnityPlugin
             }
         }
 
-        public void SetChannels(JArray devChannels) 
+        public void SetChannels(JArray devChannels, bool isDevStream = true)  
         {
             _devChannels.Add(Channel_t.CHAN_TIME_SYSTEM);
-            _devChannels.Add(Channel_t.CHAN_BATTERY);
-            _devChannels.Add(Channel_t.CHAN_SIGNAL_STRENGTH);
+            if (isDevStream) {
+                _devChannels.Add(Channel_t.CHAN_BATTERY);
+                _devChannels.Add(Channel_t.CHAN_SIGNAL_STRENGTH);
+            }
+            
             _hasTwoSideBattery = false;
             _hasBatteryPercent = false;
             foreach(var item in devChannels){

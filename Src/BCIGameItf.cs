@@ -86,6 +86,18 @@ namespace EmotivUnityPlugin
             return emotivUnityItf.GetNumberCQSamples();
         }
 
+        // eq data
+        public double GetEQ(Channel_t channel)
+        {
+            return emotivUnityItf.GetEQ(channel);
+        }
+
+        // numebr of eeg quality samples
+        public int GetNumberEQSamples()
+        {
+            return emotivUnityItf.GetNumberEQSamples();
+        }
+
         /// <summary>
         /// Check if profile is loaded and ready for training.
         /// </summary>

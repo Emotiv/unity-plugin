@@ -126,6 +126,7 @@ namespace EmotivUnityPlugin
                 _dsManager.EEGDataReceived += OnEEGDataReceived;
                 _dsManager.MotionDataReceived += OnMotionDataReceived;
                 _dsManager.DevDataReceived += OnDevDataReceived;
+                _dsManager.EQDataReceived += OnEQDataReceived;
                 _dsManager.PerfDataReceived += OnPerfDataReceived;
                 _dsManager.BandPowerDataReceived += OnBandPowerDataReceived;
                 _dsManager.InformSuccessSubscribedData += OnInformSuccessSubscribedData;
@@ -387,6 +388,18 @@ namespace EmotivUnityPlugin
         public int GetNumberCQSamples()
         {
             return _dsManager.GetNumberCQSamples();
+        }
+
+        // eee quality data
+        public double GetEQ(Channel_t channel)
+        {
+            return _dsManager.GetEQ(channel);
+        }
+
+        // numebr of eeg quality samples
+        public int GetNumberEQSamples()
+        {
+            return _dsManager.GetNumberEQSamples();
         }
 
         //--------End functions which get data from buffer--------------
@@ -667,6 +680,17 @@ namespace EmotivUnityPlugin
         private void OnDevDataReceived(object sender, ArrayList e)
         {
             string dataText = "dev data: ";
+            foreach (var item in e) {
+                dataText += item.ToString() + ",";
+            }
+            _messageLog = dataText;
+            // print out data to console
+            UnityEngine.Debug.Log(dataText);
+        }
+
+        private void OnEQDataReceived(object sender, ArrayList e)
+        {
+            string dataText = "eq data: ";
             foreach (var item in e) {
                 dataText += item.ToString() + ",";
             }

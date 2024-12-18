@@ -34,6 +34,10 @@ namespace EmotivUnityPlugin
         /// Device information data buffer.
         /// </summary>
         DevDataBuffer       _devBuff;
+        /// <summary>
+        /// EEG quality data buffer.
+        /// </summary>
+        DevDataBuffer       _eqBuff;
         
         /// <summary>
         /// Performance metric data buffer.
@@ -67,6 +71,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<ArrayList> MotionDataReceived;      // motion data
         public event EventHandler<ArrayList> EEGDataReceived;         // eeg data
         public event EventHandler<ArrayList> DevDataReceived;         // contact quality
+        public event EventHandler<ArrayList> EQDataReceived;         // EEG quality
         public event EventHandler<ArrayList> PerfDataReceived;        // performance metric
         public event EventHandler<ArrayList> BandPowerDataReceived;   // band power
         public event EventHandler<FacEventArgs> FacialExpReceived;         // Facial expressions
@@ -119,6 +124,11 @@ namespace EmotivUnityPlugin
                 _dsProcess.DevDataReceived -= _devBuff.OnDevDataReceived;
                 _devBuff.Clear();
                 _devBuff = null;
+            }
+            if (_eqBuff != null) {
+                _dsProcess.EQDataReceived -= _eqBuff.OnDevDataReceived;
+                _eqBuff.Clear();
+                _eqBuff = null;
             }
             if (_bandpowerBuff != null) {
                 _dsProcess.BandPowerDataReceived -= _bandpowerBuff.OnBandPowerReceived;
@@ -275,6 +285,13 @@ namespace EmotivUnityPlugin
                             _devBuff = null;
                         }
                     }
+                    else if (streamName == DataStreamName.EQ) {
+                        if (_eqBuff != null) {
+                            _dsProcess.EQDataReceived -= _eqBuff.OnDevDataReceived;
+                            _eqBuff.Clear();
+                            _eqBuff = null;
+                        }
+                    }
                     else if (streamName == DataStreamName.BandPower) {
                         if (_bandpowerBuff != null) {
                             _dsProcess.BandPowerDataReceived -= _bandpowerBuff.OnBandPowerReceived;
@@ -400,7 +417,7 @@ namespace EmotivUnityPlugin
                         {
                             _devBuff = new DevDataBuffer();
                             _devBuff.SettingBuffer(1, 1, headerCount);
-                            _devBuff.SetChannels(e[key]);
+                            _devBuff.SetChannels(e[key], true);
                             _dsProcess.DevDataReceived += _devBuff.OnDevDataReceived;
                             UnityEngine.Debug.Log("Subscribed done: DEV Data Stream");
                             
@@ -408,6 +425,21 @@ namespace EmotivUnityPlugin
                         else if (_devBuff == null){
                             _dsProcess.DevDataReceived += this.DevDataReceived;
                             successfulStreams.Add(DataStreamName.DevInfos);
+                        }
+                    }
+                    else if (key == DataStreamName.EQ) {
+                        if (_isDataBufferUsing)
+                        {
+                            _eqBuff = new DevDataBuffer();
+                            _eqBuff.SettingBuffer(1, 1, headerCount);
+                            _eqBuff.SetChannels(e[key], false);
+                            _dsProcess.EQDataReceived += _eqBuff.OnDevDataReceived;
+                            UnityEngine.Debug.Log("Subscribed done: EQ Data Stream");
+                            
+                        }
+                        else if (_eqBuff == null){
+                            _dsProcess.EQDataReceived += this.EQDataReceived;
+                            successfulStreams.Add(DataStreamName.EQ);
                         }
                     }
                     else if (key == DataStreamName.PerformanceMetrics) {
@@ -693,29 +725,35 @@ namespace EmotivUnityPlugin
         /// </summary>
         public double Battery()
         {
-            if (_devBuff == null)
-                return 0;
-            else 
+            if (_eqBuff != null)
+                return _eqBuff.Battery;
+            else if (_devBuff != null)
                 return _devBuff.Battery;
+            else
+                return 0;
         }
 
         // battery left level
         public double BatteryLeft()
         {
-            if (_devBuff == null)
-                return 0;
-            else 
+            if (_eqBuff != null)
+                return _eqBuff.BatteryLeft;
+            else if (_devBuff != null)
                 return _devBuff.BatteryLeft;
+            else
+                return 0;
         }
 
 
         // battery right level
         public double BatteryRight()
         {
-            if (_devBuff == null)
-                return 0;
-            else 
+            if (_eqBuff != null)
+                return _eqBuff.BatteryRight;
+            else if (_devBuff != null)
                 return _devBuff.BatteryRight;
+            else
+                return 0;
         }
 
         /// <summary>
@@ -723,10 +761,12 @@ namespace EmotivUnityPlugin
         /// </summary>
         public double BatteryMax()
         {
-            if (_devBuff == null)
-                return 0;
-            else 
+            if (_eqBuff != null)
+                return 100.0;
+            else if (_devBuff != null)
                 return _devBuff.BatteryMax;
+            else
+                return 0;
         }
 
         /// <summary>
@@ -773,6 +813,33 @@ namespace EmotivUnityPlugin
                 return 0;
 
             return _devBuff.GetBufferSize();
+        }
+        
+        
+        // === EQ data ===
+        /// <summary>
+        /// Get EEG quality by channel.
+        /// </summary>
+        public double GetEQ(Channel_t channel) {
+            if (_eqBuff == null)
+                return 0;
+            else {
+                double result = _eqBuff.GetContactQuality(channel);
+                if (result < 0)
+                    result = 0;
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Get the current number of samples of a channel in contact quality or eeg buffer.
+        /// </summary>
+        public int GetNumberEQSamples()
+        {
+            if (_eqBuff == null)
+                return 0;
+
+            return _eqBuff.GetBufferSize();
         }
 
         //=== EEG data ===
