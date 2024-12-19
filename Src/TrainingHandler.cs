@@ -61,7 +61,14 @@ namespace EmotivUnityPlugin
         {
             add { _ctxClient.InformTrainedSignatureActions += value; }
             remove { _ctxClient.InformTrainedSignatureActions -= value; }
-        } 
+        }
+
+        // forward event GetMentalCommandActionSensitivityOK
+        public event EventHandler<List<int>> GetMentalCommandActionSensitivityOK
+        {
+            add { _ctxClient.GetMentalCommandActionSensitivityOK += value; }
+            remove { _ctxClient.GetMentalCommandActionSensitivityOK -= value;}
+        }
 
         public static TrainingHandler Instance { get; } = new TrainingHandler();
 
@@ -193,6 +200,14 @@ namespace EmotivUnityPlugin
             string cortexToken = _authorizer.CortexToken;
             string sessionId    = _sessionHandler.SessionId;
             _ctxClient.MentalCommandActionSensitivity(cortexToken, "set", sessionId, profileName, levels);
+        }
+
+        // get mental command sensitivity
+        public void GetMentalCommandSensitivity(string profileName)
+        {
+            string cortexToken = _authorizer.CortexToken;
+            string sessionId    = _sessionHandler.SessionId;
+            _ctxClient.MentalCommandActionSensitivity(cortexToken, "get", sessionId, profileName);
         }
 
         // get trained signature actions

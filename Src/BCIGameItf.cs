@@ -4,6 +4,10 @@ namespace EmotivUnityPlugin
 {
     public class BCIGameItf
     {
+        public const string DEFAULT_MC_ACTION = "pull"; // default action for mental command training
+        public const string NEUTRAL_ACTION = "neutral"; // neutral action for training
+        public const int DEFAULT_SENSITIVITY = 5; // default sensitivity for mental command training
+
         private static BCIGameItf _instance;
         private EmotivUnityItf emotivUnityItf = EmotivUnityItf.Instance;
 
@@ -103,7 +107,8 @@ namespace EmotivUnityPlugin
         /// </summary>
         public bool IsReadyForTraining()
         {
-            return emotivUnityItf.IsProfileLoaded;
+            // Check if profile is loaded and no desired erasing profiles (in erasing process)
+            return emotivUnityItf.IsProfileLoaded && (emotivUnityItf.DesiredErasingProfiles.Count == 0);
         }
 
         /// <summary>
@@ -147,14 +152,14 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void StartStreamData(string desiredHeadsetId = "")
         {
-            List<string> streamNameList = new List<string> { "sys"};
+            List<string> streamNameList = new List<string> { "sys", "com", "dev" };
             emotivUnityItf.StartDataStream(streamNameList, desiredHeadsetId);
         }
 
         /// <summary>
         /// Get mental command action power for a specific action.
         /// </summary>
-        public double GetMentalCommandActionPower(string action = "push")
+        public double GetMentalCommandActionPower(string action = DEFAULT_MC_ACTION)
         {
             MentalComm mentalCommand = emotivUnityItf.LatestMentalCommand;
             if (mentalCommand.act == action)
@@ -171,7 +176,7 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Check if mental command power for a specific action is greater than a threshold.
         /// </summary>
-        public bool IsGoodMCAction(string action = "push", double threshold = 0.5)
+        public bool IsGoodMCAction(string action = DEFAULT_MC_ACTION, double threshold = 0.5)
         {
             MentalComm mentalCommand = emotivUnityItf.LatestMentalCommand;
             if (mentalCommand.act == action)
@@ -202,36 +207,19 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Start training for a specific action. It will erase the previous training data. then start training for a specific action.
+        /// Start training for a specific action.
         /// </summary>
-        public void StartTraining(string action = "push", bool isAutoAccept = true, bool isAutoSave = true)
+        public void StartTraining(string action = DEFAULT_MC_ACTION, bool isAutoAccept = true, bool isAutoSave = true)
         {
-            emotivUnityItf.StartMCTraining(action, isAutoAccept, isAutoSave, false);
+            emotivUnityItf.StartMCTraining(action, isAutoAccept, isAutoSave);
         }
 
         /// <summary>
-        /// Start neutral training. It will erase the previous training data. then start training for a neutral action.
+        /// Start neutral training.
         /// </summary>
         public void StartNeutralTraining(bool isAutoAccept = true, bool isAutoSave = true)
         {
-            emotivUnityItf.StartMCTraining("neutral", isAutoAccept, isAutoSave, false);
-        }
-
-
-        /// <summary>
-        /// Start training addative for a specific action. It will add training data to the previous training data.
-        /// </summary>
-        public void StartTrainingAddative(string action = "push", bool isAutoAccept = true, bool isAutoSave = true)
-        {
-            emotivUnityItf.StartMCTraining(action, isAutoAccept, isAutoSave, true);
-        }
-
-        /// <summary>
-        /// Start neutral training. It will add training data to the previous training data.
-        /// </summary>
-        public void StartNeutralTrainingAddtive(bool isAutoAccept = true, bool isAutoSave = true)
-        {
-            emotivUnityItf.StartMCTraining("neutral", isAutoAccept, isAutoSave, true);
+            emotivUnityItf.StartMCTraining(NEUTRAL_ACTION, isAutoAccept, isAutoSave);
         }
 
         /// <summary>
@@ -259,11 +247,11 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Set sensitivity.
+        /// Set sensitivity for first trained action. Should be called after training is completed.
         /// </summary>
-        public void SetSensitivity(int value = 5)
+        public void SetSensitivity(int value = DEFAULT_SENSITIVITY)
         {
-            List<int> levels = new List<int> { value };
+            List<int> levels = new List<int> { value, DEFAULT_SENSITIVITY, DEFAULT_SENSITIVITY, DEFAULT_SENSITIVITY }; // require 4 value for 4 actions (even only 1 trained action)
             emotivUnityItf.SetMentalCommandActionSensitivity(levels);
         }
 
@@ -283,22 +271,56 @@ namespace EmotivUnityPlugin
             emotivUnityItf.UnLoadProfile();
         }
 
-        // get number training time for neutral action
-        public int GetNumberTrainingOfNeutral()
-        {
-            return emotivUnityItf.GetTrainingTimeForAction("neutral");
-        }
-
-        // get number training time for specific action
-        public int GetNumberTrainingOfAction(string action = "push")
+        /// <summary>
+        /// Get the number of training times for a specific action. We can use it to display number of training times for each action.
+        /// </summary>
+        /// <param name="action">The action to get the training times for. Default is pull action.</param>
+        /// <returns>The number of training times for the specified action.</returns>
+        public int GetNumberTrainingOfAction(string action = DEFAULT_MC_ACTION)
         {
             return emotivUnityItf.GetTrainingTimeForAction(action);
         }
 
-        // erase all training of all actions
-        public void EraseAllMCTraining()
+        /// <summary>
+        /// Get the mental command action sensitivity for the first trained action except neutral (pull action).
+        /// Should be called after training is completed. Default sensitivity is 5
+        /// </summary>
+        /// <returns>The sensitivity of the first trained mental command action, or -1 if no actions are trained.</returns>
+        public int GetFirstMCActionSensitivity()
+        {
+            if (emotivUnityItf.MentalCommandActionSensitivity.Count > 0)
+            {
+                return emotivUnityItf.MentalCommandActionSensitivity[0];
+            }
+            else
+            {
+                return -1;
+            }
+        }
+
+        /// <summary>
+        /// Clear all training data for all mental command actions. It will erase actions one by one. You can check emotivUnityItf.DesiredErasingProfiles.Count to know the number of actions that are being erased.
+        /// </summary>
+        public void EraseDataAllMCTraining()
         {
             emotivUnityItf.EraseAllMCTraining();
+        }
+
+        /// <summary>
+        /// Erase training data for the neutral action.
+        /// </summary>
+        public void EraseDataForNeutralTraining()
+        {
+            emotivUnityItf.EraseMCTraining(NEUTRAL_ACTION);
+        }
+
+        /// <summary>
+        /// Erase training data for a specific mental command action.
+        /// </summary>
+        /// <param name="action">The action to erase the training data for. Default is the default mental command action.</param>
+        public void EraseDataForMCTrainingAction(string action = DEFAULT_MC_ACTION)
+        {
+            emotivUnityItf.EraseMCTraining(action);
         }
 
     }

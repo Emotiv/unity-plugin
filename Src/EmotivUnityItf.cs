@@ -44,8 +44,6 @@ namespace EmotivUnityPlugin
 
         bool _isMCTrainingSuccess = false;
 
-        string _desiredRetrainMCAction = ""; // desired action to retrain after erasing
-
         bool _isProfileLoaded = false;
         string _loadedProfileName = "";
 
@@ -55,8 +53,12 @@ namespace EmotivUnityPlugin
 
         private string _messageLog = "";
 
+        private List<int> _mentalCommandActionSensitivity = new List<int>();
+
         // trained signature actions
         private Dictionary<string, int> _trainedSignatureActions = new Dictionary<string, int>();
+
+        private List<string> _desiredErasingProfiles = new List<string>(); // desired profiles to erase
 
         public static EmotivUnityItf Instance { get; } = new EmotivUnityItf();
 
@@ -74,6 +76,8 @@ namespace EmotivUnityPlugin
         public MentalComm LatestMentalCommand { get; private set; } = new MentalComm();
         public bool IsMCTrainingCompleted { get => _isMCTrainingCompleted; set => _isMCTrainingCompleted = value; }
         public bool IsMCTrainingSuccess { get => _isMCTrainingSuccess; set => _isMCTrainingSuccess = value; }
+        public List<string> DesiredErasingProfiles { get => _desiredErasingProfiles; set => _desiredErasingProfiles = value; }
+        public List<int> MentalCommandActionSensitivity { get => _mentalCommandActionSensitivity; set => _mentalCommandActionSensitivity = value; }
 
         // get headset lists
         public List<Headset> GetDetectedHeadsets()
@@ -142,7 +146,7 @@ namespace EmotivUnityPlugin
                 _dsManager.BandPowerDataReceived += OnBandPowerDataReceived;
                 _dsManager.InformSuccessSubscribedData += OnInformSuccessSubscribedData;
             }
-            _dsManager.MessageQueryHeadsetOK +=OnMessageQueryHeadsetOK;
+            _dsManager.MessageQueryHeadsetOK += OnMessageQueryHeadsetOK;
 
             _dsManager.FacialExpReceived += OnFacialExpReceived;
             _dsManager.MentalCommandReceived += OnMentalCommandReceived;
@@ -160,8 +164,38 @@ namespace EmotivUnityPlugin
             _bciTraining.SetMentalCommandActionSensitivityOK += OnSetMentalCommandActionSensitivityOK;
             _bciTraining.InformEraseDone += OnInformEraseDone;
             _bciTraining.InformTrainedSignatureActions += OnInformTrainedSignatureActions;
+            _bciTraining.ProfileSavedOK += OnProfileSavedOK;
+            _bciTraining.GetMentalCommandActionSensitivityOK += OnGetMentalCommandActionSensitivityOK;
             // get error message
-            _ctxClient.ErrorMsgReceived             += MessageErrorRecieved;
+            _ctxClient.ErrorMsgReceived += MessageErrorRecieved;
+        }
+
+        private void OnGetMentalCommandActionSensitivityOK(object sender, List<int> e)
+        {
+            UnityEngine.Debug.Log("OnGetMentalCommandActionSensitivityOK: " + e.Count);
+            _mentalCommandActionSensitivity = e;
+        }
+
+        private void OnProfileSavedOK(object sender, string profileName)
+        {
+            if (profileName == _loadedProfileName)
+            {
+                _messageLog = "The profile " + profileName + " is saved successfully.";
+
+                // check desired erasing profiles. If there is any, erase the one by one in the list
+                if (_desiredErasingProfiles.Count > 0)
+                {
+                    UnityEngine.Debug.Log("OnProfileSavedOK: There are " + _desiredErasingProfiles.Count + " signature actions to erase.");
+                    EraseMCTraining(_desiredErasingProfiles[0]);
+                }
+                else {
+                    // get signature actions again
+                    GetTrainedSignatureActions("mentalCommand");
+
+                    // get mental command action sensitivity
+                    GetMentalCommandActionSensitivity();
+                }
+            }
         }
 
         private void OnInformTrainedSignatureActions(object sender, Dictionary<string, int> trainedActions)
@@ -179,17 +213,17 @@ namespace EmotivUnityPlugin
 
         private void OnInformEraseDone(object sender, string action)
         {
-            if (_desiredRetrainMCAction == action) {
-                _messageLog = "The training data of " + action + " is erased successfully.";
-                // Start training again
-                _bciTraining.StartTraining(action, "mentalCommand");
-                _desiredRetrainMCAction = "";
-            }
+            UnityEngine.Debug.Log("OnInformEraseDone: " + action);
         }
 
-        private void OnSetMentalCommandActionSensitivityOK(object sender, bool e)
+        private void OnSetMentalCommandActionSensitivityOK(object sender, bool isSuccess)
         {
-            UnityEngine.Debug.Log("SetMentalCommandActionSensitivityOK: " + e);
+            UnityEngine.Debug.Log("SetMentalCommandActionSensitivityOK: " + isSuccess);
+            if (isSuccess)
+            {
+                // save profile
+                SaveProfile(_loadedProfileName);
+            }
         }
 
         /// <summary>
@@ -209,6 +243,7 @@ namespace EmotivUnityPlugin
             _isAuthorizedOK = false;
             _isProfileLoaded = false;
             _workingHeadsetId = "";
+            _desiredErasingProfiles.Clear();
         }
 
 
@@ -510,7 +545,7 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Start a Mental command Training
         /// </summary>
-        public void StartMCTraining(string action, bool isAutoAccept = false, bool isAutoSave = false, bool isAddative = false)
+        public void StartMCTraining(string action, bool isAutoAccept = false, bool isAutoSave = false)
         {
             if (_isProfileLoaded)
             {
@@ -518,25 +553,7 @@ namespace EmotivUnityPlugin
                 _isAutoSaveProfile = isAutoSave;
                 _isMCTrainingCompleted = false;
                 _isMCTrainingSuccess = false;
-
-                UnityEngine.Debug.Log("StartMCTraining: " + action + " isAddative" + isAddative);
-
-                if (isAddative) {
-                    // add training data to the previous training data
-                    _bciTraining.StartTraining(action, "mentalCommand");
-                }
-                else {
-                    // earse previous training data if signature action is trained
-                    if (_trainedSignatureActions.ContainsKey(action) && _trainedSignatureActions[action] > 0)
-                    {
-                        _desiredRetrainMCAction = action;
-                        EraseMCTraining(action);
-                    }
-                    else {
-                        
-                        _bciTraining.StartTraining(action, "mentalCommand");
-                    }
-                }
+                _bciTraining.StartTraining(action, "mentalCommand");
             }
             else
             {
@@ -565,7 +582,14 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void EraseMCTraining(string action)
         {
+            UnityEngine.Debug.Log("EraseMCTraining: " + action);
             _bciTraining.EraseTraining(action, "mentalCommand");
+
+            // remove the action from desired erasing list
+            if (_desiredErasingProfiles.Contains(action))
+            {
+                _desiredErasingProfiles.Remove(action);
+            }
         }
 
         // erase all signature actions
@@ -577,8 +601,18 @@ namespace EmotivUnityPlugin
             {
                 if (item.Value > 0)
                 {
-                    EraseMCTraining(item.Key);
+                    _desiredErasingProfiles.Add(item.Key);
                 }
+            }
+
+            if (_desiredErasingProfiles.Count == 0)
+            {
+                UnityEngine.Debug.Log("There is no signature action to erase.");
+            }
+            else
+            {
+                // Erase training data of action one by one.
+                EraseMCTraining(_desiredErasingProfiles[0]);
             }
         }
 
@@ -644,6 +678,12 @@ namespace EmotivUnityPlugin
             _bciTraining.SetMentalCommandActionSensitivity(_loadedProfileName, levels);
         }
 
+        // get mental command action sensitivity
+        public void GetMentalCommandActionSensitivity()
+        {
+            _bciTraining.GetMentalCommandActionSensitivity(_loadedProfileName);
+        }
+
         // get trained signature actions
         public void GetTrainedSignatureActions(string detection)
         {
@@ -680,6 +720,9 @@ namespace EmotivUnityPlugin
             _loadedProfileName = profileName;
             // get trained signature actions
             GetTrainedSignatureActions("mentalCommand");
+
+            // get mental command action sensitivity
+            GetMentalCommandActionSensitivity();
         }
 
         private void OnInformUnLoadProfileDone(object sender, string profileName)
@@ -687,6 +730,7 @@ namespace EmotivUnityPlugin
             _messageLog = "The profile " + profileName + " is unloaded successfully.";
             _isProfileLoaded = false;
             _loadedProfileName = "";
+            _desiredErasingProfiles.Clear();
         }
 
         private void OnInformStartRecordResult(object sender, Record record)
@@ -800,14 +844,13 @@ namespace EmotivUnityPlugin
         private void OnSysEventsReceived(object sender, SysEventArgs data)
         {
             string dataText = "sys data: " + data.Detection + ", event: " + data.EventMessage + ", time " + data.Time.ToString();
-            // print out data to console
-            UnityEngine.Debug.Log(dataText);
+            UnityEngine.Debug.Log("OnSysEventsReceived: " + data.EventMessage + ", _isAutoSaveProfile " + _isAutoSaveProfile + ", _loadedProfileName " + _loadedProfileName);
             // show the system event to message log
             _messageLog = dataText;
 
-            if (_isAutoAcceptTraining && data.Detection == "mentalCommand")
+            if (data.Detection == "mentalCommand")
             {
-                if (data.EventMessage == "MC_Succeeded") {
+                if (_isAutoAcceptTraining && data.EventMessage == "MC_Succeeded") {
                     AcceptMCTraining();
                 }
                 else if (data.EventMessage == "MC_Failed")
@@ -824,19 +867,11 @@ namespace EmotivUnityPlugin
                     {
                         SaveProfile(_loadedProfileName);
                     }
-
-                    // get signature actions
-                    GetTrainedSignatureActions("mentalCommand");
                 }
-                else if (data.EventMessage == "MC_DataErased")
+                else if (data.EventMessage == "MC_DataErased" && _loadedProfileName != "")
                 {
-                    if (_isAutoSaveProfile && _loadedProfileName != "")
-                    {
-                        SaveProfile(_loadedProfileName);
-                    }
-
-                    // call to get signature actions
-                    GetTrainedSignatureActions("mentalCommand");
+                    // save profile after erasing the training data
+                    SaveProfile(_loadedProfileName);
                 }
             }
         }

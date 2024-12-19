@@ -38,6 +38,20 @@ namespace EmotivUnityPlugin
             remove { _trainingHandler.InformTrainedSignatureActions -= value; }
         }
 
+        // forward event ProfileSavedOK from TrainingHandler
+        public event EventHandler<string> ProfileSavedOK
+        {
+            add { _trainingHandler.ProfileSavedOK += value; }
+            remove { _trainingHandler.ProfileSavedOK -= value; }
+        }
+
+        // forward event GetMentalCommandActionSensitivityOK
+        public event EventHandler<List<int>> GetMentalCommandActionSensitivityOK
+        {
+            add { _trainingHandler.GetMentalCommandActionSensitivityOK += value; }
+            remove { _trainingHandler.GetMentalCommandActionSensitivityOK -= value; }
+        }
+
         public event EventHandler<string> InformEraseDone; // inform erase done for action
 
         /// <summary>
@@ -188,6 +202,12 @@ namespace EmotivUnityPlugin
         public void SetMentalCommandActionSensitivity(string profileName, List<int> levels)
         {
             _trainingHandler.SetMentalCommandSensitivity( profileName, levels);
+        }
+
+        // get sensitivity for mental command
+        public void GetMentalCommandActionSensitivity(string profileName)
+        {
+            _trainingHandler.GetMentalCommandSensitivity(profileName);
         }
 
         // get trained signature actions

@@ -922,18 +922,29 @@ namespace EmotivUnityPlugin
             SendTextMessage(param, "getTrainedSignatureActions", true);
         }
 
-        public void MentalCommandActionSensitivity (string cortexToken, string status, string sessionId, string profileName, List<int> values)
+        public void MentalCommandActionSensitivity (string cortexToken, string status, string sessionId, string profileName, List<int> values = null)
         {
             JObject param = new JObject();
-            param.Add("session", sessionId);
             param.Add("cortexToken", cortexToken);
             param.Add("status", status);
-            param.Add("profile", profileName);
-            JArray valuesArr = new JArray();
-            foreach (int ele in values){
-                valuesArr.Add(ele);
+
+            // check session id is empty
+            if (sessionId != "")
+                param.Add("session", sessionId);
+
+            // check profile name is empty
+            if (profileName != "")
+                param.Add("profile", profileName);
+
+            if (values != null) {
+                JArray valuesArr = new JArray();
+                // parse values to array and add to param
+                foreach (int ele in values){
+                    valuesArr.Add(ele);
+                }
+                param.Add("values", valuesArr);
+                
             }
-            param.Add("values", valuesArr);
             SendTextMessage(param, "mentalCommandActionSensitivity", true);
         }
     }
