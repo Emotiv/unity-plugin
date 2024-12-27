@@ -105,6 +105,9 @@ namespace EmotivUnityPlugin
 
         public virtual void SendTextMessage(JObject param, string method, bool hasParam = true) {}
 
+        // authenticate
+        public virtual void Authenticate() {}
+
         protected static CortexClient instance;
     
         public static CortexClient Instance

@@ -61,6 +61,8 @@ namespace EmotivUnityPlugin
         #if UNITY_ANDROID
         private AndroidJavaObject _cortexLibManager;
         private CortexLibInterfaceProxy cortexLibInterfaceProxy;
+
+        private AndroidJavaObject _activity;
         #endif
 
         // Private constructor to prevent direct instantiation
@@ -75,7 +77,15 @@ namespace EmotivUnityPlugin
             #if UNITY_ANDROID
             if (context is AndroidJavaObject activity)
             {
+                _activity = activity;
                 AndroidJavaObject application = activity.Call<AndroidJavaObject>("getApplication");
+                // start the background service
+                AndroidJavaObject appContext = activity.Call<AndroidJavaObject>("getApplicationContext");
+                AndroidJavaClass serviceClass = new AndroidJavaClass("com.emotiv.unityplugin.BForegroundService");
+                AndroidJavaObject intent = new AndroidJavaObject("android.content.Intent", appContext, serviceClass);
+                intent.Call<AndroidJavaObject>("putExtra", "action", "Start");
+                activity.Call<AndroidJavaObject>("startService", intent);
+                
                 LoadCortexLibAndroid(application);
             }
             else
@@ -125,6 +135,13 @@ namespace EmotivUnityPlugin
             string request = PrepareRequest(method, param, hasParam);
             // UnityEngine.Debug.Log("SendTextMessage: " + request);
             _cortexLibManager.Call("sendRequest", request);
+        }
+
+        // authenticate the user
+        public override void Authenticate()
+        {
+            // call authenticate method in cortex lib
+            _cortexLibManager.Call("authenticate", _activity, Config.AppClientId, 100);
         }
     }
 }

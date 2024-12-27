@@ -1,6 +1,7 @@
 package com.emotiv.unityplugin;
 
 import android.app.Application;
+import android.app.Activity;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -14,7 +15,6 @@ import androidx.core.content.ContextCompat;
 import org.json.JSONObject;
 
 import com.emotiv.CortexLibInterface;
-import android.util.Log;
 /**
  * This class is the base class for MainActivity when they want to work with EmotivCortexLib.aar
  * In this activity, we will request some permissions needed by CortexLib and start/stop CortexLib.
@@ -52,6 +52,13 @@ public class CortexLibActivity implements CortexLibInterface {
     public void sendRequest(String contentRequest) {
         if (mCortexConnection != null) {
             mCortexConnection.sendRequest(contentRequest);
+        }
+    }
+
+    // authenticate
+    public void authenticate(Activity activity, String clientId, int activityHandleCode) {
+        if (mCortexConnection != null) {
+            mCortexConnection.authenticate(activity, clientId, activityHandleCode);
         }
     }
 
