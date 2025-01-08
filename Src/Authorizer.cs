@@ -69,13 +69,17 @@ namespace EmotivUnityPlugin
         }
 
         private void OnErrorMsgReceived(object sender, ErrorMsgEventArgs errorInfo) {
-            if (errorInfo.Code == ErrorCode.AuthorizeTokenError || errorInfo.Code == ErrorCode.LoginTokenError || errorInfo.Code == ErrorCode.CloudTokenIsRefreshing)
+            if (errorInfo.Code == ErrorCode.AuthorizeTokenError || errorInfo.Code == ErrorCode.LoginTokenError)
             {
                 UnityEngine.Debug.LogError("OnErrorMsgReceived error: " + errorInfo.MessageError  + ". Need to re-login for user " + Config.UserName + " emotivId: " + _emotivId);
                 if (_emotivId == "")
                     return;
                 // logout user
                 _ctxClient.Logout(_emotivId);
+            }
+            else if (errorInfo.Code == ErrorCode.CloudTokenIsRefreshing || errorInfo.Code == ErrorCode.NotReAuthorizedError || errorInfo.Code == ErrorCode.CortexTokenCompareErrorAppInfo) {
+                UnityEngine.Debug.Log("OnErrorMsgReceived error: " + errorInfo.MessageError  + ". Need to re-authorize again until it is done. Received time at" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                _ctxClient.Authorize(_licenseID, _debitNo);
             }
         }
 
@@ -185,8 +189,8 @@ namespace EmotivUnityPlugin
                     UnityEngine.Debug.Log("Save token for next using.");
                     // Save App version
                     Utils.SaveAppVersion(Config.AppVersion);
-                    SaveToken(tokenInfo);
                 #endif
+                Authorizer.SaveToken(tokenInfo);
 
                 // get license information
                 _ctxClient.GetLicenseInfo(cortexToken);
@@ -199,26 +203,26 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Load token from local app data
         /// </summary>
-        private UserDataInfo LoadToken() {
-            string rootPath     = Utils.GetAppTmpPath();
-            string targetDir    = Path.Combine(rootPath, Config.ProfilesDir);
-
-            if (!Directory.Exists(targetDir)){
-                UnityEngine.Debug.Log("LoadToken: not exists directory " + targetDir);
-                return new UserDataInfo();
-            }
-            string fileDir = Path.Combine(targetDir, Config.TmpDataFileName);
+        private static UserDataInfo LoadToken() {
+            string fileDir = Path.Combine(Utils.DataDirectory, Config.TmpDataFileName);
             if (!File.Exists(fileDir)) {
-                UnityEngine.Debug.Log("LoadToken: not exists file " + fileDir);
+                UnityEngine.Debug.Log("LoadToken: not exists token file " + fileDir);
                 return new UserDataInfo();
             }
             try
             {
+                // get tokenSavedInfo from file
                 Stream stream = File.Open(fileDir, FileMode.Open);
                 BinaryFormatter bformater = new BinaryFormatter();
-                UserDataInfo tokenInfo   = (UserDataInfo)bformater.Deserialize(stream);
+                UserDataInfo tokenSavedInfo = (UserDataInfo)bformater.Deserialize(stream);
                 stream.Close();
-                return tokenInfo;
+                if (tokenSavedInfo == null) {
+                    UnityEngine.Debug.Log("LoadToken: tokenSavedInfo is null");
+                    return new UserDataInfo();
+                }
+                else {
+                    return tokenSavedInfo;
+                }
             }
             catch (System.Exception e)
             {
@@ -230,40 +234,21 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Save token to local app data for next using
         /// </summary>
-        private void SaveToken(UserDataInfo tokenSavedInfo) {
-            string rootPath = Utils.GetAppTmpPath();
-            string targetDir = Path.Combine(rootPath, Config.ProfilesDir);
-            if (!Directory.Exists(targetDir)) {
-                try
-                {
-                    // create directory
-                    Directory.CreateDirectory(targetDir);
-                    UnityEngine.Debug.Log("SaveCortexToken: create directory " + targetDir);
-                }
-                catch (Exception e)
-                {      
-                    UnityEngine.Debug.Log("Can not create directory: " + targetDir + " : failed: " + e.ToString());
-                    return;
-                }
-                finally {}
-            }
-            string fileDir = Path.Combine(targetDir, Config.TmpDataFileName);
-
+        private static void SaveToken(UserDataInfo tokenSavedInfo) {
+            string fileDir = Path.Combine(Utils.DataDirectory, Config.TmpDataFileName);
             try
             {
-                using(var fileStream = new FileStream(fileDir, FileMode.Create)) {
-                BinaryFormatter bformatter = new BinaryFormatter();
-                bformatter.Serialize(fileStream, tokenSavedInfo);
-                // var data = JsonConvert.SerializeObject(tokenSavedInfo);
-                // byte[] dataByte = new UTF8Encoding(true).GetBytes(data);
-                // fileStream.Write(dataByte, 0, dataByte.Length);
-                }
-                UnityEngine.Debug.Log("Save token successfully.");
+                // save tokenSavedInfo to file
+                Stream stream = File.Open(fileDir, FileMode.Create);
+                BinaryFormatter bformater = new BinaryFormatter();
+                bformater.Serialize(stream, tokenSavedInfo);
+                stream.Close();
+                UnityEngine.Debug.Log("Save token done.");
+
             }
             catch (Exception e)
             {
-                UnityEngine.Debug.Log("Can not save token failed: " + e.ToString());
-                return;
+                UnityEngine.Debug.LogError("Can not save token failed: " + e.ToString());
             }
             
         }
@@ -271,21 +256,8 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Remove token when user logout 
         /// </summary>
-        private void RemoveToken(string path = "") {
-            string rootPath = "";
-            if (string.IsNullOrEmpty(path)){
-                //get tmp Path of App 
-                rootPath = Utils.GetAppTmpPath();
-            }
-            else {
-                rootPath = path;
-            }
-            string targetDir = Path.Combine(rootPath, Config.ProfilesDir);
-            if (!Directory.Exists(targetDir)){
-                UnityEngine.Debug.Log("RemoveCortexToken: not exists directory " + targetDir);
-                return;
-            }
-            string fileDir = Path.Combine(targetDir, Config.TmpDataFileName);
+        private static void RemoveToken() {
+            string fileDir = Path.Combine(Utils.DataDirectory, Config.TmpDataFileName);
             if (!File.Exists(fileDir)) {
                 UnityEngine.Debug.Log("RemoveCortexToken: not exists file " + fileDir);
                 return;
@@ -375,47 +347,33 @@ namespace EmotivUnityPlugin
 
                 // save emotivId
                 lock (_locker) _emotivId   = loginData.EmotivId;
-               
-                
-                double lastLoginTime    = loginData.LastLoginTime;
+
                 // notify change sate
                 ConnectServiceStateChanged(this, ConnectToCortexStates.Authorizing);
-
-                #if UNITY_ANDROID || UNITY_IOS
-                    // for embedded cortex lib need to call check request access 
-                    _ctxClient.Authorize(_licenseID, _debitNo);
-                    return;
-                #endif
-
-                // If app version different saved app version
-                if (!Utils.IsSameAppVersion(Config.AppVersion)) {
-                    // re authorize again
-                    UnityEngine.Debug.Log("There are new version of App. Need to re-authorize.");
-                    _ctxClient.HasAccessRights();
-                    return;
-                }
                 // load cortexToken
-                UserDataInfo tokenInfo  = LoadToken();
+                UserDataInfo tokenInfo  = Authorizer.LoadToken();
                 string savedEmotivId    = tokenInfo.EmotivId;
-                double savedTime        = tokenInfo.LastLoginTime;
 
-                // Re-Authorize if saved emotivId different logged in emotivId
-                if (string.IsNullOrEmpty(savedEmotivId) ||
-                    savedEmotivId != loginData.EmotivId) {
-                    // re authorize again
-                    UnityEngine.Debug.Log("There are new logging user. Need to re-authorize.");
-                    _ctxClient.HasAccessRights();
-                    return;
-                }
-                if (lastLoginTime >= savedTime) {
-                    UnityEngine.Debug.Log("User has just re-logined. Need to re-authorize.");
-                    _ctxClient.HasAccessRights();
-                    return;
-                }
+                // print saved EmotivId and saved time and token
+                UnityEngine.Debug.Log("Saved EmotivId: " + savedEmotivId + " current logged in emotivId " + loginData.EmotivId +
+                  " saved token: " + tokenInfo.CortexToken);
 
-                UnityEngine.Debug.Log("Refresh token for next using.");
-                // genereate new token
-                _ctxClient.GenerateNewToken(tokenInfo.CortexToken);
+                // check cortex token
+                if (!string.IsNullOrEmpty(savedEmotivId) && !string.IsNullOrEmpty(tokenInfo.CortexToken) && savedEmotivId == loginData.EmotivId) {
+                    // generate new token for next using
+                    UnityEngine.Debug.Log("Refresh token for next using.");
+                    _ctxClient.GenerateNewToken(tokenInfo.CortexToken);
+                }
+                else {
+                    // need to re-authorize again
+                    #if UNITY_ANDROID || UNITY_IOS
+                        // for embedded cortex lib need to athorize again
+                        _ctxClient.Authorize(_licenseID, _debitNo);
+                    #else
+                        // check access right to re authorize again
+                        _ctxClient.HasAccessRights();
+                    #endif
+                }  
             } 
             else {
 

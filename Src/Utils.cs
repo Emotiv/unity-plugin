@@ -5,9 +5,32 @@ using UnityEngine;
 
 namespace EmotivUnityPlugin
 {
-    public class Utils
+    public static class Utils
     {
         
+        private static string _logDirectory;
+        private static string _dataDirectory;
+
+        public static string LogDirectory { get => _logDirectory; set => _logDirectory = value; }
+        public static string DataDirectory { get => _dataDirectory; set => _dataDirectory = value; }
+        
+        // init Utils to create needed directories for unity app. It should be called at Start() and before logger.Init() method
+        public static void Init()
+        {
+            // create tmp directory for unity app
+            string tmpPath = GetAppTmpPath();
+            _logDirectory = Path.Combine(tmpPath, Config.LogsDir);
+            _dataDirectory = Path.Combine(tmpPath, Config.ProfilesDir);
+
+            // Ensure the directories exist
+            // check directory is existed or not to create
+            if (!Directory.Exists(_logDirectory))
+                Directory.CreateDirectory(_logDirectory);
+
+            if (!Directory.Exists(_dataDirectory))
+                Directory.CreateDirectory(_dataDirectory);
+        }
+
         public static Int64 GetEpochTimeNow()
         {
             TimeSpan t = DateTime.UtcNow - new DateTime(1970, 1, 1);
@@ -48,22 +71,7 @@ namespace EmotivUnityPlugin
 
         public static string GetLogPath() 
         {
-            string tmpPath = GetAppTmpPath();
-            string targetDir = Path.Combine(tmpPath, Config.LogsDir);
-            if (!Directory.Exists(targetDir)) {
-                try
-                {
-                    // create directory
-                    Directory.CreateDirectory(targetDir);
-                    UnityEngine.Debug.Log("GetLogPath: create directory " + targetDir);
-                }
-                catch (Exception e)
-                {      
-                    UnityEngine.Debug.Log("Can not create directory: " + targetDir + " : failed: " + e.ToString());
-                }
-                finally {}
-            }
-            return targetDir;
+            return _logDirectory;
         }
 
         public static DateTime StringToIsoDateTime(string time) {

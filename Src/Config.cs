@@ -90,6 +90,9 @@
         public const int LoginTokenError = -32108;
         public const int AuthorizeTokenError = -32109;
         public const int CloudTokenIsRefreshing = -32130;
+        public const int NotReAuthorizedError = -32170;
+        public const int CortexTokenCompareErrorAppInfo = -32135;
+
     }
 
     public static class DevStreamParams
