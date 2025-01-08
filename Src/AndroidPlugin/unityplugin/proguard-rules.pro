@@ -12,6 +12,9 @@
 #   public *;
 #}
 
+-keep class net.openid.appauth.** { *; }
+-keep class net.openid.appauth.**$* { *; }
+
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable

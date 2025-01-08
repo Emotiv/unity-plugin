@@ -250,6 +250,11 @@ namespace EmotivUnityPlugin
                 JToken messageData = warning["message"];
                 HandleWarning(code, messageData);
             }
+            else if (response["authenticationCode"] != null) {
+                // handle authentication code for login via web browser
+                string authCode = response["authenticationCode"].ToString();
+                // print log
+            }
         }
 
         /// <summary>
