@@ -78,8 +78,20 @@ namespace EmotivUnityPlugin
                 _ctxClient.Logout(_emotivId);
             }
             else if (errorInfo.Code == ErrorCode.CloudTokenIsRefreshing || errorInfo.Code == ErrorCode.NotReAuthorizedError || errorInfo.Code == ErrorCode.CortexTokenCompareErrorAppInfo) {
-                UnityEngine.Debug.Log("OnErrorMsgReceived error: " + errorInfo.MessageError  + ". Need to re-authorize again until it is done. Received time at" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                _ctxClient.Authorize(_licenseID, _debitNo);
+                // load cortexToken
+                UserDataInfo tokenInfo  = Authorizer.LoadToken();
+
+                if (string.IsNullOrEmpty(tokenInfo.CortexToken)) {
+                    UnityEngine.Debug.Log("OnErrorMsgReceived: No token found. Need to logout user " + _emotivId);
+                    if (_emotivId == "")
+                        return;
+                    // logout user
+                    _ctxClient.Logout(_emotivId);
+                }
+                else {
+                    UnityEngine.Debug.Log("OnErrorMsgReceived: " + errorInfo.MessageError  +  " Re-authorize again until it is done");
+                    _ctxClient.Authorize(_licenseID, _debitNo);
+                } 
             }
         }
 
