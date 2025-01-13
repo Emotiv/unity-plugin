@@ -66,7 +66,18 @@ namespace EmotivUnityPlugin
         #endif
 
         // Private constructor to prevent direct instantiation
-        public EmbeddedCortexClient() { }
+        public EmbeddedCortexClient() {
+            // print log
+            Debug.Log("qqqqqq EmbeddedCortexClient created");
+
+        }
+
+        // destructor
+        ~EmbeddedCortexClient()
+        {
+            // print log
+            Debug.Log("qqqqqq EmbeddedCortexClient destroyed");
+        }
 
         // Implementation of the abstract method
 
@@ -80,11 +91,11 @@ namespace EmotivUnityPlugin
                 _activity = activity;
                 AndroidJavaObject application = activity.Call<AndroidJavaObject>("getApplication");
                 // start the background service
-                AndroidJavaObject appContext = activity.Call<AndroidJavaObject>("getApplicationContext");
-                AndroidJavaClass serviceClass = new AndroidJavaClass("com.emotiv.unityplugin.BForegroundService");
-                AndroidJavaObject intent = new AndroidJavaObject("android.content.Intent", appContext, serviceClass);
-                intent.Call<AndroidJavaObject>("putExtra", "action", "Start");
-                activity.Call<AndroidJavaObject>("startService", intent);
+                // AndroidJavaObject appContext = activity.Call<AndroidJavaObject>("getApplicationContext");
+                // AndroidJavaClass serviceClass = new AndroidJavaClass("com.emotiv.unityplugin.BForegroundService");
+                // AndroidJavaObject intent = new AndroidJavaObject("android.content.Intent", appContext, serviceClass);
+                // intent.Call<AndroidJavaObject>("putExtra", "action", "Start");
+                // activity.Call<AndroidJavaObject>("startService", intent);
                 
                 LoadCortexLibAndroid(application);
             }
