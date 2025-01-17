@@ -2,6 +2,15 @@
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Timers;
+using System.Security.Cryptography;
+using System.Text;
+using Cdm.Authentication.Browser;
+using Cdm.Authentication.Clients;
+using Cdm.Authentication.OAuth2;
+using System.Threading;
+using UnityEngine;
+using Newtonsoft.Json;
+using System.Threading.Tasks;
 
 namespace EmotivUnityPlugin
 {
@@ -46,8 +55,17 @@ namespace EmotivUnityPlugin
         public static Authorizer Instance { get; } = new Authorizer();
         public string LicenseID { get => _licenseID; set => _licenseID = value; }
 
+        private CrossPlatformBrowser _crossPlatformBrowser;
+        private AuthenticationSession _authenticationSession;
+        private CancellationTokenSource _cancellationTokenSource;
+
+        private char[] HEX_ARRAY;
+
         public Authorizer()
         {
+            // init HEX_ARRAY
+            HEX_ARRAY = "xxxx-yyyy".ToCharArray();
+
             _ctxClient.WSConnectDone            += OnWSConnectDone;
             _ctxClient.GetUserLoginDone         += OnGetUserLoginDone;
             _ctxClient.UserLoginNotify          += OnUserLoginNotify;          // inform user loggin 
@@ -61,6 +79,91 @@ namespace EmotivUnityPlugin
             _ctxClient.RefreshTokenOK           += OnRefreshTokenOK;
             _ctxClient.GetLicenseInfoDone       += OnGetLicenseInfoDone;
             _ctxClient.ErrorMsgReceived        += OnErrorMsgReceived;
+
+            _crossPlatformBrowser = new CrossPlatformBrowser();
+            // add DeepLinkBrowser for Android
+            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new DeepLinkBrowser());
+
+            string server = "cerebrum.emotivcloud.com";
+            string hash = Md5(Config.AppClientId);
+            string redirectUrl = "emotiv-" + hash + "://authorize";
+
+            string serverUrl = $"https://{server}";
+
+            var configuration = new AuthorizationCodeFlow.Configuration()
+            {
+                clientId = Config.AppClientId,
+                clientSecret = Config.AppClientSecret,
+                redirectUri = redirectUrl,
+                scope = ""
+            };
+
+            var auth = new MockServerAuth(configuration, serverUrl);
+
+            _authenticationSession = new AuthenticationSession(auth, _crossPlatformBrowser);
+        }
+
+        private string BytesToHex(byte[] bytes)
+        {
+            char[] hexChars = new char[bytes.Length * 2];
+            for (int j = 0; j < bytes.Length; ++j)
+            {
+                int v = bytes[j] & 0xFF;
+                hexChars[j * 2] = HEX_ARRAY[v >> 4];
+                hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+            }
+            return new string(hexChars);
+        }
+
+        private string Md5(string s)
+        {
+            try
+            {
+                using MD5 md5 = MD5.Create();
+                byte[] inputBytes = Encoding.UTF8.GetBytes(s);
+                byte[] hashBytes = md5.ComputeHash(inputBytes);
+                return BytesToHex(hashBytes);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
+            return "";
+        }
+
+        private async void AuthenticateAsync()
+        {
+            if (_authenticationSession != null)
+            {
+
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = new CancellationTokenSource();
+                _authenticationSession.loginTimeout = TimeSpan.FromSeconds(180);
+                
+                try
+                {
+                    var authorizationCode =
+                        await _authenticationSession.AuthenticateAsyncForAuthorizationCode(_cancellationTokenSource.Token);
+
+                    // print authorization code
+                    UnityEngine.Debug.Log("Authorization code: " + authorizationCode);
+
+                }
+                catch (AuthorizationCodeRequestException ex)
+                {
+                    Debug.LogError($"{nameof(AuthorizationCodeRequestException)} " +
+                                $"error: {ex.error.code}, description: {ex.error.description}, uri: {ex.error.uri}");
+                }
+                catch (AccessTokenRequestException ex)
+                {
+                    Debug.LogError($"{nameof(AccessTokenRequestException)} " +
+                                $"error: {ex.error.code}, description: {ex.error.description}, uri: {ex.error.uri}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogException(ex);
+                }
+            }
         }
 
         private void OnEULANotAccepted(object sender, string message)
@@ -396,7 +499,11 @@ namespace EmotivUnityPlugin
                     if (Config.UserName == "")
                         return;
                     
-                    _ctxClient.Login(Config.UserName, Config.Password);
+                    // call AuthenticateAsync()
+                    AuthenticateAsync();
+                    
+
+                    // _ctxClient.Login(Config.UserName, Config.Password);
 
                 #else
                     bool checkEmotivAppRequire = true; // require to check emotiv apps installed or not
