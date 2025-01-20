@@ -908,5 +908,9 @@ namespace EmotivUnityPlugin
             return _dsManager.GetConnectToCortexState();
         }
 
+        public void LoginWithAuthenticationCode(string code) {
+            _ctxClient.LoginWithAuthenticationCode(code);
+        }
+
     }
 }

@@ -142,24 +142,31 @@ namespace Cdm.Authentication.OAuth2
             if (!string.IsNullOrEmpty(state) && state != authorizationResponse.state)
                 throw new SecurityException($"Invalid state got: {authorizationResponse.state}");
 
-            // print log
-            Debug.Log($"qqqqqq 333333 ExchangeCodeForAccessTokenAsync 33333authorizationResponse {authorizationResponse.code}");
-            var parameters = GetAccessTokenParameters(authorizationResponse.code);
-
-            Debug.Assert(parameters != null);
-            // print log
-            Debug.Log($"qqqqqq 444444 ExchangeCodeForAccessTokenAsync 44444parameters {parameters.Count}");
-            // print key and value of parameters
-            foreach (var keyValuePair in parameters)
+            // create aceces token response with authorization code
+            accessTokenResponse = new AccessTokenResponse()
             {
-                Debug.Log($"qqqqqqqq 44444444-22222222 ExchangeCodeForAccessTokenAsync {keyValuePair.Key} {keyValuePair.Value}");
-            }
-            accessTokenResponse =
-                await GetAccessTokenInternalAsync(new FormUrlEncodedContent(parameters), cancellationToken);
-            
-            // print accessToken
-            Debug.Log($"qqqqqq 55555555 accessTokenResponse: {accessTokenResponse.accessToken}");
+                accessToken = authorizationResponse.code
+            };
             return accessTokenResponse;
+            
+            // print log
+            // Debug.Log($"qqqqqq 333333 ExchangeCodeForAccessTokenAsync 33333authorizationResponse {authorizationResponse.code}");
+            // var parameters = GetAccessTokenParameters(authorizationResponse.code);
+
+            // Debug.Assert(parameters != null);
+            // // print log
+            // Debug.Log($"qqqqqq 444444 ExchangeCodeForAccessTokenAsync 44444parameters {parameters.Count}");
+            // // print key and value of parameters
+            // foreach (var keyValuePair in parameters)
+            // {
+            //     Debug.Log($"qqqqqqqq 44444444-22222222 ExchangeCodeForAccessTokenAsync {keyValuePair.Key} {keyValuePair.Value}");
+            // }
+            // accessTokenResponse =
+            //     await GetAccessTokenInternalAsync(new FormUrlEncodedContent(parameters), cancellationToken);
+            
+            // // print accessToken
+            // Debug.Log($"qqqqqq 55555555 accessTokenResponse: {accessTokenResponse.accessToken}");
+            // return accessTokenResponse;
         }
 
         public virtual async Task<string> ExtractAuthorizationCode(string redirectUrl, CancellationToken cancellationToken = default) {

@@ -27,7 +27,12 @@ namespace EmotivUnityPlugin
                 return _instance;
             }
         }
-
+        
+        public ConnectToCortexStates GetConnectToCortexState()
+        {
+            return emotivUnityItf.GetConnectToCortexState();
+        }
+        
         /// <summary>
         /// Get detected headsets. Returns a list of detected headsets.
         /// </summary>
@@ -321,6 +326,12 @@ namespace EmotivUnityPlugin
         public void EraseDataForMCTrainingAction(string action = DEFAULT_MC_ACTION)
         {
             emotivUnityItf.EraseMCTraining(action);
+        }
+
+        // LoginWithAuthenticationCode
+        public void LoginWithAuthenticationCode(string code)
+        {
+            emotivUnityItf.LoginWithAuthenticationCode(code);
         }
 
     }

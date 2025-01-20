@@ -289,7 +289,7 @@ namespace EmotivUnityPlugin
                 }
                 GetUserLoginDone(this, loginData);
             }
-            else if (method == "login")
+            else if (method == "login" || method == "loginWithAuthenticationCode")
             {
                 UserDataInfo loginData = new UserDataInfo();
                 loginData.EmotivId = data["username"].ToString();
@@ -594,6 +594,17 @@ namespace EmotivUnityPlugin
                 param.Add("debit", debitNumber);
             SendTextMessage(param, "authorize", true);
         }
+
+        // authorize with authorization code
+        public void LoginWithAuthenticationCode(string code)
+        {
+            JObject param = new JObject();
+            param.Add("clientId", Config.AppClientId);
+            param.Add("clientSecret", Config.AppClientSecret);
+            param.Add("code", code);
+            SendTextMessage(param, "loginWithAuthenticationCode", true);
+        }
+
         // get license information
         public void GetLicenseInfo(string cortexToken)
         {
