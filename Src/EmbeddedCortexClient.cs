@@ -61,6 +61,8 @@ namespace EmotivUnityPlugin
         #if UNITY_ANDROID
         private AndroidJavaObject _cortexLibManager;
         private CortexLibInterfaceProxy cortexLibInterfaceProxy;
+        // activity
+        private AndroidJavaObject _activity;
         #endif
 
         // Private constructor to prevent direct instantiation
@@ -75,6 +77,7 @@ namespace EmotivUnityPlugin
             #if UNITY_ANDROID
             if (context is AndroidJavaObject activity)
             {
+                _activity = activity;
                 AndroidJavaObject application = activity.Call<AndroidJavaObject>("getApplication");
                 LoadCortexLibAndroid(application);
             }
@@ -91,9 +94,9 @@ namespace EmotivUnityPlugin
         {
             // stop the cortex lib
             #if UNITY_ANDROID
-            if (_cortexLibManager != null)
+            if (_activity != null)
             {
-                _cortexLibManager.Call("stop");
+                _activity.Call("stop");
             }
             #endif
         }
@@ -102,15 +105,15 @@ namespace EmotivUnityPlugin
         private void LoadCortexLibAndroid(AndroidJavaObject application)
         {
             cortexLibInterfaceProxy = new CortexLibInterfaceProxy();
-            AndroidJavaClass cortexLibActivityClass = new AndroidJavaClass("com.emotiv.unityplugin.CortexLibActivity");
-            // Get the instance of CortexLibActivity
-            _cortexLibManager = cortexLibActivityClass.CallStatic<AndroidJavaObject>("getInstance");
+            // AndroidJavaClass cortexLibActivityClass = new AndroidJavaClass("com.emotiv.unityplugin.CortexLibActivity");
+            // // Get the instance of CortexLibActivity
+            // _cortexLibManager = cortexLibActivityClass.CallStatic<AndroidJavaObject>("getInstance");
             
-            bool isCortexLibManagerNotNull = _cortexLibManager != null;
+            bool isCortexLibManagerNotNull = _activity != null;
             if (isCortexLibManagerNotNull) {
-                _cortexLibManager.Call("load", application);
+                _activity.Call("load", application);
                 // start the cortex lib 
-                _cortexLibManager.Call("start", cortexLibInterfaceProxy);
+                _activity.Call("start", cortexLibInterfaceProxy);
             }
             else
                 UnityEngine.Debug.LogError("CortexLibManager is null. Cannot load cortex lib.");
@@ -124,7 +127,15 @@ namespace EmotivUnityPlugin
         {
             string request = PrepareRequest(method, param, hasParam);
             // UnityEngine.Debug.Log("SendTextMessage: " + request);
-            _cortexLibManager.Call("sendRequest", request);
+
+            _activity.Call("sendRequest", request);
+        }
+
+        // authenticate the user
+        public override void Authenticate()
+        {
+            // call authenticate method in cortex lib
+            _activity.Call("authenticate", Config.AppClientId, 100);
         }
     }
 }

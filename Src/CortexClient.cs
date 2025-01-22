@@ -490,6 +490,9 @@ namespace EmotivUnityPlugin
             }
         }
 
+        // authenticate
+        public virtual void Authenticate() {}
+
         /// <summary>
         /// Handle warning  message. 
         /// A warning message is notified from Cortex. The warning messages do not contain request Id

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.content.Intent;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -15,20 +16,45 @@ import org.json.JSONObject;
 
 import com.emotiv.CortexLibInterface;
 import android.util.Log;
-/**
- * This class is the base class for MainActivity when they want to work with EmotivCortexLib.aar
- * In this activity, we will request some permissions needed by CortexLib and start/stop CortexLib.
- */
-public class CortexLibActivity implements CortexLibInterface {
-    private final String TAG = CortexLibActivity.class.getName();
+
+import com.unity3d.player.UnityPlayerActivity;
+
+public class CustomUnityPlayerActivity extends UnityPlayerActivity implements CortexLibInterface {
+    private static final String TAG = "CustomUnityPlayerActivity";
     private boolean mCortexStarted = false;
     protected CortexConnection mCortexConnection = null;
     protected CortexConnectionInterface mCortexConnectionItf = null;
+    
 
-    private static final CortexLibActivity ourInstance = new CortexLibActivity();
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Log.i(TAG, "CustomUnityPlayerActivity is created");
+    }
 
-    public static CortexLibActivity getInstance() {
-        return ourInstance;
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.i(TAG, "CustomUnityPlayerActivity is destroyed");
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Log.i(TAG, "onActivityResult: requestCode: " + requestCode + ", resultCode: " + resultCode);
+        if (mCortexConnection != null) {
+            String authorizationCode = mCortexConnection.getAuthenticationCode(requestCode, data);
+            // print authorizationCode to Unity console
+            Log.i(TAG, "Authorization code: " + authorizationCode);
+        }
+    }
+
+    public void authenticate(String clientId, int requestCode) {
+        // PRINT LOG
+        Log.i(TAG, "authenticate: clientId: " + clientId + ", requestCode: " + requestCode);
+        if (mCortexConnection != null) {
+            mCortexConnection.authenticate(this, clientId, requestCode);
+        }
     }
 
     public void load(Application application) {

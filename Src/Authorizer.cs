@@ -396,7 +396,10 @@ namespace EmotivUnityPlugin
                     if (Config.UserName == "")
                         return;
                     
-                    _ctxClient.Login(Config.UserName, Config.Password);
+                    // call authenticate
+                    _ctxClient.Authenticate();
+                    
+                    // _ctxClient.Login(Config.UserName, Config.Password);
 
                 #else
                     bool checkEmotivAppRequire = true; // require to check emotiv apps installed or not
