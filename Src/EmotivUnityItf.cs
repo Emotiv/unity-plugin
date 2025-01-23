@@ -79,37 +79,70 @@ namespace EmotivUnityPlugin
         public List<string> DesiredErasingProfiles { get => _desiredErasingProfiles; set => _desiredErasingProfiles = value; }
         public List<int> MentalCommandActionSensitivity { get => _mentalCommandActionSensitivity; set => _mentalCommandActionSensitivity = value; }
 
-        // get headset lists
+        
+        /// <summary>
+        /// Logs in with an authentication code. Which used for unity example with embedded Cortex on Windows.
+        /// </summary>
+        /// <param name="code">The authentication code.</param>
+        public void LoginWithAuthenticationCode(string code) {
+            _ctxClient.LoginWithAuthenticationCode(code);
+        }
+        
+        /// <summary>
+        /// Gets the list of detected headsets.
+        /// </summary>
+        /// <returns>A list of detected headsets.</returns>
         public List<Headset> GetDetectedHeadsets()
         {
             return _dsManager.GetDetectedHeadsets();
         }
 
-        // get number training time for signature action
+        /// <summary>
+        /// Gets the number of training times for a specific action.
+        /// </summary>
+        /// <param name="action">The action to get the training times for.</param>
+        /// <returns>The number of training times for the specified action.</returns>
         public int GetTrainingTimeForAction(string action)
         {
             return _trainedSignatureActions.ContainsKey(action) ? _trainedSignatureActions[action] : 0;
         }
 
-        // profile list
+        /// <summary>
+        /// Gets the list of profiles.
+        /// </summary>
+        /// <returns>A list of profiles.</returns>
         public List<string> GetProfileList()
         {
             return _bciTraining.ProfileLists;
         }
 
-        // get connect state
+        /// <summary>
+        /// Gets the connection state of the desired connecting headset.
+        /// </summary>
+        /// <returns>The connection state of the headset.</returns>
         public ConnectHeadsetStates GetConnectHeadsetState()
         {
             return _dsManager.ConnectHeadsetState;
         }
 
         /// <summary>
-        /// Set up App configuration.
+        /// Gets the state of application in authorizing process. The Authorized state is true if the application is authorized successfully.
         /// </summary>
-        /// <param name="clientId">A clientId of Application.</param>
-        /// <param name="clientSecret">A clientSecret of Application.</param>
-        /// <param name="appVersion">Application version.</param>
-        /// <param name="appName">Application name.</param>
+        /// <returns>The state of application.</returns>
+        public ConnectToCortexStates GetConnectToCortexState()
+        {
+            return _dsManager.GetConnectToCortexState();
+        }
+
+        /// <summary>
+        /// Sets up the application configuration.
+        /// </summary>
+        /// <param name="clientId">The client ID of the application.</param>
+        /// <param name="clientSecret">The client secret of the application.</param>
+        /// <param name="appVersion">The version of the application.</param>
+        /// <param name="appName">The name of the application.</param>
+        /// <param name="appUrl">The URL of the application (optional). Only for desktop version and work with Cortex Service.</param>
+        /// <param name="emotivAppsPath">The path to Emotiv Launcher file path (optional). Only for desktop version and work with Cortex Service. </param>
         public void SetAppConfig(string clientId, string clientSecret,
                                  string appVersion, string appName,
                                  string appUrl = "", string emotivAppsPath = "")
@@ -117,7 +150,17 @@ namespace EmotivUnityPlugin
             _dsManager.SetAppConfig(clientId, clientSecret, appVersion, appName);
         }
 
-        // Init
+        /// <summary>
+        /// Initializes the Emotiv Unity Interface.
+        /// </summary>
+        /// <param name="clientId">The client ID of the application.</param>
+        /// <param name="clientSecret">The client secret of the application.</param>
+        /// <param name="appName">The name of the application.</param>
+        /// <param name="appVersion">The version of the application (optional).</param>
+        /// <param name="username">The username for login. Only for Test purpose when use private login in some special case.</param>
+        /// <param name="password">The password for login. Only for Test purpose when use private login in some special case.</param>
+        /// <param name="isDataBufferUsing"> Set to true whether to use data buffer to store data before get from Unity script. 
+        ///                Otherwise, the subscribing data only are handled on xyDataReceived() and displayed on Message Log   </param>
         public void Init(string clientId, string clientSecret, string appName,
                          string appVersion = "", string username = "", string password = "", bool isDataBufferUsing = true)
         {
@@ -147,11 +190,12 @@ namespace EmotivUnityPlugin
                 _dsManager.InformSuccessSubscribedData += OnInformSuccessSubscribedData;
             }
             _dsManager.MessageQueryHeadsetOK += OnMessageQueryHeadsetOK;
-
             _dsManager.FacialExpReceived += OnFacialExpReceived;
             _dsManager.MentalCommandReceived += OnMentalCommandReceived;
             _dsManager.SysEventsReceived += OnSysEventsReceived;
             _dsManager.HeadsetConnectFail += OnHeadsetConnectFail;
+            _dsManager.UserLogoutNotify += OnUserLogoutNotify;
+            _dsManager.StreamStopNotify += OnStreamStopNotify;
 
             // bind to record manager 
             _recordMgr.informMarkerResult += OnInformMarkerResult;
@@ -170,103 +214,46 @@ namespace EmotivUnityPlugin
             _ctxClient.ErrorMsgReceived += MessageErrorRecieved;
         }
 
-        private void OnGetMentalCommandActionSensitivityOK(object sender, List<int> e)
-        {
-            UnityEngine.Debug.Log("OnGetMentalCommandActionSensitivityOK: " + e.Count);
-            _mentalCommandActionSensitivity = e;
-        }
-
-        private void OnProfileSavedOK(object sender, string profileName)
-        {
-            if (profileName == _loadedProfileName)
-            {
-                _messageLog = "The profile " + profileName + " is saved successfully.";
-
-                // check desired erasing profiles. If there is any, erase the one by one in the list
-                if (_desiredErasingProfiles.Count > 0)
-                {
-                    UnityEngine.Debug.Log("OnProfileSavedOK: There are " + _desiredErasingProfiles.Count + " signature actions to erase.");
-                    EraseMCTraining(_desiredErasingProfiles[0]);
-                }
-                else {
-                    // get signature actions again
-                    GetTrainedSignatureActions("mentalCommand");
-
-                    // get mental command action sensitivity
-                    GetMentalCommandActionSensitivity();
-                }
-            }
-        }
-
-        private void OnInformTrainedSignatureActions(object sender, Dictionary<string, int> trainedActions)
-        {
-            // print out trained actions to message log
-            string trainedActionsText = "Trained actions: ";
-            foreach (var item in trainedActions)
-            {
-                trainedActionsText += item.Key + " (" + item.Value + "), ";
-            }
-            _messageLog = trainedActionsText;
-
-            _trainedSignatureActions = trainedActions;
-        }
-
-        private void OnInformEraseDone(object sender, string action)
-        {
-            UnityEngine.Debug.Log("OnInformEraseDone: " + action);
-        }
-
-        private void OnSetMentalCommandActionSensitivityOK(object sender, bool isSuccess)
-        {
-            UnityEngine.Debug.Log("SetMentalCommandActionSensitivityOK: " + isSuccess);
-            if (isSuccess)
-            {
-                // save profile
-                SaveProfile(_loadedProfileName);
-            }
-        }
-
         /// <summary>
-        /// Start program: open websocket, authorize process
+        /// If work with Cortex Service, the function will open socket then start authorizing process
+        /// In the case work with Embedded Cortex library, It will load library then start connecting and authorizing process.
         /// </summary>
+        /// <param name="context">It should be set the current activity in the case Android platform.</param>
         public void Start(object context = null)
         {
             _dsManager.StartAuthorize("", context);
         }
 
         /// <summary>
-        /// Stop program to clear data, stop queryHeadset
+        /// Stops the program to clear data and stop querying headsets.
         /// </summary>
         public void Stop()
         {
             _dsManager.Stop();
-            _isAuthorizedOK = false;
-            _isProfileLoaded = false;
-            _workingHeadsetId = "";
-            _desiredErasingProfiles.Clear();
+            ClearData();
         }
 
-
-        // login
-        public void Login(string username = "", string password = "")
+        /// <summary>
+        /// Logs out the current user.
+        /// </summary>
+        public void Logout()
         {
-            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-            {
-                // login with config username and password
-                _ctxClient.Login(AppConfig.UserName, AppConfig.Password);
-            }
-            else {
-                _ctxClient.Login(username, password);
-            }
+            _dsManager.Logout();
         }
 
+        /// <summary>
+        /// Queries the headsets.
+        /// </summary>
+        /// <param name="headsetId">The headset id of specific headset if want get headset information of a specific headset. 
+        ///                         If use empty string it will query all headsets</param>
         public void QueryHeadsets(string headsetId = "") {
             _dsManager.QueryHeadsets(headsetId);
         }
 
         /// <summary>
-        /// Create session with headset
+        /// Creates a session with a specific headset.
         /// </summary>
+        /// <param name="headsetId">The headset ID.</param>
         public void CreateSessionWithHeadset(string headsetId)
         {
             // start data stream without streams -> create session with the headset
@@ -276,7 +263,11 @@ namespace EmotivUnityPlugin
                 UnityEngine.Debug.LogWarning("Please wait authorize successfully before creating session with headset " + headsetId);
         }
 
-        // start data stream
+        /// <summary>
+        /// A compromise function to create a session with a specific headset then subscribe data
+        /// </summary>
+        /// <param name="streamNameList">The list of stream names.</param>
+        /// <param name="headsetId">The headset ID.</param>
         public void StartDataStream(List<string> streamNameList, string headsetId)
         {
             // check authorized
@@ -289,8 +280,9 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Subscribe data
+        /// Subscribes to data streams.
         /// </summary>
+        /// <param name="streamNameList">The list of stream names to subscribe to.</param>
         public void SubscribeData(List<string> streamNameList)
         {
             if (_dsManager.IsSessionCreated)
@@ -300,79 +292,95 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Unsubscribe data
+        /// Unsubscribes from data streams.
         /// </summary>
+        /// <param name="streamNameList">The list of stream names to unsubscribe from.</param>
         public void UnSubscribeData(List<string> streamNameList)
         {
             _dsManager.UnSubscribeData(streamNameList);
         }
 
-        
         // --------Get subscribed data from buffer---------
         /// <summary>
-        /// Get EEG channels lists.
+        /// Gets the list of EEG channels.
         /// </summary>
+        /// <returns>A list of EEG channels.</returns>
         public List<Channel_t> GetEEGChannels()
         {
             return _dsManager.GetEEGChannels();
         }
+
         /// <summary>
-        /// Get EEG data by channel.
+        /// Gets the current number of samples of a channel in the EEG buffer.
         /// </summary>
+        /// <returns>The number of EEG samples in the data buffer.</returns>
+        public int GetNumberEEGSamples()
+        {
+            return _dsManager.GetNumberEEGSamples();
+        }
+
+        /// <summary>
+        /// Gets EEG data by channel. Should call after check GetNumberEEGSamples() > 0 to make sure the data is ready.
+        /// </summary>
+        /// <param name="chan">The EEG channel.</param>
+        /// <returns>An array of EEG data.</returns>
         public double[] GetEEGData(Channel_t chan)
         {
             return _dsManager.GetEEGData(chan);
         }
 
         /// <summary>
-        /// Get the current number of samples of a channel in eeg buffer.
+        /// Gets the list of motion channels.
         /// </summary>
-        public int GetNumberEEGSamples()
-        {
-            return _dsManager.GetNumberEEGSamples();
-        }
-
-        // get motion data
-        /// <summary>
-        /// Get motion data by channel.
-        /// </summary>
-        public double[] GetMotionData(Channel_t chan)
-        {
-            return _dsManager.GetMotionData(chan);
-        }
-
-        /// <summary>
-        /// Get Motion channel lists.
-        /// </summary>
+        /// <returns>A list of motion channels.</returns>
         public List<Channel_t> GetMotionChannels()
         {
             return _dsManager.GetMotionChannels();
         }
 
         /// <summary>
-        /// Get the current number of samples of a channel in motion buffer.
+        /// Gets the current number of samples of a channel in the Motion buffer.
         /// </summary>
+        /// <returns>The number of motion samples.</returns>
         public int GetNumberMotionSamples()
         {
             return _dsManager.GetNumberMotionSamples();
         }
-        // get band power data
+
         /// <summary>
-        /// Get band power label lists.
+        /// Gets motion data by channel. Should call after check GetNumberMotionSamples() > 0 to make sure the data is ready.
         /// </summary>
+        /// <param name="chan">The motion channel.</param>
+        /// <returns>An array of motion data.</returns>
+        public double[] GetMotionData(Channel_t chan)
+        {
+            return _dsManager.GetMotionData(chan);
+        }
+
+        /// <summary>
+        /// Gets the list of band power labels.
+        /// </summary>
+        /// <returns>A list of band power labels.</returns>
         public List<string> GetBandPowerLists()
         {
             return _dsManager.GetBandPowerLists();
         }
 
         /// <summary>
-        /// Get the current number of samples of a channel in band power buffer.
+        /// Gets the current number of samples of a channel in the band power buffer.
         /// </summary>
+        /// <returns>The number of band power samples.</returns>
         public int GetNumberPowerBandSamples()
         {
             return _dsManager.GetNumberPowerBandSamples();
         }
 
+        /// <summary>
+        /// Gets the band power data for a specific channel and band. Should call after check GetNumberPowerBandSamples() > 0 to make sure the data is ready.
+        /// </summary>
+        /// <param name="chan">The channel.</param>
+        /// <param name="band">The band power type.</param>
+        /// <returns>The band power data.</returns>
         public double GetBandPower(Channel_t chan, BandPowerType _band)
         {
             switch (_band)
@@ -392,57 +400,52 @@ namespace EmotivUnityPlugin
             }
         }
 
-        //=== Peformance metric data ===
         /// <summary>
-        /// Get Performance metrics label lists.
+        /// Gets the list of performance metrics labels.
         /// </summary>
+        /// <returns>A list of performance metrics labels.</returns>
         public List<string> GetPMLists()
         {
             return _dsManager.GetPMLists();
         }
 
         /// <summary>
-        /// Get the current number of samples of a channel in performance metric buffer.
+        /// Gets the current number of samples of a channel in the performance metrics buffer.
         /// </summary>
+        /// <returns>The number of performance metrics samples.</returns>
         public int GetNumberPMSamples()
         {
             return _dsManager.GetNumberPMSamples();
         }
 
         /// <summary>
-        /// Get peformance metric data by label.
+        /// Gets performance metrics data by label. Should call after check GetNumberPMSamples() > 0 to make sure the data is ready.
         /// </summary>
+        /// <param name="label">The performance metrics label.</param>
+        /// <returns>The performance metrics data.</returns>
         public double GetPMData(string label)
         {
             return _dsManager.GetPMData(label);
         }
 
+        
         /// <summary>
-        /// Get contact quality by channel.
+        /// Gets the current number of samples of a channel in the contact quality or device buffer.
         /// </summary>
+        /// <returns>The number of contact quality samples.</returns>
+        public int GetNumberCQSamples()
+        {
+            return _dsManager.GetNumberCQSamples();
+        }
+
+        /// <summary>
+        /// Gets the contact quality by channel. Should call after check GetNumberCQSamples() > 0 to make sure the data is ready.
+        /// </summary>
+        /// <param name="channel">The channel.</param>
+        /// <returns>The contact quality data.</returns>
         public double GetContactQuality(Channel_t channel)
         {
             return _dsManager.GetContactQuality(channel);
-        }
-
-        //=== Device data ===
-        /// <summary>
-        /// Get battery level.
-        /// </summary>
-        public BatteryInfo GetBattery()
-        {
-            BatteryInfo batteryInfo = new BatteryInfo();
-            
-            batteryInfo.batteryLeft = _dsManager.BatteryLeft();
-            batteryInfo.batteryRight = _dsManager.BatteryRight();
-            batteryInfo.isTwoSideBatteryType = (batteryInfo.batteryLeft >= 0)  || (batteryInfo.batteryRight >= 0);
-            if  (batteryInfo.isTwoSideBatteryType) {
-                batteryInfo.overallBattery = Math.Min(batteryInfo.batteryLeft, batteryInfo.batteryRight);
-            }
-            else {
-                batteryInfo.overallBattery = _dsManager.Battery();
-            }
-            return batteryInfo;
         }
 
         /// <summary>
@@ -454,38 +457,59 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Get the current number of samples of a channel in contact quality or dev buffer.
+        /// Gets the battery level. If the headset is two-side battery type, it will return the minimum battery level of two sides.
         /// </summary>
-        public int GetNumberCQSamples()
+        /// <returns>The battery information.</returns>
+        public BatteryInfo GetBattery()
         {
-            return _dsManager.GetNumberCQSamples();
+            BatteryInfo batteryInfo = new BatteryInfo();
+            batteryInfo.batteryLeft = _dsManager.BatteryLeft();
+            batteryInfo.batteryRight = _dsManager.BatteryRight();
+            batteryInfo.isTwoSideBatteryType = (batteryInfo.batteryLeft >= 0)  || (batteryInfo.batteryRight >= 0);
+            if  (batteryInfo.isTwoSideBatteryType) {
+                batteryInfo.overallBattery = Math.Min(batteryInfo.batteryLeft, batteryInfo.batteryRight);
+            }
+            else {
+                batteryInfo.overallBattery = _dsManager.Battery();
+            }
+            return batteryInfo;
         }
-
-        // eee quality data
-        public double GetEQ(Channel_t channel)
-        {
-            return _dsManager.GetEQ(channel);
-        }
-
-        // numebr of eeg quality samples
+        
+        
+        /// <summary>
+        /// Gets the number of EEG quality samples.
+        /// </summary>
+        /// <returns>The number of EEG quality samples.</returns>
         public int GetNumberEQSamples()
         {
             return _dsManager.GetNumberEQSamples();
         }
 
-        //--------End functions which get data from buffer--------------
+        /// <summary>
+        /// Gets the EEG quality data for a specific channel. Should call after check GetNumberEQSamples() > 0 to make sure the data is ready.
+        /// </summary>
+        /// <param name="channel">The EEG channel.</param>
+        /// <returns>The EEG quality data.</returns>
+        public double GetEQ(Channel_t channel)
+        {
+            return _dsManager.GetEQ(channel);
+        }
         
         /// <summary>
-        /// Create a record
+        /// Create a record.
         /// </summary>
+        /// <param name="title">The title of the record.</param>
+        /// <param name="description">The description of the record (optional).</param>
+        /// <param name="subjectName">The subject name (optional).</param>
+        /// <param name="tags">The tags associated with the record (optional).</param>
         public void StartRecord(string title, string description = null,
-                                 string subjectName = null, List<string> tags = null)
+                                string subjectName = null, List<string> tags = null)
         {
             _recordMgr.StartRecord(title, description, subjectName, tags);
         }
 
         /// <summary>
-        /// Stop current record
+        /// Stops the current recording.
         /// </summary>
         public void StopRecord()
         {
@@ -493,15 +517,17 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Add an instance marker
+        /// Injects an instance marker into the current record.
         /// </summary>
+        /// <param name="markerLabel">The label of the marker.</param>
+        /// <param name="markerValue">The value of the marker.</param>
         public void InjectMarker(string markerLabel, string markerValue)
         {
             _recordMgr.InjectMarker(markerLabel, markerValue);
         }
 
         /// <summary>
-        /// Update current instance marker
+        /// Updates the current marker to make it is interval marker with the end time is current time.
         /// </summary>
         public void UpdateMarker()
         {
@@ -509,8 +535,9 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Load a profile if is existed or create and load profile if it is not existed
+        /// Loads a profile if it exists or creates and loads a profile if it does not exist.
         /// </summary>
+        /// <param name="profileName">The name of the profile.</param>
         public void LoadProfile(string profileName)
         {
             if (!string.IsNullOrEmpty(_workingHeadsetId))
@@ -520,7 +547,7 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Unload a profile
+        /// Unloads the current profile.
         /// </summary>
         public void UnLoadProfile()
         {
@@ -532,8 +559,9 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Save a profile
+        /// Saves the current profile.
         /// </summary>
+        /// <param name="profileName">The name of the profile.</param>
         public void SaveProfile(string profileName)
         {
             if (!string.IsNullOrEmpty(_workingHeadsetId))
@@ -543,8 +571,11 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Start a Mental command Training
+        /// Starts a Mental Command training session.
         /// </summary>
+        /// <param name="action">The action to train.</param>
+        /// <param name="isAutoAccept">Whether to automatically accept the training.</param>
+        /// <param name="isAutoSave">Whether to automatically save the profile after training.</param>
         public void StartMCTraining(string action, bool isAutoAccept = false, bool isAutoSave = false)
         {
             if (_isProfileLoaded)
@@ -562,7 +593,7 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Accept a Mental command Training
+        /// Accepts the current Mental Command training session.
         /// </summary>
         public void AcceptMCTraining()
         {
@@ -570,7 +601,7 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Reject a Mental command Training
+        /// Rejects the current Mental Command training session.
         /// </summary>
         public void RejectMCTraining()
         {
@@ -578,8 +609,9 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Erase a Mental command Training
+        /// Erases the Mental Command training data for a specific action.
         /// </summary>
+        /// <param name="action">The action to erase training data for.</param>
         public void EraseMCTraining(string action)
         {
             UnityEngine.Debug.Log("EraseMCTraining: " + action);
@@ -588,60 +620,63 @@ namespace EmotivUnityPlugin
             // remove the action from desired erasing list
             if (_desiredErasingProfiles.Contains(action))
             {
-                _desiredErasingProfiles.Remove(action);
-            }
-        }
-
-        // erase all signature actions
-        public void EraseAllMCTraining()
-        {
-            // earse all training data of signature actions which has training time > 0
-            Dictionary<string, int> trainedActions = _trainedSignatureActions;
-            foreach (var item in trainedActions)
-            {
-                if (item.Value > 0)
-                {
-                    _desiredErasingProfiles.Add(item.Key);
-                }
-            }
-
-            if (_desiredErasingProfiles.Count == 0)
-            {
-                UnityEngine.Debug.Log("There is no signature action to erase.");
-            }
-            else
-            {
-                // Erase training data of action one by one.
-                EraseMCTraining(_desiredErasingProfiles[0]);
+            _desiredErasingProfiles.Remove(action);
             }
         }
 
         /// <summary>
-        /// Reset Mental command Training
+        /// Erases all Mental Command training data.
         /// </summary>
+        public void EraseAllMCTraining()
+        {
+            // erase all training data of signature actions which have training time > 0
+            Dictionary<string, int> trainedActions = _trainedSignatureActions;
+            foreach (var item in trainedActions)
+            {
+            if (item.Value > 0)
+            {
+                _desiredErasingProfiles.Add(item.Key);
+            }
+            }
+
+            if (_desiredErasingProfiles.Count == 0)
+            {
+            UnityEngine.Debug.Log("There is no signature action to erase.");
+            }
+            else
+            {
+            // Erase training data of action one by one.
+            EraseMCTraining(_desiredErasingProfiles[0]);
+            }
+        }
+
+        /// <summary>
+        /// Resets the Mental Command training data for a specific action.
+        /// </summary>
+        /// <param name="action">The action to reset training data for.</param>
         public void ResetMCTraining(string action)
         {
             _bciTraining.ResetTraining(action, "mentalCommand");
         }
 
-        // training fe
         /// <summary>
-        /// Start a Facial Expression Training
+        /// Starts a Facial Expression training session.
         /// </summary>
+        /// <param name="action">The action to train.</param>
         public void StartFETraining(string action)
         {
             if (_isProfileLoaded)
             {
-                _bciTraining.StartTraining(action, "facialExpression");
+            _bciTraining.StartTraining(action, "facialExpression");
             }
             else
             {
-                UnityEngine.Debug.LogError("Please load a profile before starting training");
+            UnityEngine.Debug.LogError("Please load a profile before starting training");
             }
         }
 
         /// <summary>
-        /// Accept a Facial Expression Training
+        /// Accepts the current Facial Expression training session.
         /// </summary>
         public void AcceptFETraining()
         {
@@ -649,7 +684,7 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Reject a Facial Expression Training
+        /// Rejects the current Facial Expression training session.
         /// </summary>
         public void RejectFETraining()
         {
@@ -657,44 +692,50 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Erase a Facial Expression Training
+        /// Erases the Facial Expression training data for a specific action.
         /// </summary>
+        /// <param name="action">The action to erase training data for.</param>
         public void EraseFETraining(string action)
         {
             _bciTraining.EraseTraining(action, "facialExpression");
         }
 
         /// <summary>
-        /// Reset Facial Expression Training
+        /// Resets the Facial Expression training data for a specific action.
         /// </summary>
+        /// <param name="action">The action to reset training data for.</param>
         public void ResetFETraining(string action)
         {
             _bciTraining.ResetTraining(action, "facialExpression");
         }
 
-        // set mental command action sensitivity
+        /// <summary>
+        /// Sets the sensitivity of the 4 active mental command actions even if active actions are less than 4.
+        /// </summary>
+        /// <param name="levels">The list of sensitivity levels. It is array of 4 numbers in range 1-10 </param>
         public void SetMentalCommandActionSensitivity(List<int> levels)
         {
             _bciTraining.SetMentalCommandActionSensitivity(_loadedProfileName, levels);
         }
 
-        // get mental command action sensitivity
+        /// <summary>
+        /// Gets the sensitivity levels for Mental Command actions. The sensitivity data will be got via MentalCommandActionSensitivity
+        /// </summary>
         public void GetMentalCommandActionSensitivity()
         {
             _bciTraining.GetMentalCommandActionSensitivity(_loadedProfileName);
         }
 
-        // get trained signature actions
+        /// <summary>
+        /// Gets the trained signature actions for a specific detection type.
+        /// </summary>
+        /// <param name="detection">The detection type (e.g., "mentalCommand").</param>
         public void GetTrainedSignatureActions(string detection)
         {
             _bciTraining.GetTrainedSignatureActions(detection, _loadedProfileName);
         }
 
-        // other BCI APIs
-
-
         // Event handlers
-
         private void OnHeadsetConnectFail(object sender, string headsetId)
         {
             UnityEngine.Debug.Log("OnHeadsetConnectFail: headsetId " + headsetId);
@@ -903,9 +944,87 @@ namespace EmotivUnityPlugin
             _messageLog = "Get Error: errorCode " + errorCode.ToString() + ", message: " + message + ", API: " + method;  
         }
 
-        public ConnectToCortexStates GetConnectToCortexState()
+        private void OnStreamStopNotify(object sender, List<string> streams)
         {
-            return _dsManager.GetConnectToCortexState();
+            string tmpText = "The data streams: ";
+            foreach (var item in streams)
+            {
+                tmpText= tmpText + item + "; ";
+            }
+            tmpText = tmpText + " are stopped.";
+            _messageLog = tmpText;
+        }
+
+        private void OnUserLogoutNotify(object sender, string message)
+        {
+            // clear data
+            ClearData();
+            _messageLog = message;
+        }
+
+        private void OnGetMentalCommandActionSensitivityOK(object sender, List<int> e)
+        {
+            UnityEngine.Debug.Log("OnGetMentalCommandActionSensitivityOK: " + e.Count);
+            _mentalCommandActionSensitivity = e;
+        }
+
+        private void OnProfileSavedOK(object sender, string profileName)
+        {
+            if (profileName == _loadedProfileName)
+            {
+                _messageLog = "The profile " + profileName + " is saved successfully.";
+
+                // check desired erasing profiles. If there is any, erase the one by one in the list
+                if (_desiredErasingProfiles.Count > 0)
+                {
+                    UnityEngine.Debug.Log("OnProfileSavedOK: There are " + _desiredErasingProfiles.Count + " signature actions to erase.");
+                    EraseMCTraining(_desiredErasingProfiles[0]);
+                }
+                else {
+                    // get signature actions again
+                    GetTrainedSignatureActions("mentalCommand");
+
+                    // get mental command action sensitivity
+                    GetMentalCommandActionSensitivity();
+                }
+            }
+        }
+
+        private void OnInformTrainedSignatureActions(object sender, Dictionary<string, int> trainedActions)
+        {
+            // print out trained actions to message log
+            string trainedActionsText = "Trained actions: ";
+            foreach (var item in trainedActions)
+            {
+                trainedActionsText += item.Key + " (" + item.Value + "), ";
+            }
+            // _messageLog = trainedActionsText;
+
+            _trainedSignatureActions = trainedActions;
+        }
+
+        private void OnInformEraseDone(object sender, string action)
+        {
+            UnityEngine.Debug.Log("OnInformEraseDone: " + action);
+        }
+
+        private void OnSetMentalCommandActionSensitivityOK(object sender, bool isSuccess)
+        {
+            UnityEngine.Debug.Log("SetMentalCommandActionSensitivityOK: " + isSuccess);
+            if (isSuccess)
+            {
+                // save profile
+                SaveProfile(_loadedProfileName);
+            }
+        }
+
+        // clear data
+        private void ClearData()
+        {
+            _isAuthorizedOK = false;
+            _isProfileLoaded = false;
+            _workingHeadsetId = "";
+            _desiredErasingProfiles.Clear();
         }
 
     }

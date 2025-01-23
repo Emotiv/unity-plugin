@@ -30,6 +30,7 @@ using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine;
+using System.Threading.Tasks;
 
 namespace EmotivUnityPlugin
 {
@@ -113,7 +114,7 @@ namespace EmotivUnityPlugin
             {
                 if (instance == null)
                 {
-                    #if UNITY_ANDROID || UNITY_IOS
+                    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB_WIN
                         instance = new EmbeddedCortexClient();
                     #else
                         instance = new WebsocketCortexClient();
@@ -151,7 +152,7 @@ namespace EmotivUnityPlugin
         /// </summary> 
         public void OnMessageReceived(string receievedMsg)
         {
-            UnityEngine.Debug.Log("OnMessageReceived " + receievedMsg);
+            // UnityEngine.Debug.Log("OnMessageReceived " + receievedMsg);
 
             JObject response = JObject.Parse(receievedMsg);
 
@@ -289,7 +290,7 @@ namespace EmotivUnityPlugin
                 }
                 GetUserLoginDone(this, loginData);
             }
-            else if (method == "login")
+            else if (method == "login" || method == "loginWithAuthenticationCode")
             {
                 UserDataInfo loginData = new UserDataInfo();
                 loginData.EmotivId = data["username"].ToString();
@@ -299,6 +300,8 @@ namespace EmotivUnityPlugin
             }
             else if (method == "logout")
             {
+                String message = data["message"].ToString();
+                UserLogoutNotify(this, message);
                 // get user login info
                 GetUserLogin();
             }
@@ -594,6 +597,17 @@ namespace EmotivUnityPlugin
                 param.Add("debit", debitNumber);
             SendTextMessage(param, "authorize", true);
         }
+
+        // authorize with authorization code
+        public void LoginWithAuthenticationCode(string code)
+        {
+            JObject param = new JObject();
+            param.Add("clientId", Config.AppClientId);
+            param.Add("clientSecret", Config.AppClientSecret);
+            param.Add("code", code);
+            SendTextMessage(param, "loginWithAuthenticationCode", true);
+        }
+
         // get license information
         public void GetLicenseInfo(string cortexToken)
         {

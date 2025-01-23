@@ -63,6 +63,11 @@ namespace EmotivUnityPlugin
             _ctxClient.ErrorMsgReceived        += OnErrorMsgReceived;
         }
 
+                // login with authorization code
+        public void LoginWithAuthenticationCode(string code) {
+            _ctxClient.LoginWithAuthenticationCode(code);
+        }
+
         private void OnEULANotAccepted(object sender, string message)
         {
             UnityEngine.Debug.Log("OnEULANotAccepted: " + message);
@@ -117,6 +122,13 @@ namespace EmotivUnityPlugin
             _ctxClient.GetUserLogin();
         }
 
+        // log out user
+        public void Logout() {
+            if (_emotivId == "")
+                return;
+            _ctxClient.Logout(_emotivId);
+        }
+
         private void OnGetLicenseInfoDone(object sender, License lic)
         {
             // UnityEngine.Debug.Log(" OnGetLicenseInfoDone:  lic: " + lic.licenseId);
@@ -164,6 +176,7 @@ namespace EmotivUnityPlugin
                     UnityEngine.Debug.Log("Embedded cortex lib is started.");
                 #else
                     UnityEngine.Debug.Log("Websocket is opened.");
+                    _ctxClient.GetUserLogin();
                 #endif
                 ConnectServiceStateChanged(this, ConnectToCortexStates.Login_waiting);
             } else {
@@ -197,7 +210,7 @@ namespace EmotivUnityPlugin
                 }
 
                 // do not save token for mobile platform
-                #if !UNITY_ANDROID && !UNITY_IOS
+                #if !UNITY_ANDROID && !UNITY_IOS && !USE_EMBEDDED_LIB_WIN
                     UnityEngine.Debug.Log("Save token for next using.");
                     // Save App version
                     Utils.SaveAppVersion(Config.AppVersion);
@@ -378,7 +391,7 @@ namespace EmotivUnityPlugin
                 }
                 else {
                     // need to re-authorize again
-                    #if UNITY_ANDROID || UNITY_IOS
+                    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB_WIN
                         // for embedded cortex lib need to athorize again
                         _ctxClient.Authorize(_licenseID, _debitNo);
                     #else
@@ -389,14 +402,14 @@ namespace EmotivUnityPlugin
             } 
             else {
 
-                // for embedded cortex lib need to call login 
-                #if UNITY_ANDROID || UNITY_IOS
+                // for embedded cortex lib need to call login  windows and androids
+                #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB_WIN
                     UnityEngine.Debug.Log("No emotiv user login. Need to call login for username " + Config.UserName);
                     ConnectServiceStateChanged(this, ConnectToCortexStates.Login_notYet);
                     if (Config.UserName == "")
                         return;
                     
-                    _ctxClient.Login(Config.UserName, Config.Password);
+                    // _ctxClient.Login(Config.UserName, Config.Password);
 
                 #else
                     bool checkEmotivAppRequire = true; // require to check emotiv apps installed or not

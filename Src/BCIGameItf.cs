@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace EmotivUnityPlugin
 {
@@ -26,6 +27,17 @@ namespace EmotivUnityPlugin
                 }
                 return _instance;
             }
+        }
+
+        public ConnectToCortexStates GetConnectToCortexState()
+        {
+            return emotivUnityItf.GetConnectToCortexState();
+        }
+
+        // LoginWithAuthenticationCode
+        public void LoginWithAuthenticationCode(string code)
+        {
+            emotivUnityItf.LoginWithAuthenticationCode(code);
         }
 
         /// <summary>
@@ -321,6 +333,12 @@ namespace EmotivUnityPlugin
         public void EraseDataForMCTrainingAction(string action = DEFAULT_MC_ACTION)
         {
             emotivUnityItf.EraseMCTraining(action);
+        }
+
+        // logout
+        public void Logout()
+        {
+            emotivUnityItf.Logout();
         }
 
     }

@@ -170,21 +170,22 @@ namespace EmotivUnityPlugin
 
         private void OnUnSubscribeDataDone(object sender, MultipleResultEventArgs e)
         {
+            List<string> unSubList = new List<string>();
             foreach (JObject ele in e.SuccessList)
             {
                 lock (_locker)
                 {
                     string streamName = (string)ele["streamName"];
-                    List<string> unSubList = new List<string>();
                     if (_streams.Contains(streamName)) {
                         _streams.Remove(streamName);
                         unSubList.Add(streamName);
                     }
-                    if (unSubList.Count > 0) {
-                        StreamStopNotify(this, unSubList);
-                    }
                 }
             }
+            if (unSubList.Count > 0) {
+                StreamStopNotify(this, unSubList);
+            }
+            
             foreach (JObject ele in e.FailList)
             {
                 string streamName = (string)ele["streamName"];
@@ -456,6 +457,11 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void RefreshHeadset() {
             _headsetFinder.RefreshHeadset();
+        }
+
+        // log out
+        public void Logout() {
+            _authorizer.Logout();
         }
     }
 }

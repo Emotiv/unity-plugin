@@ -80,6 +80,9 @@ namespace EmotivUnityPlugin
 
         public event EventHandler<string> HeadsetScanFinished;
         public event EventHandler<string> MessageQueryHeadsetOK;
+        public event EventHandler<string> UserLogoutNotify;
+
+        public event EventHandler<List<string>> StreamStopNotify;
 
         private DataStreamManager()
         {
@@ -178,6 +181,8 @@ namespace EmotivUnityPlugin
                 _detectedHeadsets.Clear();
                 _connectHeadsetState = ConnectHeadsetStates.No_Connect;
                 ResetDataBuffers();
+                // notify logout
+                UserLogoutNotify(this, message);
             }
         }
 
@@ -264,12 +269,8 @@ namespace EmotivUnityPlugin
         {
             lock (_locker)
             {
-                _wantedHeadsetId    = "" ; // reset headset
-                _readyCreateSession = true;
-                _connectHeadsetState = ConnectHeadsetStates.No_Connect;
-
-                UnityEngine.Debug.Log("OnStreamStopNotify: Stop data stream from Cortex.");
                 foreach (string streamName in streams) {
+                    UnityEngine.Debug.Log("OnStreamStopNotify: Stop " + streamName +  " from Cortex.");
                     if (streamName == DataStreamName.EEG) {
                         // clear _eegBuffer
                         if (_eegBuff != null) {
@@ -328,6 +329,7 @@ namespace EmotivUnityPlugin
                         UnityEngine.Debug.Log("DataStreamManager-OnStreamStopNotify: stream name:" + streamName);
                     }
                 }
+                StreamStopNotify(this, streams);
             }
         }
 
@@ -1066,6 +1068,12 @@ namespace EmotivUnityPlugin
             {
                 return _wantedHeadsetId;
             }
+        }
+
+        // log out
+        public void Logout()
+        {
+            _dsProcess.Logout();
         }
     }
 }
