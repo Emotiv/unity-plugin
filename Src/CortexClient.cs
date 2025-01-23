@@ -113,7 +113,7 @@ namespace EmotivUnityPlugin
             {
                 if (instance == null)
                 {
-                    #if UNITY_ANDROID || UNITY_IOS
+                    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB_WIN
                         instance = new EmbeddedCortexClient();
                     #else
                         instance = new WebsocketCortexClient();
