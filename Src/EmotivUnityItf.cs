@@ -79,6 +79,10 @@ namespace EmotivUnityPlugin
         public List<string> DesiredErasingProfiles { get => _desiredErasingProfiles; set => _desiredErasingProfiles = value; }
         public List<int> MentalCommandActionSensitivity { get => _mentalCommandActionSensitivity; set => _mentalCommandActionSensitivity = value; }
 
+        public void LoginWithAuthenticationCode(string code) {
+            _ctxClient.LoginWithAuthenticationCode(code);
+        }
+        
         // get headset lists
         public List<Headset> GetDetectedHeadsets()
         {
@@ -101,6 +105,11 @@ namespace EmotivUnityPlugin
         public ConnectHeadsetStates GetConnectHeadsetState()
         {
             return _dsManager.ConnectHeadsetState;
+        }
+
+        public async Task AuthenticateAsync()
+        {
+            await _ctxClient.AuthenticateAsync();
         }
 
         /// <summary>

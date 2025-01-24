@@ -63,6 +63,11 @@ namespace EmotivUnityPlugin
             _ctxClient.ErrorMsgReceived        += OnErrorMsgReceived;
         }
 
+                // login with authorization code
+        public void LoginWithAuthenticationCode(string code) {
+            _ctxClient.LoginWithAuthenticationCode(code);
+        }
+
         private void OnEULANotAccepted(object sender, string message)
         {
             UnityEngine.Debug.Log("OnEULANotAccepted: " + message);
@@ -397,7 +402,7 @@ namespace EmotivUnityPlugin
                     if (Config.UserName == "")
                         return;
                     
-                    _ctxClient.Login(Config.UserName, Config.Password);
+                    // _ctxClient.Login(Config.UserName, Config.Password);
 
                 #else
                     bool checkEmotivAppRequire = true; // require to check emotiv apps installed or not

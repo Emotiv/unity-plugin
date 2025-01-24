@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace EmotivUnityPlugin
 {
@@ -27,6 +28,23 @@ namespace EmotivUnityPlugin
                 return _instance;
             }
         }
+
+        public ConnectToCortexStates GetConnectToCortexState()
+        {
+            return emotivUnityItf.GetConnectToCortexState();
+        }
+
+        // LoginWithAuthenticationCode
+        public void LoginWithAuthenticationCode(string code)
+        {
+            emotivUnityItf.LoginWithAuthenticationCode(code);
+        }
+
+        public async Task AuthenticateAsync()
+        {
+            await emotivUnityItf.AuthenticateAsync();
+        }
+
 
         /// <summary>
         /// Get detected headsets. Returns a list of detected headsets.
