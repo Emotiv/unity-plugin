@@ -116,11 +116,11 @@ namespace EmotivUnityPlugin
                 _cortexLibManager.Call("start", cortexLibInterfaceProxy);
                 #if DEVELOPMENT_BUILD
                 Debug.Log("Build is Development");
-                endif
+                #endif
 
                 #if PRODUCTION_BUILD
                 Debug.Log("Build is Production");
-                endif
+                #endif
             }
             else
                 Debug.LogError("CortexLibManager is null. Cannot load cortex lib.");
