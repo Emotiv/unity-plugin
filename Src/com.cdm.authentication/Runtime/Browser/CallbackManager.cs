@@ -4,7 +4,7 @@ using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace EmotivUnityPlugin
+namespace Cdm.Authentication.Browser
 {
     public class CallbackManager
     {
