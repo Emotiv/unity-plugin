@@ -122,6 +122,13 @@ namespace EmotivUnityPlugin
             _ctxClient.GetUserLogin();
         }
 
+        // log out user
+        public void Logout() {
+            if (_emotivId == "")
+                return;
+            _ctxClient.Logout(_emotivId);
+        }
+
         private void OnGetLicenseInfoDone(object sender, License lic)
         {
             // UnityEngine.Debug.Log(" OnGetLicenseInfoDone:  lic: " + lic.licenseId);

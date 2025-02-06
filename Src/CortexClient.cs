@@ -124,11 +124,6 @@ namespace EmotivUnityPlugin
             }
         }
 
-        public virtual async Task AuthenticateAsync()
-        {
-            
-        }
-
         // prepare json rpc request
         protected string PrepareRequest(string method, JObject param, bool hasParam = true) {
             JObject request = new JObject(
@@ -305,6 +300,8 @@ namespace EmotivUnityPlugin
             }
             else if (method == "logout")
             {
+                String message = data["message"].ToString();
+                UserLogoutNotify(this, message);
                 // get user login info
                 GetUserLogin();
             }

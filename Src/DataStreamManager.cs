@@ -80,6 +80,7 @@ namespace EmotivUnityPlugin
 
         public event EventHandler<string> HeadsetScanFinished;
         public event EventHandler<string> MessageQueryHeadsetOK;
+        public event EventHandler<string> UserLogoutNotify;
 
         private DataStreamManager()
         {
@@ -178,6 +179,8 @@ namespace EmotivUnityPlugin
                 _detectedHeadsets.Clear();
                 _connectHeadsetState = ConnectHeadsetStates.No_Connect;
                 ResetDataBuffers();
+                // notify logout
+                UserLogoutNotify(this, message);
             }
         }
 
@@ -1066,6 +1069,12 @@ namespace EmotivUnityPlugin
             {
                 return _wantedHeadsetId;
             }
+        }
+
+        // log out
+        public void Logout()
+        {
+            _dsProcess.Logout();
         }
     }
 }

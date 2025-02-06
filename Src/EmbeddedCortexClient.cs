@@ -197,32 +197,5 @@ namespace EmotivUnityPlugin
             _cortexClient.sendRequest(request);
             #endif
         }
-
-        public override async Task AuthenticateAsync() {
-            
-            // print log
-            Debug.Log("qqqqqqq AuthenticateAsync");
-            // add try catch
-            try
-            {
-                var authorize = new EmotivAuthentication(Config.AppClientId);
-                var code = await authorize.Authorize();
-
-                if (string.IsNullOrEmpty(code))
-                {
-                    Debug.LogError("Failed to authorize");
-                    return;
-                }
-                else
-                {
-                    Debug.Log("Authorization code: " + code);
-                    LoginWithAuthenticationCode(code);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("Failed to authenticate: " + e.Message);
-            }
-        }
     }
 }

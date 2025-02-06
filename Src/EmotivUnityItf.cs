@@ -107,11 +107,6 @@ namespace EmotivUnityPlugin
             return _dsManager.ConnectHeadsetState;
         }
 
-        public async Task AuthenticateAsync()
-        {
-            await _ctxClient.AuthenticateAsync();
-        }
-
         /// <summary>
         /// Set up App configuration.
         /// </summary>
@@ -161,6 +156,8 @@ namespace EmotivUnityPlugin
             _dsManager.MentalCommandReceived += OnMentalCommandReceived;
             _dsManager.SysEventsReceived += OnSysEventsReceived;
             _dsManager.HeadsetConnectFail += OnHeadsetConnectFail;
+            // notify logout
+            _dsManager.UserLogoutNotify += OnUserLogoutNotify;
 
             // bind to record manager 
             _recordMgr.informMarkerResult += OnInformMarkerResult;
@@ -177,6 +174,13 @@ namespace EmotivUnityPlugin
             _bciTraining.GetMentalCommandActionSensitivityOK += OnGetMentalCommandActionSensitivityOK;
             // get error message
             _ctxClient.ErrorMsgReceived += MessageErrorRecieved;
+        }
+
+        private void OnUserLogoutNotify(object sender, string message)
+        {
+            // clear data
+            ClearData();
+            _messageLog = message;
         }
 
         private void OnGetMentalCommandActionSensitivityOK(object sender, List<int> e)
@@ -235,6 +239,15 @@ namespace EmotivUnityPlugin
             }
         }
 
+        // clear data
+        private void ClearData()
+        {
+            _isAuthorizedOK = false;
+            _isProfileLoaded = false;
+            _workingHeadsetId = "";
+            _desiredErasingProfiles.Clear();
+        }
+
         /// <summary>
         /// Start program: open websocket, authorize process
         /// </summary>
@@ -249,12 +262,8 @@ namespace EmotivUnityPlugin
         public void Stop()
         {
             _dsManager.Stop();
-            _isAuthorizedOK = false;
-            _isProfileLoaded = false;
-            _workingHeadsetId = "";
-            _desiredErasingProfiles.Clear();
+            ClearData();
         }
-
 
         // login
         public void Login(string username = "", string password = "")
@@ -915,6 +924,12 @@ namespace EmotivUnityPlugin
         public ConnectToCortexStates GetConnectToCortexState()
         {
             return _dsManager.GetConnectToCortexState();
+        }
+
+        // logout
+        public void Logout()
+        {
+            _dsManager.Logout();
         }
 
     }

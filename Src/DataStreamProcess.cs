@@ -457,5 +457,10 @@ namespace EmotivUnityPlugin
         public void RefreshHeadset() {
             _headsetFinder.RefreshHeadset();
         }
+
+        // log out
+        public void Logout() {
+            _authorizer.Logout();
+        }
     }
 }

@@ -40,12 +40,6 @@ namespace EmotivUnityPlugin
             emotivUnityItf.LoginWithAuthenticationCode(code);
         }
 
-        public async Task AuthenticateAsync()
-        {
-            await emotivUnityItf.AuthenticateAsync();
-        }
-
-
         /// <summary>
         /// Get detected headsets. Returns a list of detected headsets.
         /// </summary>
@@ -339,6 +333,12 @@ namespace EmotivUnityPlugin
         public void EraseDataForMCTrainingAction(string action = DEFAULT_MC_ACTION)
         {
             emotivUnityItf.EraseMCTraining(action);
+        }
+
+        // logout
+        public void Logout()
+        {
+            emotivUnityItf.Logout();
         }
 
     }
