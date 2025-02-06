@@ -76,6 +76,8 @@ namespace Cdm.Authentication.Browser
                 UnityEngine.Debug.Log($"Found state: {response.State}");
                 var callbackManager = new CallbackManager(response.State);
                 await callbackManager.RunClient(args);
+                await Task.Delay(1000);
+                Application.Quit();
             }
             else
             {
