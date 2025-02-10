@@ -13,7 +13,7 @@
         public static string AppClientId            = "";
         public static string AppClientSecret        = "";
 
-         public static string AppUrl                 = "wss://localhost:7070"; // default
+        public static string AppUrl                 = "wss://localhost:6868"; // default
         public static string AppVersion             = "1.0.0"; // default
         public static string AppName                = "UnityApp"; // default app name
         

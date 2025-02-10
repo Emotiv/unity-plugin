@@ -156,8 +156,9 @@ namespace EmotivUnityPlugin
             _dsManager.MentalCommandReceived += OnMentalCommandReceived;
             _dsManager.SysEventsReceived += OnSysEventsReceived;
             _dsManager.HeadsetConnectFail += OnHeadsetConnectFail;
-            // notify logout
             _dsManager.UserLogoutNotify += OnUserLogoutNotify;
+            _dsManager.StreamStopNotify += OnStreamStopNotify;
+            
 
             // bind to record manager 
             _recordMgr.informMarkerResult += OnInformMarkerResult;
@@ -174,6 +175,17 @@ namespace EmotivUnityPlugin
             _bciTraining.GetMentalCommandActionSensitivityOK += OnGetMentalCommandActionSensitivityOK;
             // get error message
             _ctxClient.ErrorMsgReceived += MessageErrorRecieved;
+        }
+
+        private void OnStreamStopNotify(object sender, List<string> streams)
+        {
+            string tmpText = "The data streams: ";
+            foreach (var item in streams)
+            {
+                tmpText= tmpText + item + "; ";
+            }
+            tmpText = tmpText + " are stopped.";
+            _messageLog = tmpText;
         }
 
         private void OnUserLogoutNotify(object sender, string message)
@@ -219,7 +231,7 @@ namespace EmotivUnityPlugin
             {
                 trainedActionsText += item.Key + " (" + item.Value + "), ";
             }
-            _messageLog = trainedActionsText;
+            // _messageLog = trainedActionsText;
 
             _trainedSignatureActions = trainedActions;
         }
@@ -268,14 +280,7 @@ namespace EmotivUnityPlugin
         // login
         public void Login(string username = "", string password = "")
         {
-            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-            {
-                // login with config username and password
-                _ctxClient.Login(AppConfig.UserName, AppConfig.Password);
-            }
-            else {
-                _ctxClient.Login(username, password);
-            }
+            _ctxClient.Login(username, password);
         }
 
         public void QueryHeadsets(string headsetId = "") {

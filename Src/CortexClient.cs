@@ -152,7 +152,7 @@ namespace EmotivUnityPlugin
         /// </summary> 
         public void OnMessageReceived(string receievedMsg)
         {
-            UnityEngine.Debug.Log("OnMessageReceived " + receievedMsg);
+            // UnityEngine.Debug.Log("OnMessageReceived " + receievedMsg);
 
             JObject response = JObject.Parse(receievedMsg);
 
