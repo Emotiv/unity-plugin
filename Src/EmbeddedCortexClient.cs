@@ -140,10 +140,12 @@ namespace EmotivUnityPlugin
 
         private void CortexStarted(object? sender, bool e)
         {
+            #if USE_EMBEDDED_LIB_WIN
             _cortexClient = new EmbeddedCortexClientWin();
             _responseHandler = new CortexReponseHandler();
             _responseHandler.OnCortexResponse += OnCortexResponse;
             _cortexClient.registerResponseHandler(_responseHandler);
+            #endif
         }
 
         // override the close method
