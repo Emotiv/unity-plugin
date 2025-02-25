@@ -56,9 +56,9 @@ namespace EmotivUnityPlugin
     // implement CortexLogHandler java class
     public class CortexLogHandler : AndroidJavaProxy
     {
-        public CortexLogHandler() : base("com.emotiv.CortexLogHandler") { }
+        public CortexLogHandler() : base("com.emotiv.unityplugin.JavaLogInterface") { }
 
-        void onCortexLogMessage(string msg) {
+        public void onReceivedLog(String msg) {
             Debug.Log(msg);
         }
     }
@@ -187,7 +187,7 @@ namespace EmotivUnityPlugin
                 _cortexLibManager.Call("load", application);
                 // set log handler
                 _cortexLogHandler = new CortexLogHandler();
-                _cortexLibManager.Call("setLogHandler", _cortexLogHandler);
+                _cortexLibManager.Call("setJavaLogInterface", _cortexLogHandler);
                 // start the cortex lib
                 _cortexLibManager.Call("start", cortexLibInterfaceProxy);
             }

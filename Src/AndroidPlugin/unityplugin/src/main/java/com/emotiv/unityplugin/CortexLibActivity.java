@@ -27,6 +27,8 @@ public class CortexLibActivity implements CortexLibInterface {
     protected CortexConnection mCortexConnection = null;
     protected CortexConnectionInterface mCortexConnectionItf = null;
 
+    protected JavaLogInterface mJavaLogInterface = null;
+
     private static final CortexLibActivity ourInstance = new CortexLibActivity();
 
     public static CortexLibActivity getInstance() {
@@ -43,12 +45,17 @@ public class CortexLibActivity implements CortexLibInterface {
         }
         else {
             mCortexConnectionItf = cortexResponseInterface;
+            CortexLibManager.setLogHandler(CortexLogLevel.INFO, s -> {
+                if(mJavaLogInterface != null) {
+                    mJavaLogInterface.onReceivedLog(s);
+                }
+            });
             CortexLibManager.start(this);
         }
     }
 
-    public void setLogHandler(CortexLogHandler logHandler) {
-        CortexLibManager.setLogHandler(CortexLogLevel.INFO, logHandler);
+    public void setJavaLogInterface(JavaLogInterface javaLogInterface) {
+        mJavaLogInterface = javaLogInterface;
     }
 
     public void stop() {
