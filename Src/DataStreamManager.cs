@@ -65,6 +65,18 @@ namespace EmotivUnityPlugin
             remove { _dsProcess.BTLEPermissionGrantedNotify -= value; }
         }
 
+        public event EventHandler<List<DateTime>> QueryDatesHavingConsumerDataDone
+        {
+            add { _dsProcess.QueryDatesHavingConsumerDataDone += value; }
+            remove { _dsProcess.QueryDatesHavingConsumerDataDone -= value; }
+        }
+
+        public event EventHandler<List<MentalStateModel>> QueryDayDetailOfConsumerDataDone
+        {
+            add { _dsProcess.QueryDayDetailOfConsumerDataDone += value; }
+            remove { _dsProcess.QueryDayDetailOfConsumerDataDone -= value; }
+        }
+
         public event EventHandler<List<string>> InformSuccessSubscribedData;
 
         // list signal if do not store data to buffer
@@ -1074,6 +1086,15 @@ namespace EmotivUnityPlugin
         public void Logout()
         {
             _dsProcess.Logout();
+        }
+
+        public void QueryDatesHavingConsumerData(DateTime? from, DateTime? to, int page, int pageSize) {
+            
+            _dsProcess.QueryDatesHavingConsumerData(from, to, page, pageSize);
+        }
+
+        public void QueryDayDetailOfConsumerData(DateTime date) {
+            _dsProcess.QueryDayDetailOfConsumerData(date);
         }
     }
 }

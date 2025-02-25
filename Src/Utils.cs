@@ -215,5 +215,18 @@ namespace EmotivUnityPlugin
             else
                 return false;
         }
+
+        public static TimeSpan IndexToTime(int index)
+        {
+            if (index < 0 || index >= 48)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), "Index must be between 0 and 47.");
+            }
+
+            int hours = index / 2;
+            int minutes = (index % 2) * 30;
+
+            return new TimeSpan(hours, minutes, 0);
+        }
     }
 }

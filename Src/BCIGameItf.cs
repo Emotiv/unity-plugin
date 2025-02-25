@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -137,6 +138,16 @@ namespace EmotivUnityPlugin
         public bool IsTrainingSuccess()
         {
             return emotivUnityItf.IsMCTrainingSuccess;
+        }
+
+        public List<DateTime> DatesHavingConsumerData()
+        {
+            return emotivUnityItf.DatesHavingConsumerData;
+        }
+
+        public List<MentalStateModel> MentalStateDatas()
+        {
+            return emotivUnityItf.MentalStateDatas;
         }
 
         /// <summary>
@@ -341,5 +352,24 @@ namespace EmotivUnityPlugin
             emotivUnityItf.Logout();
         }
 
+        /// <summary>
+        /// Query the dates having consumer data within a specified date range.
+        /// </summary>
+        /// <param name="from">The start date of the range. If null, it will return all dates having data.</param>
+        /// <param name="to">The end date of the range. If null, it will return all dates having data.</param>
+        /// <param name="page">The page number for pagination. Default is 1.</param>
+        /// <param name="pageSize">The number of items per page for pagination. Default is 10.</param>
+        public void QueryDatesHavingConsumerData(DateTime? from = null, DateTime? to = null, int page = 1, int pageSize = 10)
+        {
+            emotivUnityItf.QueryDatesHavingConsumerData(from, to, page, pageSize);
+        }
+
+        /// <summary>
+        /// Queries the detailed consumer data for a specific day.
+        /// </summary>
+        /// <param name="date">The date for which to query the detailed consumer data.</param>
+        public void QueryDayDetailOfConsumerData(DateTime date) {
+            emotivUnityItf.QueryDayDetailOfConsumerData(date);
+        }
     }
 }

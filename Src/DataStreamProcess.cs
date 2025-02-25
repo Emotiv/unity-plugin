@@ -74,6 +74,18 @@ namespace EmotivUnityPlugin
             remove { _ctxClient.HeadsetScanFinished -= value; }
         }
 
+        public event EventHandler<List<DateTime>> QueryDatesHavingConsumerDataDone
+        {
+            add { _ctxClient.QueryDatesHavingConsumerDataDone += value; }
+            remove { _ctxClient.QueryDatesHavingConsumerDataDone -= value; }
+        }
+
+        public event EventHandler<List<MentalStateModel>> QueryDayDetailOfConsumerDataDone
+        {
+            add { _ctxClient.QueryDayDetailOfConsumerDataDone += value; }
+            remove { _ctxClient.QueryDayDetailOfConsumerDataDone -= value; }
+        }
+
         /// <summary>
         /// Gets states when work with cortex.
         /// Currently, the states relate to authorizing.
@@ -463,5 +475,15 @@ namespace EmotivUnityPlugin
         public void Logout() {
             _authorizer.Logout();
         }
+
+        public void QueryDatesHavingConsumerData(DateTime? from, DateTime? to, int page, int pageSize) {
+            
+            _ctxClient.QueryDatesHavingConsumerData(_authorizer.CortexToken, from, to, page, pageSize);
+        }
+
+        public void QueryDayDetailOfConsumerData (DateTime date) {
+            _ctxClient.QueryDayDetailOfConsumerData(_authorizer.CortexToken, date);
+        }
+
     }
 }
