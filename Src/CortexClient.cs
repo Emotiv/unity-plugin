@@ -988,21 +988,12 @@ namespace EmotivUnityPlugin
             SendTextMessage(param, "mentalCommandActionSensitivity", true);
         }
 
-        public void QueryDatesHavingConsumerData(string cortexToken, DateTime? start, DateTime? end, int page, int pageSize)
+        public void QueryDatesHavingConsumerData(string cortexToken, DateTime start, DateTime end)
         {
             JObject param = new JObject();
             param.Add("cortexToken", cortexToken);
-            if (start != null)
-            {
-                param.Add("startDate", start.Value.Date.ToString("yyyy-MM-dd"));
-            }
-            if (end != null)
-            {
-                param.Add("endDate", end.Value.Date.ToString("yyyy-MM-dd"));
-            }
-            
-            param.Add("page", page);
-            param.Add("pageSize", pageSize);
+            param.Add("startDate", start.Date.ToString("yyyy-MM-dd"));
+            param.Add("endDate", end.Date.ToString("yyyy-MM-dd"));
             SendTextMessage(param, "queryDatesHavingConsumerData", true);
         }
 

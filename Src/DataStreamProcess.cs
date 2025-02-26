@@ -476,9 +476,9 @@ namespace EmotivUnityPlugin
             _authorizer.Logout();
         }
 
-        public void QueryDatesHavingConsumerData(DateTime? from, DateTime? to, int page, int pageSize) {
+        public void QueryDatesHavingConsumerData(DateTime from, DateTime to) {
             
-            _ctxClient.QueryDatesHavingConsumerData(_authorizer.CortexToken, from, to, page, pageSize);
+            _ctxClient.QueryDatesHavingConsumerData(_authorizer.CortexToken, from, to);
         }
 
         public void QueryDayDetailOfConsumerData (DateTime date) {

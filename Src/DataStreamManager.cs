@@ -1088,9 +1088,9 @@ namespace EmotivUnityPlugin
             _dsProcess.Logout();
         }
 
-        public void QueryDatesHavingConsumerData(DateTime? from, DateTime? to, int page, int pageSize) {
+        public void QueryDatesHavingConsumerData(DateTime from, DateTime to) {
             
-            _dsProcess.QueryDatesHavingConsumerData(from, to, page, pageSize);
+            _dsProcess.QueryDatesHavingConsumerData(from, to);
         }
 
         public void QueryDayDetailOfConsumerData(DateTime date) {

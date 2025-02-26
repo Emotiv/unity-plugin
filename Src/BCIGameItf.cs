@@ -355,13 +355,11 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Query the dates having consumer data within a specified date range.
         /// </summary>
-        /// <param name="from">The start date of the range. If null, it will return all dates having data.</param>
-        /// <param name="to">The end date of the range. If null, it will return all dates having data.</param>
-        /// <param name="page">The page number for pagination. Default is 1.</param>
-        /// <param name="pageSize">The number of items per page for pagination. Default is 10.</param>
-        public void QueryDatesHavingConsumerData(DateTime? from = null, DateTime? to = null, int page = 1, int pageSize = 10)
+        /// <param name="from">The start date of the range.</param>
+        /// <param name="to">The end date of the range.</param>
+        public void QueryDatesHavingConsumerData(DateTime from, DateTime to)
         {
-            emotivUnityItf.QueryDatesHavingConsumerData(from, to, page, pageSize);
+            emotivUnityItf.QueryDatesHavingConsumerData(from, to);
         }
 
         /// <summary>
