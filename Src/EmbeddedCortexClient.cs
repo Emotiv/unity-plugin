@@ -52,6 +52,17 @@ namespace EmotivUnityPlugin
             EmbeddedCortexClient.Instance.OnWSConnected(true);
         }
     }
+
+    // implement CortexLogHandler java class
+    public class CortexLogHandler : AndroidJavaProxy
+    {
+        public CortexLogHandler() : base("com.emotiv.unityplugin.JavaLogInterface") { }
+
+        public void onReceivedLog(String msg) {
+            Debug.Log(msg);
+        }
+    }
+
     
     #elif USE_EMBEDDED_LIB_WIN
     public class CortexReponseHandler : ResponseHandlerCpp
@@ -103,6 +114,7 @@ namespace EmotivUnityPlugin
         #if UNITY_ANDROID
         private AndroidJavaObject _cortexLibManager;
         private CortexLibInterfaceProxy cortexLibInterfaceProxy;
+        private  CortexLogHandler _cortexLogHandler;
         #elif USE_EMBEDDED_LIB_WIN
         private EmbeddedCortexClientWin _cortexClient;
         private CortexReponseHandler _responseHandler;
@@ -173,7 +185,10 @@ namespace EmotivUnityPlugin
             bool isCortexLibManagerNotNull = _cortexLibManager != null;
             if (isCortexLibManagerNotNull) {
                 _cortexLibManager.Call("load", application);
-                // start the cortex lib 
+                // set log handler
+                _cortexLogHandler = new CortexLogHandler();
+                _cortexLibManager.Call("setJavaLogInterface", _cortexLogHandler);
+                // start the cortex lib
                 _cortexLibManager.Call("start", cortexLibInterfaceProxy);
             }
             else

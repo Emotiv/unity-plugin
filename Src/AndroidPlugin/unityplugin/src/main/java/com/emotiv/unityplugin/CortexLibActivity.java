@@ -14,6 +14,8 @@ import androidx.core.content.ContextCompat;
 import org.json.JSONObject;
 
 import com.emotiv.CortexLibInterface;
+import com.emotiv.CortexLogLevel;
+import com.emotiv.CortexLogHandler;
 import android.util.Log;
 /**
  * This class is the base class for MainActivity when they want to work with EmotivCortexLib.aar
@@ -24,6 +26,8 @@ public class CortexLibActivity implements CortexLibInterface {
     private boolean mCortexStarted = false;
     protected CortexConnection mCortexConnection = null;
     protected CortexConnectionInterface mCortexConnectionItf = null;
+
+    protected JavaLogInterface mJavaLogInterface = null;
 
     private static final CortexLibActivity ourInstance = new CortexLibActivity();
 
@@ -41,8 +45,17 @@ public class CortexLibActivity implements CortexLibInterface {
         }
         else {
             mCortexConnectionItf = cortexResponseInterface;
+            CortexLibManager.setLogHandler(CortexLogLevel.INFO, s -> {
+                if(mJavaLogInterface != null) {
+                    mJavaLogInterface.onReceivedLog(s);
+                }
+            });
             CortexLibManager.start(this);
         }
+    }
+
+    public void setJavaLogInterface(JavaLogInterface javaLogInterface) {
+        mJavaLogInterface = javaLogInterface;
     }
 
     public void stop() {
