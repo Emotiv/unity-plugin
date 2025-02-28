@@ -1063,9 +1063,10 @@ namespace EmotivUnityPlugin
             for (int i = 0; i < mentalStateList.Count; i++)
             {
                 TimeSpan time = Utils.IndexToTime(i);
-                mentalStateText += "At time: " + time.ToString() +  ", recordingTime: " + mentalStateList[i].recordingTime + ", ";
+                mentalStateText += "At time: " + time.ToString() +  mentalStateList[i].ToString() + "\n";
             }
-            _messageLog = mentalStateText;
+            UnityEngine.Debug.Log(mentalStateText);
+            // _messageLog = mentalStateText;
             _mentalStateDatas = mentalStateList;
         }
 
