@@ -59,7 +59,7 @@ namespace EmotivUnityPlugin
         public CortexLogHandler() : base("com.emotiv.unityplugin.JavaLogInterface") { }
 
         public void onReceivedLog(String msg) {
-            Debug.Log(msg);
+            MyLogger.Instance.Log(LogType.Log, "CortexLog", msg, null);
         }
     }
 

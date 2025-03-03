@@ -154,10 +154,10 @@ namespace EmotivUnityPlugin
         /// Initialize and start the application. It should be called when the app has granted permissions: bluetooth, location, write external storage.
         /// It will auto login if the user has not logged in before otherwise it will authorize to get cortex token for working with the cortex API.
         /// </summary>
-        public void Start(string clientId, string clientSecret, string username, string password, object context = null)
+        public void Start(string clientId, string clientSecret, string username, string password, bool isSaveLog = true, object context = null)
         {
             // Init
-            emotivUnityItf.Init(clientId, clientSecret, "HeartBeat", "1.1.0", username, password);
+            emotivUnityItf.Init(clientId, clientSecret, "HeartBeat", "1.1.0", username, password, isSaveLog);
             // Loads the Cortex library, connects, and authorizes the application.
             emotivUnityItf.Start(context);
         }

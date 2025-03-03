@@ -169,13 +169,15 @@ namespace EmotivUnityPlugin
         /// <param name="isDataBufferUsing"> Set to true whether to use data buffer to store data before get from Unity script. 
         ///                Otherwise, the subscribing data only are handled on xyDataReceived() and displayed on Message Log   </param>
         public void Init(string clientId, string clientSecret, string appName,
-                         string appVersion = "", string username = "", string password = "", bool isDataBufferUsing = true)
+                         string appVersion = "", string username = "", string password = "", bool allowSaveLogToFile = true, bool isDataBufferUsing = true)
         {
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
                 UnityEngine.Debug.LogError("The clientId or clientSecret is empty. Please fill them before starting.");
                 return;
             }
+            Utils.Init();
+            MyLogger.Instance.Init(allowSaveLogToFile);
             _dsManager.SetAppConfig(clientId, clientSecret, appVersion, appName, username, password);
             _dsManager.IsDataBufferUsing = isDataBufferUsing;
             // init bcitraining
