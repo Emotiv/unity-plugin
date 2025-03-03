@@ -98,6 +98,10 @@ namespace EmotivUnityPlugin
 
         public event EventHandler<bool> BTLEPermissionGrantedNotify; // notify btle permision grant status
         
+        //list of having consumer data
+        public event EventHandler<List<DateTime>> QueryDatesHavingConsumerDataDone;
+        public event EventHandler<List<MentalStateModel>> QueryDayDetailOfConsumerDataDone;
+
         public virtual void Init(object context = null) {}
 
         public virtual void Open() {}
@@ -490,6 +494,28 @@ namespace EmotivUnityPlugin
                 else {
                     SetMentalCommandActionSensitivityOK(this, true);
                 }
+            }
+            else if (method == "queryDatesHavingConsumerData")
+            {
+                // array of date string
+                JArray dateList = (JArray)data;
+                List<DateTime> dateListConverted = new List<DateTime>();
+                foreach (string dateStr in dateList)
+                {
+                    dateListConverted.Add(DateTime.ParseExact(dateStr, "yyyy-MM-dd", 
+                                          System.Globalization.CultureInfo.InvariantCulture));
+                }
+                QueryDatesHavingConsumerDataDone(this, dateListConverted);
+            }
+            else if (method == "queryDayDetailOfConsumerData")
+            {
+                List<MentalStateModel> mentalStateList = new List<MentalStateModel>();
+                JArray dataList = (JArray)data;
+                foreach (JToken item in dataList)
+                {
+                    mentalStateList.Add(new MentalStateModel(item.ToObject<JObject>()));
+                }
+                QueryDayDetailOfConsumerDataDone(this, mentalStateList);
             }
         }
 
@@ -960,6 +986,23 @@ namespace EmotivUnityPlugin
                 
             }
             SendTextMessage(param, "mentalCommandActionSensitivity", true);
+        }
+
+        public void QueryDatesHavingConsumerData(string cortexToken, DateTime start, DateTime end)
+        {
+            JObject param = new JObject();
+            param.Add("cortexToken", cortexToken);
+            param.Add("startDate", start.Date.ToString("yyyy-MM-dd"));
+            param.Add("endDate", end.Date.ToString("yyyy-MM-dd"));
+            SendTextMessage(param, "queryDatesHavingConsumerData", true);
+        }
+
+        public void QueryDayDetailOfConsumerData(string cortexToken, DateTime date)
+        {
+            JObject param = new JObject();
+            param.Add("cortexToken", cortexToken);
+            param.Add("date", date.Date.ToString("yyyy-MM-dd"));
+            SendTextMessage(param, "queryDayDetailOfConsumerData", true);
         }
     }
 }

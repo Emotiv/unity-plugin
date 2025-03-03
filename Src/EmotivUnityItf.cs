@@ -60,6 +60,11 @@ namespace EmotivUnityPlugin
 
         private List<string> _desiredErasingProfiles = new List<string>(); // desired profiles to erase
 
+        // date having consumer data
+        private List<DateTime> _datesHavingConsumerData = new List<DateTime>();
+
+        private List<MentalStateModel> _mentalStateDatas = new List<MentalStateModel>();
+
         public static EmotivUnityItf Instance { get; } = new EmotivUnityItf();
 
         public bool IsAuthorizedOK => _isAuthorizedOK;
@@ -78,8 +83,10 @@ namespace EmotivUnityPlugin
         public bool IsMCTrainingSuccess { get => _isMCTrainingSuccess; set => _isMCTrainingSuccess = value; }
         public List<string> DesiredErasingProfiles { get => _desiredErasingProfiles; set => _desiredErasingProfiles = value; }
         public List<int> MentalCommandActionSensitivity { get => _mentalCommandActionSensitivity; set => _mentalCommandActionSensitivity = value; }
+        public List<DateTime> DatesHavingConsumerData { get => _datesHavingConsumerData; set => _datesHavingConsumerData = value; }
+        public List<MentalStateModel> MentalStateDatas { get => _mentalStateDatas; set => _mentalStateDatas = value; }
 
-        
+
         /// <summary>
         /// Logs in with an authentication code. Which used for unity example with embedded Cortex on Windows.
         /// </summary>
@@ -196,6 +203,8 @@ namespace EmotivUnityPlugin
             _dsManager.HeadsetConnectFail += OnHeadsetConnectFail;
             _dsManager.UserLogoutNotify += OnUserLogoutNotify;
             _dsManager.StreamStopNotify += OnStreamStopNotify;
+            _dsManager.QueryDatesHavingConsumerDataDone += OnQueryDatesHavingConsumerDataDone;
+            _dsManager.QueryDayDetailOfConsumerDataDone += OnQueryDayDetailOfConsumerDataDone;
 
             // bind to record manager 
             _recordMgr.informMarkerResult += OnInformMarkerResult;
@@ -735,6 +744,23 @@ namespace EmotivUnityPlugin
             _bciTraining.GetTrainedSignatureActions(detection, _loadedProfileName);
         }
 
+        /// <summary>
+        /// Queries the dates having consumer data within a specified date range.
+        /// </summary>
+        /// <param name="from">The start date of the range.</param>
+        /// <param name="to">The end date of the range.</param>
+        public void QueryDatesHavingConsumerData(DateTime from, DateTime to) {
+            _dsManager.QueryDatesHavingConsumerData(from, to);
+        }
+
+        /// <summary>
+        /// Queries the detailed consumer data for a specific day.
+        /// </summary>
+        /// <param name="date">The date for which to query the detailed consumer data.</param>
+        public void QueryDayDetailOfConsumerData(DateTime date) {
+            _dsManager.QueryDayDetailOfConsumerData(date);
+        }
+
         // Event handlers
         private void OnHeadsetConnectFail(object sender, string headsetId)
         {
@@ -1016,6 +1042,32 @@ namespace EmotivUnityPlugin
                 // save profile
                 SaveProfile(_loadedProfileName);
             }
+        }
+
+        private void OnQueryDatesHavingConsumerDataDone(object sender, List<DateTime> dates)
+        {
+            string datesText = "Dates having consumer data: ";
+            foreach (var item in dates)
+            {
+                datesText += item.ToString("yyyy-MM-dd") + ", ";
+            }
+            _messageLog = datesText;
+            
+            _datesHavingConsumerData = dates;
+        }
+
+        private void OnQueryDayDetailOfConsumerDataDone(object sender, List<MentalStateModel> mentalStateList)
+        {
+            string mentalStateText = "Mental state data: ";
+            
+            for (int i = 0; i < mentalStateList.Count; i++)
+            {
+                TimeSpan time = Utils.IndexToTime(i);
+                mentalStateText += "At time: " + time.ToString() +  mentalStateList[i].ToString() + "\n";
+            }
+            UnityEngine.Debug.Log(mentalStateText);
+            // _messageLog = mentalStateText;
+            _mentalStateDatas = mentalStateList;
         }
 
         // clear data
