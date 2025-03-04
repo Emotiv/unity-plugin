@@ -15,6 +15,18 @@ namespace EmotivUnityPlugin
 
         public MentalStateModel(JObject jsonObject)
         {
+            if (jsonObject == null || jsonObject.Count == 0)
+            {
+                totalDuration = 0;
+                overload = 0;
+                disengaged = 0;
+                flow = 0;
+                intense = 0;
+                moderate = 0;
+                optimal = 0;
+                return;
+            }
+
             totalDuration = (float)jsonObject["totalDuration"];
             overload = 0;
             disengaged = 0;
