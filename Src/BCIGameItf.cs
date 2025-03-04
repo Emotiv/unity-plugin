@@ -150,6 +150,25 @@ namespace EmotivUnityPlugin
             return emotivUnityItf.MentalStateDatas;
         }
 
+        #if USE_EMBEDDED_LIB && (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
+        /// <summary>
+        /// Process callback to handle authorization response from Emotiv Cloud when login. It use for embedded library on Windows.
+        /// </summary>
+        public  async Task ProcessCallback(string args) {
+            await emotivUnityItf.ProcessCallback(args);
+        }
+        #endif
+
+        #if USE_EMBEDDED_LIB || UNITY_ANDROID
+        /// <summary>
+        /// Authenticate with Emotiv. It will open system browser to login and get the authentication code.
+        /// </summary>
+        public async Task AuthenticateAsync()
+        {
+            await emotivUnityItf.AuthenticateAsync();
+        }
+        #endif
+
         /// <summary>
         /// Initialize and start the application. It should be called when the app has granted permissions: bluetooth, location, write external storage.
         /// It will auto login if the user has not logged in before otherwise it will authorize to get cortex token for working with the cortex API.
