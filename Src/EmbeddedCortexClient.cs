@@ -64,7 +64,7 @@ namespace EmotivUnityPlugin
     }
 
     
-    #elif USE_EMBEDDED_LIB_WIN
+    #elif USE_EMBEDDED_LIB
     public class CortexReponseHandler : ResponseHandlerCpp
     {
         public CortexReponseHandler() : base()
@@ -115,11 +115,13 @@ namespace EmotivUnityPlugin
         private AndroidJavaObject _cortexLibManager;
         private CortexLibInterfaceProxy cortexLibInterfaceProxy;
         private  CortexLogHandler _cortexLogHandler;
-        #elif USE_EMBEDDED_LIB_WIN
-        private EmbeddedCortexClientWin _cortexClient;
+        #elif USE_EMBEDDED_LIB
         private CortexReponseHandler _responseHandler;
-
+        #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+        private EmbeddedCortexClientWin _cortexClient; // Cortex client for windows
         #endif
+        #endif
+
 
         // Private constructor to prevent direct instantiation
         public EmbeddedCortexClient() { }
@@ -140,7 +142,7 @@ namespace EmotivUnityPlugin
             {
                 Debug.LogError("Expected AndroidJavaObject activity for Android initialization");
             }
-            #elif USE_EMBEDDED_LIB_WIN
+            #elif USE_EMBEDDED_LIB
             // Enable this line if you want to see the cortex log messages.   
             //CortexLog logger = new();
             //CortexLib.setLogHandler(1, logger);
@@ -152,7 +154,7 @@ namespace EmotivUnityPlugin
 
         private void CortexStarted(object? sender, bool e)
         {
-            #if USE_EMBEDDED_LIB_WIN
+            #if USE_EMBEDDED_LIB
             _cortexClient = new EmbeddedCortexClientWin();
             _responseHandler = new CortexReponseHandler();
             _responseHandler.OnCortexResponse += OnCortexResponse;
@@ -169,7 +171,7 @@ namespace EmotivUnityPlugin
             {
                 _cortexLibManager.Call("stop");
             }
-            #elif USE_EMBEDDED_LIB_WIN
+            #elif USE_EMBEDDED_LIB
             _cortexClient.close();
             #endif
         }
@@ -195,7 +197,7 @@ namespace EmotivUnityPlugin
                 UnityEngine.Debug.LogError("CortexLibManager is null. Cannot load cortex lib.");
 
         }
-        #elif USE_EMBEDDED_LIB_WIN
+        #elif USE_EMBEDDED_LIB
         private void OnCortexResponse(object? sender, string message) {
             // Handle the callback in Unity
             EmbeddedCortexClient.Instance.OnMessageReceived(message);;
@@ -210,7 +212,7 @@ namespace EmotivUnityPlugin
             // UnityEngine.Debug.Log("SendTextMessage: " + request);
             #if UNITY_ANDROID
             _cortexLibManager.Call("sendRequest", request);
-            #elif USE_EMBEDDED_LIB_WIN
+            #elif USE_EMBEDDED_LIB
             _cortexClient.sendRequest(request);
             #endif
         }

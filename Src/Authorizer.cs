@@ -210,7 +210,7 @@ namespace EmotivUnityPlugin
                 }
 
                 // do not save token for mobile platform
-                #if !UNITY_ANDROID && !UNITY_IOS && !USE_EMBEDDED_LIB_WIN
+                #if !UNITY_ANDROID && !UNITY_IOS && !USE_EMBEDDED_LIB
                     UnityEngine.Debug.Log("Save token for next using.");
                     // Save App version
                     Utils.SaveAppVersion(Config.AppVersion);
@@ -391,7 +391,7 @@ namespace EmotivUnityPlugin
                 }
                 else {
                     // need to re-authorize again
-                    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB_WIN
+                    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
                         // for embedded cortex lib need to athorize again
                         _ctxClient.Authorize(_licenseID, _debitNo);
                     #else
@@ -403,7 +403,7 @@ namespace EmotivUnityPlugin
             else {
 
                 // for embedded cortex lib need to call login  windows and androids
-                #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB_WIN
+                #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
                     UnityEngine.Debug.Log("No emotiv user login. Need to call login for username " + Config.UserName);
                     ConnectServiceStateChanged(this, ConnectToCortexStates.Login_notYet);
                     if (Config.UserName == "")
