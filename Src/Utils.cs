@@ -67,7 +67,7 @@ namespace EmotivUnityPlugin
         public static string GetAppTmpPath() 
         {
             string homePath = "";
-        #if UNITY_STANDALONE_WIN || USE_EMBEDDED_LIB_WIN
+        #if UNITY_STANDALONE_WIN || USE_EMBEDDED_LIB
             homePath = Environment.GetEnvironmentVariable("LocalAppData");
         #elif UNITY_STANDALONE_OSX
             homePath = Environment.GetEnvironmentVariable("HOME");
@@ -234,6 +234,19 @@ namespace EmotivUnityPlugin
                 return true;
             else
                 return false;
+        }
+
+        public static TimeSpan IndexToTime(int index)
+        {
+            if (index < 0 || index >= 48)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), "Index must be between 0 and 47.");
+            }
+
+            int hours = index / 2;
+            int minutes = (index % 2) * 30;
+
+            return new TimeSpan(hours, minutes, 0);
         }
     }
 }

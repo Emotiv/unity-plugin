@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -139,14 +140,43 @@ namespace EmotivUnityPlugin
             return emotivUnityItf.IsMCTrainingSuccess;
         }
 
+        public List<DateTime> DatesHavingConsumerData()
+        {
+            return emotivUnityItf.DatesHavingConsumerData;
+        }
+
+        public List<MentalStateModel> MentalStateDatas()
+        {
+            return emotivUnityItf.MentalStateDatas;
+        }
+
+        #if USE_EMBEDDED_LIB && (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
+        /// <summary>
+        /// Process callback to handle authorization response from Emotiv Cloud when login. It use for embedded library on Windows.
+        /// </summary>
+        public  async Task ProcessCallback(string args) {
+            await emotivUnityItf.ProcessCallback(args);
+        }
+        #endif
+
+        #if USE_EMBEDDED_LIB || UNITY_ANDROID
+        /// <summary>
+        /// Authenticate with Emotiv. It will open system browser to login and get the authentication code.
+        /// </summary>
+        public async Task AuthenticateAsync()
+        {
+            await emotivUnityItf.AuthenticateAsync();
+        }
+        #endif
+
         /// <summary>
         /// Initialize and start the application. It should be called when the app has granted permissions: bluetooth, location, write external storage.
         /// It will auto login if the user has not logged in before otherwise it will authorize to get cortex token for working with the cortex API.
         /// </summary>
-        public void Start(string clientId, string clientSecret, string username, string password, object context = null)
+        public void Start(string clientId, string clientSecret, string username, string password, bool isSaveLog = true, object context = null)
         {
             // Init
-            emotivUnityItf.Init(clientId, clientSecret, "HeartBeat", "1.1.0", username, password);
+            emotivUnityItf.Init(clientId, clientSecret, "HeartBeat", "1.1.0", username, password, isSaveLog);
             // Loads the Cortex library, connects, and authorizes the application.
             emotivUnityItf.Start(context);
         }
@@ -341,5 +371,22 @@ namespace EmotivUnityPlugin
             emotivUnityItf.Logout();
         }
 
+        /// <summary>
+        /// Query the dates having consumer data within a specified date range.
+        /// </summary>
+        /// <param name="from">The start date of the range.</param>
+        /// <param name="to">The end date of the range.</param>
+        public void QueryDatesHavingConsumerData(DateTime from, DateTime to)
+        {
+            emotivUnityItf.QueryDatesHavingConsumerData(from, to);
+        }
+
+        /// <summary>
+        /// Queries the detailed consumer data for a specific day.
+        /// </summary>
+        /// <param name="date">The date for which to query the detailed consumer data.</param>
+        public void QueryDayDetailOfConsumerData(DateTime date) {
+            emotivUnityItf.QueryDayDetailOfConsumerData(date);
+        }
     }
 }
