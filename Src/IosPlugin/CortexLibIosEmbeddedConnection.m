@@ -3,11 +3,11 @@
 static CortexLibIosEmbeddedConnection *sharedInstance = nil;
 
 typedef void (*UnityResponseCallback)(const char* _Nonnull responseMessage);
-static UnityResponseCallback unityCallback = NULL;
+static UnityResponseCallback unityResponseCb = NULL;
 
 //register callback from unity
 void RegisterUnityResponseCallback(UnityResponseCallback callback) {
-     unityCallback = callback;
+    unityResponseCb = callback;
 }
 
 @implementation CortexLibIosEmbeddedConnection
@@ -19,9 +19,6 @@ void RegisterUnityResponseCallback(UnityResponseCallback callback) {
     return sharedInstance;
 }
 
--(id) init {
-    return nil;
-}
 
 -(id) initAfterCortexStarted {
     self = [super init];
@@ -33,14 +30,17 @@ void RegisterUnityResponseCallback(UnityResponseCallback callback) {
 }
 
 -(void)sendRequest:(NSString *)nsJsonString {
-    // Implement the logic to handle the request here
     [cortexClient sendRequest:nsJsonString];
 }
 
+-(void)close {
+    [cortexClient close];
+}
+
 -(void)processResponse:(NSString *)responseMessage {
-    if (unityCallback != NULL) {
+    if (unityResponseCb != NULL) {
         const char* cString = [responseMessage UTF8String];
-        unityCallback(cString);
+        unityResponseCb(cString);
     }
 }
 @end

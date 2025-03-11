@@ -109,9 +109,12 @@ namespace EmotivUnityPlugin
         public static extern void StopCortexLib();
 
         public delegate void MessageCallback(string message);
+        public delegate void StartedCallback();
         
         [DllImport("__Internal")]
         private static extern void RegisterUnityResponseCallback(MessageCallback callback);
+        [DllImport("__Internal")]
+        private static extern void RegisterUnityStartedCallback(StartedCallback callback);
         
         [AOT.MonoPInvokeCallback(typeof(MessageCallback))]
         private static void OnMessageReceived(string message)
@@ -119,9 +122,17 @@ namespace EmotivUnityPlugin
             EmbeddedCortexClient.Instance.OnMessageReceived(message);
         }
 
+        [AOT.MonoPInvokeCallback(typeof(StartedCallback))]
+        private static void OnCortexLibIosStarted()
+        {
+            Debug.Log("OnCortexLibIosStarted");
+            EmbeddedCortexClient.Instance.OnWSConnected(true);
+        }
+
         public static void RegisterCallback()
         {
             RegisterUnityResponseCallback(OnMessageReceived);
+            RegisterUnityStartedCallback(OnCortexLibIosStarted);
         }
     }
     #endif
@@ -134,8 +145,6 @@ namespace EmotivUnityPlugin
         #elif USE_EMBEDDED_LIB_WIN
         private EmbeddedCortexClientWin _cortexClient;
         private CortexReponseHandler _responseHandler;
-        #elif UNITY_IOS
-        private static bool _isInitialized = false;
         #endif
 
         // Private constructor to prevent direct instantiation
@@ -165,15 +174,8 @@ namespace EmotivUnityPlugin
             startEvent.OnCortexStarted += CortexStarted; 
             CortexLib.start(startEvent);
             #elif UNITY_IOS
-            if (!_isInitialized)
-            {
-                _isInitialized = CortexIOSHandler.InitCortexLib();
-                if (_isInitialized) 
-                {
-                    EmbeddedCortexClient.Instance.OnWSConnected(true);
-                    CortexIOSHandler.RegisterCallback();
-                }
-            }
+            CortexIOSHandler.RegisterCallback();
+            CortexIOSHandler.InitCortexLib();
             #endif
         }
 
@@ -209,11 +211,7 @@ namespace EmotivUnityPlugin
             #elif USE_EMBEDDED_LIB_WIN
             _cortexClient.close();
             #elif UNITY_IOS
-            if (_isInitialized)
-            {
-                CortexIOSHandler.StopCortexLib();
-                _isInitialized = false;
-            }
+            CortexIOSHandler.StopCortexLib();
             #endif
         }
 

@@ -8,6 +8,7 @@
 
 + (id _Nonnull) shareInstance;
 - (void)sendRequest:(NSString * _Nonnull)nsJsonString;
+- (void)close;
 
 # pragma mark CortexClientDelegate
 - (void) processResponse:(NSString * _Nonnull)responseMessage;
