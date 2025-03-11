@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-#if USE_EMBEDDED_LIB || UNITY_ANDROID
+#if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
 using Cdm.Authentication.Browser;
 using Cdm.Authentication.OAuth2;
 using System.Threading;
@@ -97,7 +97,7 @@ namespace EmotivUnityPlugin
         public List<MentalStateModel> MentalStateDatas { get => _mentalStateDatas; set => _mentalStateDatas = value; }
 
 
-        #if USE_EMBEDDED_LIB || UNITY_ANDROID
+        #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
         private CrossPlatformBrowser _crossPlatformBrowser;
         private AuthenticationSession _authenticationSession;
         private CancellationTokenSource _cancellationTokenSource;
@@ -205,7 +205,7 @@ namespace EmotivUnityPlugin
             MyLogger.Instance.Init(allowSaveLogToFile);
 
             // init authentication for Android and Embedded Cortex Desktop
-            #if UNITY_ANDROID || USE_EMBEDDED_LIB
+            #if UNITY_ANDROID || USE_EMBEDDED_LIB || UNITY_IOS
             InitForAuthentication(clientId, clientSecret);
             #endif
 
@@ -1117,7 +1117,7 @@ namespace EmotivUnityPlugin
             _desiredErasingProfiles.Clear();
         }
 
-        #if USE_EMBEDDED_LIB || UNITY_ANDROID
+        #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
         private string BytesToHex(byte[] bytes)
         {
             char[] hexChars = new char[bytes.Length * 2];
@@ -1155,6 +1155,7 @@ namespace EmotivUnityPlugin
             _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsPlayer, new WindowsSystemBrowser());
             // android
             _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new DeepLinkBrowser());
+            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.IPhonePlayer, new ASWebAuthenticationSessionBrowser());
 
             string server = "cerebrum.emotivcloud.com";
             string hash = Md5(clientId);
