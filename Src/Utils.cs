@@ -24,11 +24,31 @@ namespace EmotivUnityPlugin
 
             // Ensure the directories exist
             // check directory is existed or not to create
-            if (!Directory.Exists(_logDirectory))
-                Directory.CreateDirectory(_logDirectory);
+        if (!Directory.Exists(_logDirectory))
+            {
+                try
+                {
+                    Directory.CreateDirectory(_logDirectory);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    UnityEngine.Debug.LogError("Failed to create Log Directory: " + _logDirectory + " - " + ex.Message);
+                    throw;
+                }
+            }
 
             if (!Directory.Exists(_dataDirectory))
-                Directory.CreateDirectory(_dataDirectory);
+            {
+                try
+                {
+                    Directory.CreateDirectory(_dataDirectory);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    UnityEngine.Debug.LogError("Failed to create Data Directory: " + _dataDirectory + " - " + ex.Message);
+                    throw;
+                }
+            }
         }
 
         public static Int64 GetEpochTimeNow()
@@ -57,7 +77,7 @@ namespace EmotivUnityPlugin
             homePath = Environment.GetEnvironmentVariable("HOME");
             // TODO
         #elif UNITY_IOS
-            // TODO
+            homePath = Application.persistentDataPath;
         #elif UNITY_ANDROID
             // return application data path on android
             return Application.persistentDataPath;

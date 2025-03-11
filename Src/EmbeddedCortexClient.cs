@@ -32,6 +32,7 @@ using System.Collections;
 using System.Timers;
 using UnityEngine;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace EmotivUnityPlugin
 {
@@ -106,9 +107,47 @@ namespace EmotivUnityPlugin
 
     #endif
 
-    /// <summary>
-    /// Represents a Client that connects with embedded CortexLib
-    /// </summary>
+    #if UNITY_IOS
+    public class CortexIOSHandler 
+    {
+        [DllImport("__Internal")]
+        public static extern bool InitCortexLib();
+        
+        [DllImport("__Internal")]
+        public static extern void SendRequest(string request);
+        
+        [DllImport("__Internal")]
+        public static extern void StopCortexLib();
+
+        public delegate void MessageCallback(string message);
+        public delegate void StartedCallback();
+        
+        [DllImport("__Internal")]
+        private static extern void RegisterUnityResponseCallback(MessageCallback callback);
+        [DllImport("__Internal")]
+        private static extern void RegisterUnityStartedCallback(StartedCallback callback);
+        
+        [AOT.MonoPInvokeCallback(typeof(MessageCallback))]
+        private static void OnMessageReceived(string message)
+        {
+            EmbeddedCortexClient.Instance.OnMessageReceived(message);
+        }
+
+        [AOT.MonoPInvokeCallback(typeof(StartedCallback))]
+        private static void OnCortexLibIosStarted()
+        {
+            Debug.Log("OnCortexLibIosStarted");
+            EmbeddedCortexClient.Instance.OnWSConnected(true);
+        }
+
+        public static void RegisterCallback()
+        {
+            RegisterUnityResponseCallback(OnMessageReceived);
+            RegisterUnityStartedCallback(OnCortexLibIosStarted);
+        }
+    }
+    #endif
+
     public class EmbeddedCortexClient : CortexClient
     {
         #if UNITY_ANDROID
@@ -121,7 +160,6 @@ namespace EmotivUnityPlugin
         private EmbeddedCortexClientWin _cortexClient; // Cortex client for windows
         #endif
         #endif
-
 
         // Private constructor to prevent direct instantiation
         public EmbeddedCortexClient() { }
@@ -149,7 +187,20 @@ namespace EmotivUnityPlugin
             CortexStarted startEvent = new();
             startEvent.OnCortexStarted += CortexStarted; 
             CortexLib.start(startEvent);
+            #elif UNITY_IOS
+            CortexIOSHandler.RegisterCallback();
+            CortexIOSHandler.InitCortexLib();
             #endif
+        }
+
+        private static void OnMessageReceivedStatic(string message)
+        {
+            EmbeddedCortexClient.Instance.OnMessageReceived(message);
+        }
+
+        private static void OnWSConnectedStatic()
+        {
+            EmbeddedCortexClient.Instance.OnWSConnected(true);
         }
 
         private void CortexStarted(object? sender, bool e)
@@ -173,6 +224,8 @@ namespace EmotivUnityPlugin
             }
             #elif USE_EMBEDDED_LIB
             _cortexClient.close();
+            #elif UNITY_IOS
+            CortexIOSHandler.StopCortexLib();
             #endif
         }
 
@@ -214,6 +267,8 @@ namespace EmotivUnityPlugin
             _cortexLibManager.Call("sendRequest", request);
             #elif USE_EMBEDDED_LIB
             _cortexClient.sendRequest(request);
+            #elif UNITY_IOS
+            CortexIOSHandler.SendRequest(request);
             #endif
         }
     }

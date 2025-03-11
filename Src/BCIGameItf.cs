@@ -159,7 +159,7 @@ namespace EmotivUnityPlugin
         }
         #endif
 
-        #if USE_EMBEDDED_LIB || UNITY_ANDROID
+        #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
         /// <summary>
         /// Authenticate with Emotiv. It will open system browser to login and get the authentication code.
         /// </summary>
