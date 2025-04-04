@@ -1,11 +1,10 @@
 using UnityEngine;
 using System;
 
-
 public class UniWebViewManager : MonoBehaviour
 {
     private static UniWebViewManager _instance;
-        public static UniWebViewManager Instance
+    public static UniWebViewManager Instance
     {
         get
         {
@@ -20,34 +19,43 @@ public class UniWebViewManager : MonoBehaviour
     }
 
     private UniWebView webView;
+    private string _authUrl;
 
     public void Init(string authUrl, string urlScheme)
     {
+        _authUrl = authUrl;
         GameObject webViewGameObject = new GameObject("UniWebView");
         webView = webViewGameObject.AddComponent<UniWebView>();
 
         webView.AddUrlScheme(urlScheme);
-        webView.Load(authUrl);
-        webView.Frame = new Rect(0, 0, Screen.width, Screen.height);   
+        webView.Load(_authUrl);
+        webView.Frame = new Rect(0, 0, Screen.width, Screen.height);
     }
+
     public void StartAuthorization(Action<string> onSuccess, Action<long, string> onError)
     {
-        Debug.Log("UniWebViewManager Starting authorization process...");
+        Debug.Log($"UniWebViewManager Starting authorization process...");
+
         if (webView == null)
         {
-            Debug.LogError("UniWebViewManager is not initialized. Call Init() first.");
+            Debug.Log($"UniWebViewManager is not initialized. Call Init() first.");
             return;
+        }
+
+        if (!string.IsNullOrEmpty(_authUrl))
+        {
+            webView.Load(_authUrl);
         }
 
         webView.Show();
 
-
-        webView.OnMessageReceived += (view, message) => {
+        webView.OnMessageReceived += (view, message) =>
+        {
+            Debug.Log($"UniWebViewManager Message received: {message.RawMessage}");
             if (message.RawMessage.Contains("?code="))
             {
                 string code = ExtractCodeFromUri(message.RawMessage);
                 webView.Hide();
-                Cleanup();
 
                 onSuccess?.Invoke(code);
             }
@@ -81,6 +89,7 @@ public class UniWebViewManager : MonoBehaviour
         {
             Destroy(webView.gameObject);
             webView = null;
+            _authUrl = null;
         }
     }
 }

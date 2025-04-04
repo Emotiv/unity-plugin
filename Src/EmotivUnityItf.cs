@@ -271,9 +271,10 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void Stop()
         {
-            #if USE_EMBEDDED_LIB || UNITY_ANDROID
+            #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
             _cancellationTokenSource?.Cancel();
             _authenticationSession?.Dispose();
+            UniWebViewManager.Instance?.Cleanup();
             #endif
 
             _dsManager.Stop();
@@ -1155,7 +1156,7 @@ namespace EmotivUnityPlugin
             string prefixRedirectUrl = "emotiv-" + hash;
             string redirectUrl = prefixRedirectUrl + "://authorize";
             string serverUrl = $"https://{server}";
-            #if UNITY_ANDROID
+            #if UNITY_ANDROID || UNITY_IOS
             string authorizationUrl = $"https://{server}/api/oauth/authorize/?response_type=code" +
                         $"&client_id={Uri.EscapeDataString(clientId)}" +
                         $"&redirect_uri={redirectUrl}";
@@ -1192,7 +1193,7 @@ namespace EmotivUnityPlugin
         }
         public async Task AuthenticateAsync()
         {
-            #if UNITY_ANDROID
+            #if UNITY_ANDROID || UNITY_IOS
             UniWebViewManager.Instance.StartAuthorization(
                 onSuccess: (authCode) => {
                     Debug.Log($"UniWebView Authorization succeeded! Starting login with auth code");
