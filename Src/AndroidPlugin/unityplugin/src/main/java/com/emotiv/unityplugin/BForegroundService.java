@@ -48,7 +48,7 @@ public class BForegroundService extends Service {
                     .setOngoing(false)
                     .build();
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-				startForeground(START_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+				startForeground(START_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
             } else {
 				startForeground(START_ID, notification);
             }
