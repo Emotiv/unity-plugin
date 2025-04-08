@@ -18,66 +18,91 @@ public class UniWebViewManager : MonoBehaviour
         }
     }
 
-    private UniWebView webView;
+    private UniWebViewAuthenticationSession authSession;
     private string _authUrl;
+    private string _urlScheme;
 
     public void Init(string authUrl, string urlScheme)
     {
         _authUrl = authUrl;
-        GameObject webViewGameObject = new GameObject("UniWebView");
-        webView = webViewGameObject.AddComponent<UniWebView>();
-
-        webView.AddUrlScheme(urlScheme);
-        webView.Load(_authUrl);
-        webView.Frame = new Rect(0, 0, Screen.width, Screen.height);
+        _urlScheme = urlScheme;
     }
 
     public void StartAuthorization(Action<string> onSuccess, Action<long, string> onError)
     {
-        Debug.Log($"UniWebViewManager Starting authorization process...");
-
-        if (webView == null)
+        if (string.IsNullOrEmpty(_authUrl) || string.IsNullOrEmpty(_urlScheme))
         {
-            Debug.Log($"UniWebViewManager is not initialized. Call Init() first.");
+            Debug.LogError("UniWebViewManager: Init must be called with valid authUrl and urlScheme before starting authorization.");
             return;
         }
 
-        if (!string.IsNullOrEmpty(_authUrl))
-        {
-            webView.Load(_authUrl);
-        }
+        Debug.Log("UniWebViewManager: Starting authorization using UniWebViewAuthenticationSession...");
 
-        webView.Show();
-
-        webView.OnMessageReceived += (view, message) =>
+        authSession = UniWebViewAuthenticationSession.Create(_authUrl, _urlScheme);
+        
+        authSession.OnAuthenticationFinished += (session, result) =>
         {
-            Debug.Log($"UniWebViewManager Message received: {message.RawMessage}");
-            if (message.RawMessage.Contains("?code="))
+            if (!string.IsNullOrEmpty(result))
             {
-                string code = ExtractCodeFromUri(message.RawMessage);
-                webView.Hide();
+                Debug.Log($"Auth finished. Callback URL: {result}");
 
-                onSuccess?.Invoke(code);
+                string code = ExtractCodeFromUri(result);
+                if (!string.IsNullOrEmpty(code))
+                {
+                    onSuccess?.Invoke(code);
+                }
+                else
+                {
+                    onError?.Invoke(-1, "Authorization code not found in redirect URL.");
+                }
+            }
+            else
+            {
+                Debug.LogError("Authentication session finished without a valid result.");
+                onError?.Invoke(-2, "Authentication session failed or was cancelled.");
             }
         };
 
-        webView.OnPageErrorReceived += (view, errorCode, message) =>
+        authSession.OnAuthenticationFinished += (session, resultUrl) =>
         {
-            Debug.LogError($"Authorization Error: {errorCode} - {message}");
-            onError?.Invoke(errorCode, message);
+            Debug.Log($"UniWebViewManager Authentication finished with URL: {resultUrl}");
+            string code = ExtractCodeFromUri(resultUrl);
+            if (!string.IsNullOrEmpty(code))
+            {
+                onSuccess?.Invoke(code);
+            }
+            else
+            {
+                onError?.Invoke(-1, "UniWebViewManager Failed to extract code from the callback URL.");
+            }
         };
+
+        authSession.OnAuthenticationErrorReceived += (session, errorCode, errorMessage) =>
+        {
+            Debug.LogError($"UniWebViewManager Authentication Error: {errorCode} - {errorMessage}");
+            onError?.Invoke(errorCode, errorMessage);
+        };
+
+        authSession.Start();
     }
 
     private string ExtractCodeFromUri(string uri)
     {
-        var query = new Uri(uri).Query.TrimStart('?');
-        foreach (var param in query.Split('&'))
+        try
         {
-            var keyValue = param.Split('=');
-            if (keyValue.Length == 2 && Uri.UnescapeDataString(keyValue[0]) == "code")
+            var query = new Uri(uri).Query.TrimStart('?');
+            foreach (var param in query.Split('&'))
             {
-                return Uri.UnescapeDataString(keyValue[1]);
+                var keyValue = param.Split('=');
+                if (keyValue.Length == 2 && Uri.UnescapeDataString(keyValue[0]) == "code")
+                {
+                    return Uri.UnescapeDataString(keyValue[1]);
+                }
             }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Failed to extract code from URI: {e.Message}");
         }
 
         return null;
@@ -85,11 +110,12 @@ public class UniWebViewManager : MonoBehaviour
 
     public void Cleanup()
     {
-        if (webView != null)
+        if (authSession != null)
         {
-            Destroy(webView.gameObject);
-            webView = null;
-            _authUrl = null;
+            authSession = null;
         }
+
+        _authUrl = null;
+        _urlScheme = null;
     }
 }
