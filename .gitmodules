@@ -1,0 +1,3 @@
+[submodule "Src/uniwebview"]
+	path = Src/uniwebview
+	url = git@github.com:Emotiv/uniwebview.git
