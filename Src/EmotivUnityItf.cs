@@ -1151,7 +1151,13 @@ namespace EmotivUnityPlugin
 
         private void InitForAuthentication(string clientId, string clientSecret)
         {
-            string server = "cerebrum.emotivcloud.com";
+            string server = "";
+            #if DEVELOPMENT_BUILD
+            server = "cerebrum-dev.emotivcloud.com";
+            #endif
+            #if PRODUCTION_BUILD
+            server = "cerebrum.emotivcloud.com";
+            #endif
             string hash = Md5(clientId);
             string prefixRedirectUrl = "emotiv-" + hash;
             string redirectUrl = prefixRedirectUrl + "://authorize";
@@ -1168,11 +1174,6 @@ namespace EmotivUnityPlugin
             _crossPlatformBrowser = new CrossPlatformBrowser();
             _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsEditor, new WindowsSystemBrowser());
             _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsPlayer, new WindowsSystemBrowser());
-            // android
-            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new DeepLinkBrowser());
-
-            // ios
-            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.IPhonePlayer, new ASWebAuthenticationSessionBrowser());
 
             // windows
             #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
