@@ -3,6 +3,8 @@ using System;
 
 public class UniWebViewManager : MonoBehaviour
 {
+    private static readonly string LogTag = "[UniWebViewManager]"; // Log tag for consistency
+
     private static UniWebViewManager _instance;
     public static UniWebViewManager Instance
     {
@@ -32,11 +34,11 @@ public class UniWebViewManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(_authUrl) || string.IsNullOrEmpty(_urlScheme))
         {
-            Debug.LogError("UniWebViewManager: Init must be called with valid authUrl and urlScheme before starting authorization.");
+            Debug.LogError($"{LogTag} Init must be called with valid authUrl and urlScheme before starting authorization.");
             return;
         }
 
-        Debug.Log("UniWebViewManager: Starting authorization using UniWebViewAuthenticationSession...");
+        Debug.Log($"{LogTag} Starting authorization using UniWebViewAuthenticationSession...");
 
         authSession = UniWebViewAuthenticationSession.Create(_authUrl, _urlScheme);
         
@@ -44,7 +46,7 @@ public class UniWebViewManager : MonoBehaviour
         {
             if (!string.IsNullOrEmpty(result))
             {
-                Debug.Log($"Auth finished. Callback URL: {result}");
+                Debug.Log($"{LogTag} Auth finished. Callback URL: {result}");
 
                 string code = ExtractCodeFromUri(result);
                 if (!string.IsNullOrEmpty(code))
@@ -53,33 +55,18 @@ public class UniWebViewManager : MonoBehaviour
                 }
                 else
                 {
-                    onError?.Invoke(-1, "Authorization code not found in redirect URL.");
+                    onError?.Invoke(-1, $"{LogTag} Authorization code not found in redirect URL.");
                 }
             }
             else
             {
-                Debug.LogError("Authentication session finished without a valid result.");
-                onError?.Invoke(-2, "Authentication session failed or was cancelled.");
-            }
-        };
-
-        authSession.OnAuthenticationFinished += (session, resultUrl) =>
-        {
-            Debug.Log($"UniWebViewManager Authentication finished with URL: {resultUrl}");
-            string code = ExtractCodeFromUri(resultUrl);
-            if (!string.IsNullOrEmpty(code))
-            {
-                onSuccess?.Invoke(code);
-            }
-            else
-            {
-                onError?.Invoke(-1, "UniWebViewManager Failed to extract code from the callback URL.");
+                onError?.Invoke(-2, $"{LogTag} Authentication session failed or was cancelled.");
             }
         };
 
         authSession.OnAuthenticationErrorReceived += (session, errorCode, errorMessage) =>
         {
-            Debug.LogError($"UniWebViewManager Authentication Error: {errorCode} - {errorMessage}");
+            Debug.LogError($"{LogTag} Authentication Error: {errorCode} - {errorMessage}");
             onError?.Invoke(errorCode, errorMessage);
         };
 
@@ -102,7 +89,7 @@ public class UniWebViewManager : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"Failed to extract code from URI: {e.Message}");
+            Debug.LogError($"{LogTag} Failed to extract code from URI: {e.Message}");
         }
 
         return null;
