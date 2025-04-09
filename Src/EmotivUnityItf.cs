@@ -271,9 +271,10 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void Stop()
         {
-            #if USE_EMBEDDED_LIB || UNITY_ANDROID
+            #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
             _cancellationTokenSource?.Cancel();
             _authenticationSession?.Dispose();
+            UniWebViewManager.Instance?.Cleanup();
             #endif
 
             _dsManager.Stop();
@@ -1150,18 +1151,29 @@ namespace EmotivUnityPlugin
 
         private void InitForAuthentication(string clientId, string clientSecret)
         {
-            _crossPlatformBrowser = new CrossPlatformBrowser();
-            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsEditor, new WindowsSystemBrowser());
-            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsPlayer, new WindowsSystemBrowser());
-            // android
-            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.Android, new DeepLinkBrowser());
-            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.IPhonePlayer, new ASWebAuthenticationSessionBrowser());
-
-            string server = "cerebrum.emotivcloud.com";
+            string server = "";
+            #if DEVELOPMENT_BUILD
+            server = "cerebrum-dev.emotivcloud.com";
+            #endif
+            #if PRODUCTION_BUILD
+            server = "cerebrum.emotivcloud.com";
+            #endif
             string hash = Md5(clientId);
             string prefixRedirectUrl = "emotiv-" + hash;
             string redirectUrl = prefixRedirectUrl + "://authorize";
             string serverUrl = $"https://{server}";
+            #if UNITY_ANDROID || UNITY_IOS
+            string authorizationUrl = $"https://{server}/api/oauth/authorize/?response_type=code" +
+                        $"&client_id={Uri.EscapeDataString(clientId)}" +
+                        $"&redirect_uri={redirectUrl}";
+            UniWebViewManager.Instance.Init(
+                authorizationUrl, 
+                prefixRedirectUrl
+            );
+            #else
+            _crossPlatformBrowser = new CrossPlatformBrowser();
+            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsEditor, new WindowsSystemBrowser());
+            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsPlayer, new WindowsSystemBrowser());
 
             // windows
             #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
@@ -1178,9 +1190,21 @@ namespace EmotivUnityPlugin
             var auth = new MockServerAuth(configuration, serverUrl);
             _authenticationSession = new AuthenticationSession(auth, _crossPlatformBrowser);
             _authenticationSession.loginTimeout = TimeSpan.FromSeconds(600);
+            #endif
         }
         public async Task AuthenticateAsync()
         {
+            #if UNITY_ANDROID || UNITY_IOS
+            UniWebViewManager.Instance.StartAuthorization(
+                onSuccess: (authCode) => {
+                    Debug.Log($"UniWebView Authorization succeeded! Starting login with auth code");
+                    LoginWithAuthenticationCode(authCode);
+                },
+                onError: (errorCode, errorMessage) => {
+                    Debug.LogError($"Authorization failed! Error {errorCode}: {errorMessage}");
+                }
+            );
+            #else
             if (_authenticationSession != null)
             {
                 _cancellationTokenSource?.Dispose();
@@ -1208,6 +1232,7 @@ namespace EmotivUnityPlugin
                     Debug.LogError( "Exception " + ex.Message);
                 }
             }
+            #endif
         }
 
         #endif
