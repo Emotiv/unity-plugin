@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace EmotivUnityPlugin
 {
+    #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
     public class RegistryConfig
     {
         public RegistryConfig(string uriScheme)
@@ -88,4 +89,5 @@ namespace EmotivUnityPlugin
             }
         }
     }
+    #endif
 }
