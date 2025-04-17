@@ -1,7 +1,9 @@
 using System;
 using System.Reflection;
 using System.IO;
+#if NETFRAMEWORK || NET5_0_OR_GREATER
 using Microsoft.Win32;
+#endif
 using UnityEngine;
 
 namespace EmotivUnityPlugin
@@ -15,11 +17,15 @@ namespace EmotivUnityPlugin
 
         public void Configure()
         {
+#if NETFRAMEWORK || NET5_0_OR_GREATER
             if (NeedToAddKeys()) AddRegKeys();
+#else
+            Debug.LogWarning("RegistryConfig is only supported on Windows.");
+#endif  
         }
 
         private string CustomUriScheme { get; }
-
+#if NETFRAMEWORK || NET5_0_OR_GREATER
         string CustomUriSchemeKeyPath => RootKeyPath + @"\" + CustomUriScheme;
         string CustomUriSchemeKeyValueValue => "URL:" + CustomUriScheme;
         string CommandKeyPath => CustomUriSchemeKeyPath + @"\shell\open\command";
@@ -42,7 +48,6 @@ namespace EmotivUnityPlugin
         bool NeedToAddKeys()
         {
             var addKeys = false;
-
             using (var commandKey = Registry.CurrentUser.OpenSubKey(CommandKeyPath))
             {
                 var commandValue = commandKey?.GetValue(CommandKeyValueName);
@@ -57,7 +62,6 @@ namespace EmotivUnityPlugin
                 addKeys |= !CustomUriSchemeKeyValueValue.Equals(uriValue);
                 addKeys |= !UrlProtocolValueValue.Equals(protocolValue);
             }
-
             return addKeys;
         }
 
@@ -87,5 +91,6 @@ namespace EmotivUnityPlugin
                 }
             }
         }
+#endif
     }
 }
