@@ -159,8 +159,15 @@ namespace EmotivUnityPlugin
         HEADSET_TYPE_EPOC_FLEX,
         HEADSET_TYPE_EPOC_X,
         HEADSET_TYPE_MN8,
+        HEADSET_TYPE_MND,
         HEADSET_TYPE_XTRODE,
         HEADSET_TYPE_FLEX2
+    };
+
+    public enum ModelType {
+        INSIGHT,
+        EPOC,
+        MN8         // used for all headset types have 2 channels
     };
 
     // From old code. keep it here for now. will use Channel_t soon

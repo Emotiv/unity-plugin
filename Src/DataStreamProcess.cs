@@ -27,12 +27,12 @@ namespace EmotivUnityPlugin
         public event EventHandler<ArrayList> DevDataReceived;         // contact quality
         public event EventHandler<ArrayList> PerfDataReceived;        // performance metric
         public event EventHandler<ArrayList> BandPowerDataReceived;   // band power
-        public event EventHandler<ArrayList> FacialExpReceived;         // Facial expressions
-        public event EventHandler<ArrayList> MentalCommandReceived;     // mental command
-        public event EventHandler<ArrayList> SysEventsReceived;  // Training events of the mental commands and facial expressions
+        public event EventHandler<ArrayList> FacialExpReceived;       // Facial expressions
+        public event EventHandler<ArrayList> MentalCommandReceived;   // mental command
+        public event EventHandler<ArrayList> SysEventsReceived;       // Training events of the mental commands and facial expressions
         public event EventHandler<Dictionary<string, JArray>> SubscribedOK;
-        public event EventHandler<DateTime> LicenseExpired;             // inform license expired
-        public event EventHandler<DateTime> LicenseValidTo;             // inform license valid to date
+        public event EventHandler<DateTime> LicenseExpired;           // inform license expired
+        public event EventHandler<DateTime> LicenseValidTo;           // inform license valid to date
 
         // notify headset connecting status
         public event EventHandler<HeadsetConnectEventArgs> HeadsetConnectNotify
@@ -81,10 +81,8 @@ namespace EmotivUnityPlugin
 
         public string GetConnectToCortexWarningMessage() => _connectCortexWarningMessage;
 
-        // Constructor
         public DataStreamProcess() 
         {
-
         }
 
         public void ProcessInit() 
@@ -285,12 +283,10 @@ namespace EmotivUnityPlugin
             } 
             else if (e.StreamName == DataStreamName.FacialExpressions) 
             {
-
                 FacialExpReceived(this, e.Data);
             }
             else if (e.StreamName == DataStreamName.MentalCommands) 
             {
-
                 MentalCommandReceived(this, e.Data);
             }
             else if (e.StreamName == DataStreamName.SysEvents)
