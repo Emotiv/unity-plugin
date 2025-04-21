@@ -7,7 +7,7 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [],
+    "defineConstraints": ["UNITY_IOS"],
     "versionDefines": [],
     "noEngineReferences": false
 }
