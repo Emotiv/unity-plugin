@@ -17,6 +17,7 @@ namespace EmotivUnityPlugin
         private HeadsetFinder  _headsetFinder   = HeadsetFinder.Instance;
         private Authorizer     _authorizer      = Authorizer.Instance;
         private SessionHandler _sessionHandler  = SessionHandler.Instance;
+        private MN8EEGInterpolator _mn8Inter = new MN8EEGInterpolator(true);
 
         ConnectToCortexStates _connectCortexState = ConnectToCortexStates.Service_connecting;
         string _connectCortexWarningMessage = "";
@@ -217,26 +218,58 @@ namespace EmotivUnityPlugin
             {
                 string streamName = (string)ele["streamName"];
                 JArray header = (JArray)ele["cols"];
-                // UnityEngine.Debug.Log("SubscribeDataOK header count " + header.Count + " stream name " + streamName);
+                UnityEngine.Debug.Log("SubscribeDataOK header size: " + header.Count + ", stream name " + streamName);
+
                 if (streamName == DataStreamName.DevInfos) {
                     JArray devCols = new JArray();
                     devCols.Add(header[0].ToString());
                     devCols.Add(header[1].ToString());
+
                     JArray tmp = (JArray)header[2];
-                    for (int i = 0; i < tmp.Count; i++) {
-                        devCols.Add(tmp[i].ToString());
+                    if(tmp.Count == 3) {
+                        devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_AF3));
+                        devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_T7));
+                        devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_Pz));
+                        devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_T8));
+                        devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_AF4));
+                        devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_CQ_OVERALL));
+                    } else {
+                        for (int i = 0; i < tmp.Count; i++) {
+                            devCols.Add(tmp[i].ToString());
+                        }
                     }
+
                     if (header.Count == 4) {
                         UnityEngine.Debug.Log("The dev stream contain BatteryPercent channel.");
                         devCols.Add(header[3].ToString());
                     }
                     header.RemoveAll();
                     header = devCols;
+                } else if(streamName == DataStreamName.EEG && header.Count == 7) {
+
+                    UnityEngine.Debug.Log("Add More channel");
+
+                    JArray devCols = new JArray();
+                    devCols.Add(header[0].ToString());
+                    devCols.Add(header[1].ToString());
+
+                    devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_AF3));
+                    devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_T7));
+                    devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_Pz));
+                    devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_T8));
+                    devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_AF4));
+
+                    devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_RAW_CQ));
+                    devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_MARKER_HARDWARE));
+                    devCols.Add(ChannelStringList.ChannelToString(Channel_t.CHAN_MARKER));
+
+                    header.RemoveAll();
+                    header = devCols;
                 }
+
                 headers.Add(streamName, header);
             }
             if (headers.Count > 0) {
-                // UnityEngine.Debug.Log("DataStreamProcess: notify SubscribeOK for stream " + headers.Count);
                 SubscribedOK(this, headers);
             } else {
                 UnityEngine.Debug.Log("No data streams are subsribed successfully.");
@@ -263,7 +296,30 @@ namespace EmotivUnityPlugin
             // UnityEngine.Debug.Log("OnStreamDataReceived " + e.StreamName);
             if (e.StreamName == DataStreamName.EEG)
             {
-                EEGDataReceived(this, e.Data);
+                ArrayList dataList = e.Data as ArrayList;
+                if(dataList.Count != 7) {
+                    EEGDataReceived(this, dataList);
+
+                    string outStr = string.Join(", ", dataList.ToArray());
+                    Debug.Log("Data = [" + outStr + "]");
+
+                    return;
+                }
+
+                double T7  = Convert.ToDouble(dataList[3]);
+                double T8  = Convert.ToDouble(dataList[4]);
+                double AF3 = _mn8Inter.CalculateAF3(T7);
+                double AF4 = _mn8Inter.CalculateAF4(T8);
+                double Pz  = _mn8Inter.CalculatePz(T7, T8);
+                var newValues = new double[] {AF3, T7, Pz, T8, AF4};
+
+                dataList.RemoveAt(4);
+                dataList.RemoveAt(3);
+                for (int i = newValues.Length - 1; i >= 0; i--) {
+                    dataList.Insert(3, newValues[i]);
+                }
+
+                EEGDataReceived(this, dataList);
             }
             else if (e.StreamName == DataStreamName.Motion)
             {
@@ -279,7 +335,29 @@ namespace EmotivUnityPlugin
             } 
             else if (e.StreamName == DataStreamName.DevInfos)
             {
-                DevDataReceived(this, e.Data);
+                ArrayList dataList = e.Data as ArrayList;
+                if(dataList.Count != 7) {
+                    DevDataReceived(this, e.Data);
+                    return;
+                }
+
+                double T7  = Convert.ToDouble(dataList[3]);
+                double T8  = Convert.ToDouble(dataList[4]);
+                double AF3 = T7;
+                double AF4 = T8;
+                double Pz  = T7;
+                var newValues = new double[] {AF3, T7, Pz, T8, AF4};
+
+                dataList.RemoveAt(4);
+                dataList.RemoveAt(3);
+                for (int i = newValues.Length - 1; i >= 0; i--) {
+                    dataList.Insert(3, newValues[i]);
+                }
+
+                string joined = string.Join(", ", dataList.ToArray());
+                Debug.Log("Dev Data = [" + joined + "]");
+
+                DevDataReceived(this, dataList);
             } 
             else if (e.StreamName == DataStreamName.FacialExpressions) 
             {
@@ -311,9 +389,6 @@ namespace EmotivUnityPlugin
             // ErrorNotify(this, message);
         }
 
-        /// <summary>
-        /// Subscribe data streams. 
-        /// </summary>
         public void SubscribeData(List<string> streams = null) {
 
             lock (_locker)

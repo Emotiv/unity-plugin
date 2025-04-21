@@ -198,14 +198,24 @@ namespace EmotivUnityPlugin
             }
         }
 
-        public static ModelType GetModelType(HeadsetTypes headsetType)
+        public static HeadsetGroups GetHeadsetGroup(HeadsetTypes headsetType)
         {
             if (headsetType == HeadsetTypes.HEADSET_TYPE_INSIGHT || headsetType == HeadsetTypes.HEADSET_TYPE_INSIGHT2)
-                return ModelType.INSIGHT;
+                return HeadsetGroups.INSIGHT;
             else if (headsetType == HeadsetTypes.HEADSET_TYPE_MN8 || headsetType == HeadsetTypes.HEADSET_TYPE_MND)
-                return ModelType.MN8;
+                return HeadsetGroups.MN8;
             else
-                return ModelType.EPOC;
+                return HeadsetGroups.EPOC;
+        }
+
+        // Used to setup model type and data processing for Brain Viz app
+        public static ModelTypes GetAppModelType(HeadsetTypes headsetType)
+        {
+            HeadsetGroups gType = GetHeadsetGroup(headsetType);
+            if (gType == HeadsetGroups.INSIGHT || gType == HeadsetGroups.MN8)
+                return ModelTypes.INSIGHT;
+            else
+                return ModelTypes.EPOC;
         }
     }
 }
