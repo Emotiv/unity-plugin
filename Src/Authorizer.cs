@@ -68,9 +68,15 @@ namespace EmotivUnityPlugin
             _ctxClient.LoginWithAuthenticationCode(code);
         }
 
-        private void OnEULANotAccepted(object sender, string message)
+        private void OnEULANotAccepted(object sender, string cortexToken)
         {
-            UnityEngine.Debug.Log("OnEULANotAccepted: " + message);
+            UnityEngine.Debug.Log("OnEULANotAccepted: token " + cortexToken);
+            ConnectServiceStateChanged(this, ConnectToCortexStates.EULA_Not_Accepted);
+            
+            if (String.IsNullOrEmpty(cortexToken))
+                return;
+            // save cortexToken 
+            _cortexToken = cortexToken;
         }
 
         private void OnErrorMsgReceived(object sender, ErrorMsgEventArgs errorInfo) {
@@ -193,6 +199,7 @@ namespace EmotivUnityPlugin
         private void OnEULAAccepted(object sender, string message)
         {
             UnityEngine.Debug.Log("EULAAcceptedOK: " + message);
+            _ctxClient.Authorize(_licenseID, _debitNo);
         }
 
         private void OnAuthorizedOK(object sender, string cortexToken)

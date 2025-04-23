@@ -485,5 +485,16 @@ namespace EmotivUnityPlugin
             _ctxClient.QueryDayDetailOfConsumerData(_authorizer.CortexToken, date);
         }
 
+        public void AcceptEulaAndPrivacyPolicy()
+        {
+            _ctxClient.AcceptEulaAndPrivacyPolicy(_authorizer.CortexToken);
+        }
+
+        public void LoginWithAuthenticationCode(string code)
+        {
+            _connectCortexState = ConnectToCortexStates.Login_waiting;
+            _ctxClient.LoginWithAuthenticationCode(code);
+        }
+
     }
 }

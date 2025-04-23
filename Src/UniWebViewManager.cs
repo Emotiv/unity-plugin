@@ -21,6 +21,7 @@ public class UniWebViewManager : MonoBehaviour
     }
 
     private UniWebViewAuthenticationSession authSession;
+    private UniWebViewSafeBrowsing  safeBrowsing;
     private string _authUrl;
     private string _urlScheme;
 
@@ -93,6 +94,23 @@ public class UniWebViewManager : MonoBehaviour
         }
 
         return null;
+    }
+
+    public void OpenURL(string url, Action<bool>onClosed)
+    {
+        if (string.IsNullOrEmpty(url))
+        {
+            Debug.LogError($"{LogTag} URL cannot be null or empty.");
+            return;
+        }
+
+        safeBrowsing = UniWebViewSafeBrowsing.Create(url);
+        safeBrowsing.OnSafeBrowsingFinished += (browsing) => { 
+            Debug.Log("UniWebViewSafeBrowsing closed.");
+            onClosed?.Invoke(true);
+        };
+
+        safeBrowsing.Show();
     }
 
     public void Cleanup()

@@ -41,6 +41,11 @@ namespace EmotivUnityPlugin
             emotivUnityItf.LoginWithAuthenticationCode(code);
         }
 
+        public void AcceptEulaAndPrivacyPolicy()
+        {
+            emotivUnityItf.AcceptEulaAndPrivacyPolicy();
+        }
+
         /// <summary>
         /// Get detected headsets. Returns a list of detected headsets.
         /// </summary>
@@ -387,6 +392,16 @@ namespace EmotivUnityPlugin
         /// <param name="date">The date for which to query the detailed consumer data.</param>
         public void QueryDayDetailOfConsumerData(DateTime date) {
             emotivUnityItf.QueryDayDetailOfConsumerData(date);
+        }
+
+        public void OpenURL(string url)
+        {
+            emotivUnityItf.OpenURL(url);
+        }
+
+        public bool IsWebViewOpened()
+        {
+            return emotivUnityItf.IsWebViewOpened;
         }
     }
 }
