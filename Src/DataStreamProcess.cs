@@ -17,7 +17,6 @@ namespace EmotivUnityPlugin
         private HeadsetFinder  _headsetFinder   = HeadsetFinder.Instance;
         private Authorizer     _authorizer      = Authorizer.Instance;
         private SessionHandler _sessionHandler  = SessionHandler.Instance;
-        private MN8EEGInterpolator _mn8Inter = new MN8EEGInterpolator(true);
 
         ConnectToCortexStates _connectCortexState = ConnectToCortexStates.Service_connecting;
         string _connectCortexWarningMessage = "";
@@ -218,7 +217,7 @@ namespace EmotivUnityPlugin
             {
                 string streamName = (string)ele["streamName"];
                 JArray header = (JArray)ele["cols"];
-                UnityEngine.Debug.Log("SubscribeDataOK header size: " + header.Count + ", stream name " + streamName);
+                // UnityEngine.Debug.Log("SubscribeDataOK header size: " + header.Count + ", stream name " + streamName);
 
                 if (streamName == DataStreamName.DevInfos) {
                     JArray devCols = new JArray();
@@ -265,13 +264,9 @@ namespace EmotivUnityPlugin
         private void OnStreamDataReceived(object sender, StreamDataEventArgs e)
         {
             // UnityEngine.Debug.Log("OnStreamDataReceived " + e.StreamName);
-            if (e.StreamName == DataStreamName.EEG) 
+            if (e.StreamName == DataStreamName.EEG)
             {
-                ArrayList dataList = e.Data as ArrayList;
-                EEGDataReceived(this, dataList);
-                // string outStr = string.Join(", ", dataList.ToArray());
-                // Debug.Log("Data = [" + outStr + "]");
-                return;
+                EEGDataReceived(this, e.Data);
             }
             else if (e.StreamName == DataStreamName.Motion)
             {
@@ -287,9 +282,7 @@ namespace EmotivUnityPlugin
             } 
             else if (e.StreamName == DataStreamName.DevInfos)
             {
-                ArrayList dataList = e.Data as ArrayList;
                 DevDataReceived(this, e.Data);
-                return;
             } 
             else if (e.StreamName == DataStreamName.FacialExpressions) 
             {

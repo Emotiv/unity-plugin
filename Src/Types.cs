@@ -164,11 +164,6 @@ namespace EmotivUnityPlugin
         HEADSET_TYPE_FLEX2
     };
 
-    public enum ModelTypes {
-        INSIGHT,
-        EPOC,
-    };
-
     public enum HeadsetGroups {
         INSIGHT,
         EPOC,
