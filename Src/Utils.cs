@@ -198,14 +198,14 @@ namespace EmotivUnityPlugin
             }
         }
 
-        public static HeadsetGroups GetHeadsetGroup(HeadsetTypes headsetType)
+        public static HeadsetFamily GetHeadsetGroup(HeadsetTypes headsetType)
         {
             if (headsetType == HeadsetTypes.HEADSET_TYPE_INSIGHT || headsetType == HeadsetTypes.HEADSET_TYPE_INSIGHT2)
-                return HeadsetGroups.INSIGHT;
+                return HeadsetFamily.INSIGHT;
             else if (headsetType == HeadsetTypes.HEADSET_TYPE_MN8 || headsetType == HeadsetTypes.HEADSET_TYPE_MND)
-                return HeadsetGroups.MN8;
+                return HeadsetFamily.MN8;
             else
-                return HeadsetGroups.EPOC;
+                return HeadsetFamily.EPOC;
         }
     }
 }

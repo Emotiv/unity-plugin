@@ -164,7 +164,7 @@ namespace EmotivUnityPlugin
         HEADSET_TYPE_FLEX2
     };
 
-    public enum HeadsetGroups {
+    public enum HeadsetFamily {
         INSIGHT,
         EPOC,
         MN8         // used for all headset types have 2 channels
