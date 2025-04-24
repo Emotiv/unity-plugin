@@ -325,7 +325,7 @@ namespace EmotivUnityPlugin
             lock (_locker)
             {
                 UnityEngine.Debug.Log("DataStreamManager: SubscribedOK");
-                List<string> successfulStreams = new List<string>();;
+                List<string> successfulStreams = new List<string>();
                 
                 foreach (string key in e.Keys)
                 {

@@ -27,12 +27,12 @@ namespace EmotivUnityPlugin
         public event EventHandler<ArrayList> DevDataReceived;         // contact quality
         public event EventHandler<ArrayList> PerfDataReceived;        // performance metric
         public event EventHandler<ArrayList> BandPowerDataReceived;   // band power
-        public event EventHandler<ArrayList> FacialExpReceived;         // Facial expressions
-        public event EventHandler<ArrayList> MentalCommandReceived;     // mental command
-        public event EventHandler<ArrayList> SysEventsReceived;  // Training events of the mental commands and facial expressions
+        public event EventHandler<ArrayList> FacialExpReceived;       // Facial expressions
+        public event EventHandler<ArrayList> MentalCommandReceived;   // mental command
+        public event EventHandler<ArrayList> SysEventsReceived;       // Training events of the mental commands and facial expressions
         public event EventHandler<Dictionary<string, JArray>> SubscribedOK;
-        public event EventHandler<DateTime> LicenseExpired;             // inform license expired
-        public event EventHandler<DateTime> LicenseValidTo;             // inform license valid to date
+        public event EventHandler<DateTime> LicenseExpired;           // inform license expired
+        public event EventHandler<DateTime> LicenseValidTo;           // inform license valid to date
 
         // notify headset connecting status
         public event EventHandler<HeadsetConnectEventArgs> HeadsetConnectNotify
@@ -81,10 +81,8 @@ namespace EmotivUnityPlugin
 
         public string GetConnectToCortexWarningMessage() => _connectCortexWarningMessage;
 
-        // Constructor
         public DataStreamProcess() 
         {
-
         }
 
         public void ProcessInit() 
@@ -219,15 +217,18 @@ namespace EmotivUnityPlugin
             {
                 string streamName = (string)ele["streamName"];
                 JArray header = (JArray)ele["cols"];
-                // UnityEngine.Debug.Log("SubscribeDataOK header count " + header.Count + " stream name " + streamName);
+                // UnityEngine.Debug.Log("SubscribeDataOK header size: " + header.Count + ", stream name " + streamName);
+
                 if (streamName == DataStreamName.DevInfos) {
                     JArray devCols = new JArray();
                     devCols.Add(header[0].ToString());
                     devCols.Add(header[1].ToString());
+
                     JArray tmp = (JArray)header[2];
                     for (int i = 0; i < tmp.Count; i++) {
                         devCols.Add(tmp[i].ToString());
                     }
+
                     if (header.Count == 4) {
                         UnityEngine.Debug.Log("The dev stream contain BatteryPercent channel.");
                         devCols.Add(header[3].ToString());
@@ -235,10 +236,10 @@ namespace EmotivUnityPlugin
                     header.RemoveAll();
                     header = devCols;
                 }
+
                 headers.Add(streamName, header);
             }
             if (headers.Count > 0) {
-                // UnityEngine.Debug.Log("DataStreamProcess: notify SubscribeOK for stream " + headers.Count);
                 SubscribedOK(this, headers);
             } else {
                 UnityEngine.Debug.Log("No data streams are subsribed successfully.");
@@ -285,12 +286,10 @@ namespace EmotivUnityPlugin
             } 
             else if (e.StreamName == DataStreamName.FacialExpressions) 
             {
-
                 FacialExpReceived(this, e.Data);
             }
             else if (e.StreamName == DataStreamName.MentalCommands) 
             {
-
                 MentalCommandReceived(this, e.Data);
             }
             else if (e.StreamName == DataStreamName.SysEvents)
@@ -315,9 +314,6 @@ namespace EmotivUnityPlugin
             // ErrorNotify(this, message);
         }
 
-        /// <summary>
-        /// Subscribe data streams. 
-        /// </summary>
         public void SubscribeData(List<string> streams = null) {
 
             lock (_locker)

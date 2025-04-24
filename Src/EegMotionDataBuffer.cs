@@ -70,14 +70,12 @@ namespace EmotivUnityPlugin
                 UnityEngine.Debug.Log("AddDataToBuffer: data contain markers channels.");
             }
 
-
             for (int i=0 ; i <  _channels.Count; i++) {
                 if (data[i] != null) {
                     double eegData = Convert.ToDouble(data[i]);
                     bufHi[i].AppendData(eegData);
                 }
             }
-            
         }
 
         // Event handler
@@ -121,17 +119,14 @@ namespace EmotivUnityPlugin
             if (channel == Channel_t.CHAN_FLEX_CMS || channel == Channel_t.CHAN_FLEX_DRL)
                 return null;
             
-            try
-            {
+            try {
                 return GetAllDataFromBuffer(GetChanIndex(channel));
             }
-            catch (System.Exception e)
-            {
-                UnityEngine.Debug.Log(" exception " + e.Message + " index " + GetChanIndex(channel) + " chan " + (int)channel + " buffSize " + bufHi.Length);
+            catch (System.Exception e) {
+                UnityEngine.Debug.Log(" exception " + e.Message + " index " + GetChanIndex(channel) 
+                                      + " chan " + (int)channel + " buffSize " + bufHi.Length);
                 return null;
             }
-
-            
         }
 
         public int GetBufferSize() 

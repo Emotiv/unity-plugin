@@ -112,7 +112,7 @@ namespace EmotivUnityPlugin
 
             {Channel_t.CHAN_BATTERY, "BATTERY"},
             {Channel_t.CHAN_RESERVED, "RESERVED"},
-            {Channel_t.CHAN_MARKER, "MARKER"},
+            {Channel_t.CHAN_MARKER, "MARKERS"},
             {Channel_t.CHAN_MARKER_HARDWARE, "MARKER_HARDWARE"},
             {Channel_t.CHAN_MARKER_RANGE, "MarkerValueInt"},
             {Channel_t.CHAN_MARKER_TYPE, "MarkerType"},
@@ -159,8 +159,15 @@ namespace EmotivUnityPlugin
         HEADSET_TYPE_EPOC_FLEX,
         HEADSET_TYPE_EPOC_X,
         HEADSET_TYPE_MN8,
+        HEADSET_TYPE_MND,
         HEADSET_TYPE_XTRODE,
         HEADSET_TYPE_FLEX2
+    };
+
+    public enum HeadsetFamily {
+        INSIGHT,
+        EPOC,
+        MN8         // used for all headset types have 2 channels
     };
 
     // From old code. keep it here for now. will use Channel_t soon
@@ -207,6 +214,7 @@ namespace EmotivUnityPlugin
         public static string insight2   = "INSIGHT2";
         public static string epoc_x     = "EPOCX";
         public static string mn8        = "MN8";
+        public static string mw20       = "MW20";
         public static string epoc_flex  = "EPOCFLEX";
         public static string xtrode  = "BGX";
         public static string flex2  = "FLEX2";
