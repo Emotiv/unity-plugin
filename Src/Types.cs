@@ -233,6 +233,7 @@ namespace EmotivUnityPlugin
         Login_notYet,
         Authorizing,
         Authorize_failed,
+        EULA_Not_Accepted,
         Authorized, 
         LicenseExpried,
         License_HardLimited

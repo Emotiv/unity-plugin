@@ -63,6 +63,7 @@ namespace EmotivUnityPlugin
 
         private string _messageLog = "";
 
+        private bool _isWebViewOpened = false;
         private List<int> _mentalCommandActionSensitivity = new List<int>();
 
         // trained signature actions
@@ -95,12 +96,14 @@ namespace EmotivUnityPlugin
         public List<int> MentalCommandActionSensitivity { get => _mentalCommandActionSensitivity; set => _mentalCommandActionSensitivity = value; }
         public List<DateTime> DatesHavingConsumerData { get => _datesHavingConsumerData; set => _datesHavingConsumerData = value; }
         public List<MentalStateModel> MentalStateDatas { get => _mentalStateDatas; set => _mentalStateDatas = value; }
+        public bool IsWebViewOpened { get => _isWebViewOpened; set => _isWebViewOpened = value; }
 
 
-        #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
+#if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
         private CrossPlatformBrowser _crossPlatformBrowser;
         private AuthenticationSession _authenticationSession;
-        private CancellationTokenSource _cancellationTokenSource;
+        private CancellationTokenSource _cancellationTokenSource; 
+        
         private static readonly char[] HEX_ARRAY = "0123456789abcdef".ToCharArray();
 
         #endif
@@ -117,7 +120,7 @@ namespace EmotivUnityPlugin
         /// </summary>
         /// <param name="code">The authentication code.</param>
         public void LoginWithAuthenticationCode(string code) {
-            _ctxClient.LoginWithAuthenticationCode(code);
+            _dsManager.LoginWithAuthenticationCode(code);
         }
         
         /// <summary>
@@ -287,6 +290,12 @@ namespace EmotivUnityPlugin
         public void Logout()
         {
             _dsManager.Logout();
+        }
+
+        // acceep eula and privacy policy
+        public void AcceptEulaAndPrivacyPolicy()
+        {
+            _dsManager.AcceptEulaAndPrivacyPolicy();
         }
 
         /// <summary>
@@ -1118,6 +1127,24 @@ namespace EmotivUnityPlugin
             _desiredErasingProfiles.Clear();
         }
 
+        public void OpenURL(string url)
+        {
+            #if UNITY_ANDROID || UNITY_IOS
+            _isWebViewOpened = true;
+            UniWebViewManager.Instance.OpenURL(
+                url, 
+                onClosed: (isClosed) => {
+                    Debug.Log($"UniWebView closed! isClosed: {isClosed}");
+                    _isWebViewOpened = false;
+                    
+                }
+            );
+            // UniWebViewManager.Instance.OpenURL(url);
+            #else
+            Application.OpenURL(url);
+            #endif
+        }
+
         #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
         private string BytesToHex(byte[] bytes)
         {
@@ -1195,13 +1222,17 @@ namespace EmotivUnityPlugin
         public async Task AuthenticateAsync()
         {
             #if UNITY_ANDROID || UNITY_IOS
+            _isWebViewOpened = true;
             UniWebViewManager.Instance.StartAuthorization(
                 onSuccess: (authCode) => {
                     Debug.Log($"UniWebView Authorization succeeded! Starting login with auth code");
                     LoginWithAuthenticationCode(authCode);
+                    _isWebViewOpened = false;
                 },
                 onError: (errorCode, errorMessage) => {
                     Debug.LogError($"Authorization failed! Error {errorCode}: {errorMessage}");
+                    _isWebViewOpened = false;
+                    
                 }
             );
             #else
@@ -1234,7 +1265,6 @@ namespace EmotivUnityPlugin
             }
             #endif
         }
-
         #endif
 
     }

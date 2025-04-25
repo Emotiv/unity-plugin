@@ -1096,5 +1096,14 @@ namespace EmotivUnityPlugin
         public void QueryDayDetailOfConsumerData(DateTime date) {
             _dsProcess.QueryDayDetailOfConsumerData(date);
         }
+
+        // accept eula and privacy policy
+        public void AcceptEulaAndPrivacyPolicy() {
+            _dsProcess.AcceptEulaAndPrivacyPolicy();
+        }
+
+        public void LoginWithAuthenticationCode(string code) {
+            _dsProcess.LoginWithAuthenticationCode(code);
+        }
     }
 }

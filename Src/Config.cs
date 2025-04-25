@@ -76,6 +76,7 @@
         public const int EULAAccepted             = 17;
         public const int StreamWritingClosed      = 18;
         public const int CortexIsReady            = 23;
+        public const int UserNotAcceptPrivateEULA = 28;
         public const int HeadsetWrongInformation  = 100;
         public const int HeadsetCannotConnected   = 101;
         public const int HeadsetConnectingTimeout = 102;

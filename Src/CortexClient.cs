@@ -62,7 +62,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> AuthorizeOK;
         public event EventHandler<UserDataInfo> GetUserLoginDone;
         public event EventHandler<string> EULAAccepted;
-        public event EventHandler<string> EULANotAccepted;
+        public event EventHandler<string> EULANotAccepted; // return cortexToken if user has not accept eula to proceed next step
         public event EventHandler<string> UserLoginNotify;
         public event EventHandler<string> UserLogoutNotify;
         public event EventHandler<License> GetLicenseInfoDone;
@@ -339,11 +339,21 @@ namespace EmotivUnityPlugin
                 if (data["warning"] != null)
                 {
                     JObject warning         = (JObject)data["warning"];
-                    string warningMessage   = warning["message"].ToString();
-                    UnityEngine.Debug.Log("User has not accepted eula. Please accept EULA on EMOTIV Launcher to proceed.");
-                    EULANotAccepted(this, warningMessage);
+                    int code                = (int)warning["code"];
+                    if (code == WarningCode.UserNotAcceptLicense || 
+                        code == WarningCode.UserNotAcceptPrivateEULA) {
+                        UnityEngine.Debug.Log("User has not accepted eula. Please accept EULA on EMOTIV Launcher to proceed.");
+                        EULANotAccepted(this, token);
+                        return;
+                    }
                 }
+                
                 AuthorizeOK(this, token);
+            }
+            else if (method == "acceptLicense")
+            {
+                string message = data["message"].ToString();
+                EULAAccepted(this, message);
             }
             else if (method == "createSession")
             {
@@ -550,7 +560,8 @@ namespace EmotivUnityPlugin
             else if (code == WarningCode.UserNotAcceptLicense)
             {
                 string message = messageData.ToString();
-                EULANotAccepted(this, message);
+                UnityEngine.Debug.Log(message);
+                EULANotAccepted(this, "");
             }
             else if (code == WarningCode.EULAAccepted)
             {
@@ -632,6 +643,15 @@ namespace EmotivUnityPlugin
             param.Add("clientSecret", Config.AppClientSecret);
             param.Add("code", code);
             SendTextMessage(param, "loginWithAuthenticationCode", true);
+        }
+
+        // accept eula
+        public void AcceptEulaAndPrivacyPolicy(string cortexToken)
+        {
+            JObject param = new JObject(
+                    new JProperty("cortexToken", cortexToken)
+                );
+            SendTextMessage(param, "acceptLicense", true);
         }
 
         // get license information
