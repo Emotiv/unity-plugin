@@ -176,6 +176,8 @@ namespace EmotivUnityPlugin
                 _wantedHeadsetId    = "";
                 _connectHeadsetState = ConnectHeadsetStates.No_Connect;
                 _detectedHeadsets.Clear();
+                // start scanning headset again
+                _dsProcess.RefreshHeadset();
                 ResetDataBuffers();
             }
         }
@@ -240,7 +242,7 @@ namespace EmotivUnityPlugin
         {
             lock (_locker)
             {
-                UnityEngine.Debug.Log("DataStreamManager: OnSessionActivedOK " + sessionInfo.HeadsetId);
+                UnityEngine.Debug.Log("DataStreamManager: OnSessionActivedOK " + sessionInfo.HeadsetId + "wantedHeadset " + _wantedHeadsetId);
                 if (sessionInfo.HeadsetId == _wantedHeadsetId) {
                     _isSessActivated    = true;
                     _readyCreateSession = false;
@@ -350,7 +352,7 @@ namespace EmotivUnityPlugin
             lock (_locker)
             {
                 string headsetId = e.HeadsetId;
-                UnityEngine.Debug.Log("OnHeadsetConnectNotify for headset " + headsetId + " while wantedHeadset : " + _wantedHeadsetId);
+                UnityEngine.Debug.Log("OnHeadsetConnectNotify for headset " + headsetId + " while wantedHeadset : " + _wantedHeadsetId + "_readyCreateSession" + _readyCreateSession);
                 if (e.IsSuccess && _readyCreateSession &&
                     (headsetId == _wantedHeadsetId)) {
                     UnityEngine.Debug.Log("Connect the headset " + headsetId + " successfully. Start creating session.");
@@ -358,7 +360,7 @@ namespace EmotivUnityPlugin
                     // create session
                     _dsProcess.CreateSession(headsetId, true);
                 }
-                else if (headsetId == _wantedHeadsetId) {
+                else if (!e.IsSuccess && headsetId == _wantedHeadsetId) {
                     UnityEngine.Debug.Log("Connect the headset " + headsetId + " unsuccessfully. Message : " + e.Message);
                     HeadsetConnectFail(this, headsetId);
                     _wantedHeadsetId = ""; // reset headsetId
@@ -367,7 +369,7 @@ namespace EmotivUnityPlugin
                     _connectHeadsetState = ConnectHeadsetStates.Session_Failed;
                 }
                 else {
-                    UnityEngine.Debug.Log("Connect a headset " + headsetId + " unsuccessfully. Message : " + e.Message);
+                    UnityEngine.Debug.Log("OnHeadsetConnectNotify:  " + headsetId + ". Message : " + e.Message);
                 }
             }
         }
