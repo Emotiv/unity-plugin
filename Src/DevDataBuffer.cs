@@ -31,8 +31,6 @@ namespace EmotivUnityPlugin
         public double Battery
         {
             get {
-                Debug.Log("_batteryType: " + _batteryType);
-
                 switch (_batteryType) {
                     case BatteryType.NORMAL_BATTERY_PERCENT:
                         return GetContactQuality(Channel_t.CHAN_BATTERY_PERCENT);
