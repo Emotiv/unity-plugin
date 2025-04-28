@@ -48,6 +48,7 @@ namespace EmotivUnityPlugin
         CHAN_COUNTER,       CHAN_INTERPOLATED, CHAN_RAW_CQ,      CHAN_CQ_OVERALL ,  CHAN_MARKER, CHAN_MARKER_HARDWARE,
         CHAN_TIME_SYSTEM,   CHAN_MARKER_RANGE, CHAN_MARKER_TYPE, CHAN_MARKER_TITLE, CHAN_RESERVED,
         CHAN_FLEX_HIGH_BIT, CHAN_BATTERY, CHAN_SIGNAL_STRENGTH, CHAN_BATTERY_PERCENT, CHAN_UNKNOWN,
+        CHAN_BATTERY_LEFT, CHAN_BATTERY_RIGHT,
 
         // Motion channels
         CHAN_COUNTER_MEMS, CHAN_INTERPOLATED_MEMS,
@@ -111,6 +112,7 @@ namespace EmotivUnityPlugin
             {Channel_t.CHAN_MAGX, "MAGX"},   {Channel_t.CHAN_MAGY, "MAGY"},   {Channel_t.CHAN_MAGZ, "MAGZ"},
 
             {Channel_t.CHAN_BATTERY, "BATTERY"},
+            {Channel_t.CHAN_BATTERY_LEFT, "batteryLeftPercent"}, {Channel_t.CHAN_BATTERY_RIGHT, "batteryRightPercent"},
             {Channel_t.CHAN_RESERVED, "RESERVED"},
             {Channel_t.CHAN_MARKER, "MARKERS"},
             {Channel_t.CHAN_MARKER_HARDWARE, "MARKER_HARDWARE"},

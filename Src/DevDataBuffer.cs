@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections;
 using Newtonsoft.Json.Linq;
+using UnityEngine;
 
 namespace EmotivUnityPlugin
 {
@@ -17,15 +18,33 @@ namespace EmotivUnityPlugin
         List<Channel_t> _devChannels = new List<Channel_t>();
 
         double BATTERY_MAX = (double)BatteryLevel.LEVEL_4;
-        bool _hasBatteryPercent = false; // has battery percentage range [0-100]. From Cortex v2.7.0, we add battery percentage to dev stream
+
+        enum BatteryType : int {
+            NO_BATTERY_PERCENT,
+            NORMAL_BATTERY_PERCENT,
+            TWOSIDE_BATTERY_PERCENT
+        }
+
+        // has battery percentage range [0-100]. From Cortex v2.7.0, we add battery percentage to dev stream
+        BatteryType _batteryType = BatteryType.NO_BATTERY_PERCENT; 
 
         public double Battery
         {
             get {
-                if (_hasBatteryPercent)
-                    return GetContactQuality(Channel_t.CHAN_BATTERY_PERCENT);
-                else
-                    return GetContactQuality(Channel_t.CHAN_BATTERY);
+                Debug.Log("_batteryType: " + _batteryType);
+
+                switch (_batteryType) {
+                    case BatteryType.NORMAL_BATTERY_PERCENT:
+                        return GetContactQuality(Channel_t.CHAN_BATTERY_PERCENT);
+                    case BatteryType.TWOSIDE_BATTERY_PERCENT: {
+                        float minValue = Mathf.Min((float)GetContactQuality(Channel_t.CHAN_BATTERY_LEFT),
+                                                     (float)GetContactQuality(Channel_t.CHAN_BATTERY_RIGHT));
+                        return minValue;
+                    }
+                    case BatteryType.NO_BATTERY_PERCENT:
+                    default:
+                        return GetContactQuality(Channel_t.CHAN_BATTERY);
+                }
             }
         }
 
@@ -56,15 +75,20 @@ namespace EmotivUnityPlugin
             _devChannels.Add(Channel_t.CHAN_TIME_SYSTEM);
             _devChannels.Add(Channel_t.CHAN_BATTERY);
             _devChannels.Add(Channel_t.CHAN_SIGNAL_STRENGTH);
+
             foreach(var item in devChannels){
+
                 string chanStr = item.ToString();
 
                 if (chanStr == "BatteryPercent") {
-                    _hasBatteryPercent = true;
+                    _batteryType = BatteryType.NORMAL_BATTERY_PERCENT;
                     _devChannels.Add(Channel_t.CHAN_BATTERY_PERCENT);
                 }
                 else if (chanStr != "Battery" &&  chanStr != "Signal") { // added above
-                    _devChannels.Add(ChannelStringList.StringToChannel(chanStr));
+                    Channel_t chanID = ChannelStringList.StringToChannel(chanStr);
+                    _devChannels.Add(chanID);
+                    if(chanID == Channel_t.CHAN_BATTERY_LEFT || chanID == Channel_t.CHAN_BATTERY_RIGHT)
+                        _batteryType = BatteryType.TWOSIDE_BATTERY_PERCENT;
                 }
             }
         }
