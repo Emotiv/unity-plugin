@@ -1073,6 +1073,7 @@ namespace EmotivUnityPlugin
                 trainedActionsText += item.Key + " (" + item.Value + "), ";
             }
             // _messageLog = trainedActionsText;
+            UnityEngine.Debug.Log("OnInformTrainedSignatureActions "+ trainedActionsText);
 
             _trainedSignatureActions = trainedActions;
         }
