@@ -327,7 +327,7 @@ namespace EmotivUnityPlugin
             UnityEngine.Debug.Log("MessageErrorRecieved :code " + errorCode
                                    + " message " + message 
                                    + "method name " + method);
-            if (errorInfo.MethodName == "createSession") {
+            if (errorInfo.MethodName == "createSession" || errorInfo.MethodName == "controlDevice") {
                 _sessionHandler.ClearSessionData();
                 CreateSessionFail(this, message);
             }
