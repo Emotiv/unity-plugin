@@ -1,3 +1,4 @@
+#if UNITY_ANDROID || UNITY_IOS
 using UnityEngine;
 using System;
 
@@ -124,3 +125,4 @@ public class UniWebViewManager : MonoBehaviour
         _urlScheme = null;
     }
 }
+#endif

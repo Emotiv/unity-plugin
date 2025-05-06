@@ -151,6 +151,7 @@ namespace EmotivUnityPlugin
     }
     #endif
 
+    #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
     public class EmbeddedCortexClient : CortexClient
     {
         #if UNITY_ANDROID
@@ -284,4 +285,5 @@ namespace EmotivUnityPlugin
             #endif
         }
     }
+    #endif
 }

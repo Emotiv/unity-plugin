@@ -274,9 +274,11 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void Stop()
         {
-            #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
+            #if USE_EMBEDDED_LIB
             _cancellationTokenSource?.Cancel();
             _authenticationSession?.Dispose();
+            #endif
+            #if UNITY_ANDROID || UNITY_IOS
             UniWebViewManager.Instance?.Cleanup();
             #endif
 
