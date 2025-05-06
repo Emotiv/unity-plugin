@@ -22,7 +22,37 @@ namespace EmotivUnityPlugin
 
 
         // event
-        public event EventHandler<bool> InformLoadUnLoadProfileDone;
+        public event EventHandler<string> InformLoadProfileDone;
+        public event EventHandler<string> InformUnLoadProfileDone;
+
+        public event EventHandler<bool> SetMentalCommandActionSensitivityOK
+        {
+            add { _trainingHandler.SetMentalCommandActionSensitivityOK += value; }
+            remove { _trainingHandler.SetMentalCommandActionSensitivityOK -= value; }
+        }
+
+        // forward event InformTrainedSignatureActions
+        public event EventHandler<Dictionary<string, int>> InformTrainedSignatureActions
+        {
+            add { _trainingHandler.InformTrainedSignatureActions += value; }
+            remove { _trainingHandler.InformTrainedSignatureActions -= value; }
+        }
+
+        // forward event ProfileSavedOK from TrainingHandler
+        public event EventHandler<string> ProfileSavedOK
+        {
+            add { _trainingHandler.ProfileSavedOK += value; }
+            remove { _trainingHandler.ProfileSavedOK -= value; }
+        }
+
+        // forward event GetMentalCommandActionSensitivityOK
+        public event EventHandler<List<int>> GetMentalCommandActionSensitivityOK
+        {
+            add { _trainingHandler.GetMentalCommandActionSensitivityOK += value; }
+            remove { _trainingHandler.GetMentalCommandActionSensitivityOK -= value; }
+        }
+
+        public event EventHandler<string> InformEraseDone; // inform erase done for action
 
         /// <summary>
         /// all profiles of user.
@@ -167,14 +197,33 @@ namespace EmotivUnityPlugin
             _trainingHandler.DoTraining(action, "reset", detection);
         }
 
+
+        // Set sensitivity for mental command
+        public void SetMentalCommandActionSensitivity(string profileName, List<int> levels)
+        {
+            _trainingHandler.SetMentalCommandSensitivity( profileName, levels);
+        }
+
+        // get sensitivity for mental command
+        public void GetMentalCommandActionSensitivity(string profileName)
+        {
+            _trainingHandler.GetMentalCommandSensitivity(profileName);
+        }
+
+        // get trained signature actions
+        public void GetTrainedSignatureActions(string detection, string profileName = "")
+        {
+            _trainingHandler.GetTrainedSignatureActions(detection, profileName);
+        }
+
         // Event handers
         private void OnProfileUnLoaded(object sender, bool e)
         {
             UnityEngine.Debug.Log("OnProfileUnLoaded");
             // TODO: verify unload is for current profile
+            InformUnLoadProfileDone(this, _wantedProfileName);
             _workingHeadsetId = "";
             _wantedProfileName = "";
-            InformLoadUnLoadProfileDone(this, false);
         }
         private void OnGetCurrentProfileDone(object sender, JObject data)
         {
@@ -195,7 +244,7 @@ namespace EmotivUnityPlugin
                 }
                 else if (loadByThisApp)
                 {
-                    InformLoadUnLoadProfileDone(this, true);
+                    InformLoadProfileDone(this, name);
                 }
                 else
                 {
@@ -210,7 +259,7 @@ namespace EmotivUnityPlugin
 
             if (profileName == _wantedProfileName)
             {
-                InformLoadUnLoadProfileDone(this, true);
+                InformLoadProfileDone(this, profileName);
             }
             else
             {
@@ -224,7 +273,14 @@ namespace EmotivUnityPlugin
 
         private void OnTrainingOK(object sender, JObject result)
         {
-            UnityEngine.Debug.Log("OnTrainingOK: " + result);
+            string action = result["action"].ToString();
+            string status = result["status"].ToString();
+            string message = result["message"].ToString();
+            if (status == "erase")
+            {
+                InformEraseDone(this, action);
+            }
+            UnityEngine.Debug.Log("OnTrainingOK: " + action + " status:" + status + " message:" + message);
         }
         private void OnCreateProfileOK(object sender, string profileName)
         {

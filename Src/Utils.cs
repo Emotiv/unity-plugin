@@ -1,12 +1,56 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using UnityEngine;
 
 namespace EmotivUnityPlugin
 {
-    public class Utils
+    public static class Utils
     {
         
+        private static string _logDirectory;
+        private static string _dataDirectory;
+
+        public static string LogDirectory { get => _logDirectory; set => _logDirectory = value; }
+        public static string DataDirectory { get => _dataDirectory; set => _dataDirectory = value; }
+        
+        // init Utils to create needed directories for unity app. It should be called at Start() and before logger.Init() method
+        public static void Init()
+        {
+            // create tmp directory for unity app
+            string tmpPath = GetAppTmpPath();
+            _logDirectory = Path.Combine(tmpPath, Config.LogsDir);
+            _dataDirectory = Path.Combine(tmpPath, Config.ProfilesDir);
+
+            // Ensure the directories exist
+            // check directory is existed or not to create
+        if (!Directory.Exists(_logDirectory))
+            {
+                try
+                {
+                    Directory.CreateDirectory(_logDirectory);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    UnityEngine.Debug.LogError("Failed to create Log Directory: " + _logDirectory + " - " + ex.Message);
+                    throw;
+                }
+            }
+
+            if (!Directory.Exists(_dataDirectory))
+            {
+                try
+                {
+                    Directory.CreateDirectory(_dataDirectory);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    UnityEngine.Debug.LogError("Failed to create Data Directory: " + _dataDirectory + " - " + ex.Message);
+                    throw;
+                }
+            }
+        }
+
         public static Int64 GetEpochTimeNow()
         {
             TimeSpan t = DateTime.UtcNow - new DateTime(1970, 1, 1);
@@ -23,7 +67,7 @@ namespace EmotivUnityPlugin
         public static string GetAppTmpPath() 
         {
             string homePath = "";
-        #if UNITY_STANDALONE_WIN
+        #if UNITY_STANDALONE_WIN || USE_EMBEDDED_LIB
             homePath = Environment.GetEnvironmentVariable("LocalAppData");
         #elif UNITY_STANDALONE_OSX
             homePath = Environment.GetEnvironmentVariable("HOME");
@@ -33,9 +77,10 @@ namespace EmotivUnityPlugin
             homePath = Environment.GetEnvironmentVariable("HOME");
             // TODO
         #elif UNITY_IOS
-            // TODO
+            homePath = Application.persistentDataPath;
         #elif UNITY_ANDROID
-            // TODO
+            // return application data path on android
+            return Application.persistentDataPath;
         #else
             // TODO
             homePath = Directory.GetCurrentDirectory();
@@ -46,22 +91,7 @@ namespace EmotivUnityPlugin
 
         public static string GetLogPath() 
         {
-            string tmpPath = GetAppTmpPath();
-            string targetDir = Path.Combine(tmpPath, Config.LogsDir);
-            if (!Directory.Exists(targetDir)) {
-                try
-                {
-                    // create directory
-                    Directory.CreateDirectory(targetDir);
-                    UnityEngine.Debug.Log("GetLogPath: create directory " + targetDir);
-                }
-                catch (Exception e)
-                {      
-                    UnityEngine.Debug.Log("Can not create directory: " + targetDir + " : failed: " + e.ToString());
-                }
-                finally {}
-            }
-            return targetDir;
+            return _logDirectory;
         }
 
         public static DateTime StringToIsoDateTime(string time) {
@@ -202,10 +232,31 @@ namespace EmotivUnityPlugin
         {
             if (headsetType == HeadsetTypes.HEADSET_TYPE_INSIGHT || headsetType == HeadsetTypes.HEADSET_TYPE_INSIGHT2)
                 return HeadsetFamily.INSIGHT;
-            else if (headsetType == HeadsetTypes.HEADSET_TYPE_MN8 || headsetType == HeadsetTypes.HEADSET_TYPE_MND)
+            else if (headsetType == HeadsetTypes.HEADSET_TYPE_MN8 || headsetType == HeadsetTypes.HEADSET_TYPE_MW20)
                 return HeadsetFamily.MN8;
             else
                 return HeadsetFamily.EPOC;
+        }
+
+        public static bool IsInsightType(HeadsetTypes headsetType)
+        {
+            if (headsetType == HeadsetTypes.HEADSET_TYPE_INSIGHT || headsetType == HeadsetTypes.HEADSET_TYPE_INSIGHT2)
+                return true;
+            else
+                return false;
+        }
+        
+        public static TimeSpan IndexToTime(int index)
+        {
+            if (index < 0 || index >= 48)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), "Index must be between 0 and 47.");
+            }
+
+            int hours = index / 2;
+            int minutes = (index % 2) * 30;
+
+            return new TimeSpan(hours, minutes, 0);
         }
     }
 }

@@ -48,8 +48,27 @@ namespace EmotivUnityPlugin
             add { _ctxClient.GetCurrentProfileDone += value; }
             remove { _ctxClient.GetCurrentProfileDone -= value; }
         }
+        public event EventHandler<bool> SetMentalCommandActionSensitivityOK
+        {
+            add { _ctxClient.SetMentalCommandActionSensitivityOK += value; }
+            remove { _ctxClient.SetMentalCommandActionSensitivityOK -= value; }
+        }
 
         public event EventHandler<DetectionInfo> GetDetectionInfoOK;
+
+        // forward event InformTrainedSignatureActions
+        public event EventHandler<Dictionary<string, int>> InformTrainedSignatureActions
+        {
+            add { _ctxClient.InformTrainedSignatureActions += value; }
+            remove { _ctxClient.InformTrainedSignatureActions -= value; }
+        }
+
+        // forward event GetMentalCommandActionSensitivityOK
+        public event EventHandler<List<int>> GetMentalCommandActionSensitivityOK
+        {
+            add { _ctxClient.GetMentalCommandActionSensitivityOK += value; }
+            remove { _ctxClient.GetMentalCommandActionSensitivityOK -= value;}
+        }
 
         public static TrainingHandler Instance { get; } = new TrainingHandler();
 
@@ -173,6 +192,30 @@ namespace EmotivUnityPlugin
         {
             string cortexToken = _authorizer.CortexToken;
             _ctxClient.SetupProfile(cortexToken, profileName, "save", headsetId);
+        }
+
+        // set mental command sensitivity
+        public void SetMentalCommandSensitivity(string profileName, List<int> levels)
+        {
+            string cortexToken = _authorizer.CortexToken;
+            string sessionId    = _sessionHandler.SessionId;
+            _ctxClient.MentalCommandActionSensitivity(cortexToken, "set", sessionId, profileName, levels);
+        }
+
+        // get mental command sensitivity
+        public void GetMentalCommandSensitivity(string profileName)
+        {
+            string cortexToken = _authorizer.CortexToken;
+            string sessionId    = _sessionHandler.SessionId;
+            _ctxClient.MentalCommandActionSensitivity(cortexToken, "get", sessionId, profileName);
+        }
+
+        // get trained signature actions
+        public void GetTrainedSignatureActions(string detection, string profileName = "")
+        {
+            string cortexToken = _authorizer.CortexToken;
+            string sessionId    = _sessionHandler.SessionId;
+            _ctxClient.GetTrainedSignatureActions(cortexToken, detection, sessionId, profileName);
         }
     }
 }
