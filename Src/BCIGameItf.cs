@@ -403,5 +403,9 @@ namespace EmotivUnityPlugin
         {
             return emotivUnityItf.IsWebViewOpened;
         }
+
+        public string LoadedProfilePlayer() {
+            return emotivUnityItf.LoadedProfileName;
+        }
     }
 }

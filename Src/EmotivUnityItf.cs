@@ -97,6 +97,7 @@ namespace EmotivUnityPlugin
         public List<DateTime> DatesHavingConsumerData { get => _datesHavingConsumerData; set => _datesHavingConsumerData = value; }
         public List<MentalStateModel> MentalStateDatas { get => _mentalStateDatas; set => _mentalStateDatas = value; }
         public bool IsWebViewOpened { get => _isWebViewOpened; set => _isWebViewOpened = value; }
+        public string LoadedProfileName { get => _loadedProfileName; set => _loadedProfileName = value; }
 
 
 #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
@@ -843,9 +844,14 @@ namespace EmotivUnityPlugin
         private void OnInformUnLoadProfileDone(object sender, string profileName)
         {
             _messageLog = "The profile " + profileName + " is unloaded successfully.";
-            _isProfileLoaded = false;
-            _loadedProfileName = "";
-            _desiredErasingProfiles.Clear();
+
+            if (_loadedProfileName == profileName)
+            {
+                _isProfileLoaded = false;
+                _loadedProfileName = "";
+                _desiredErasingProfiles.Clear();
+            }
+            
         }
 
         private void OnInformStartRecordResult(object sender, Record record)
