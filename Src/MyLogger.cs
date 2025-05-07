@@ -35,14 +35,14 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Initial logger handler
         /// </summary>
-        public void Init(bool saveToFile)
+        public void Init(string prefixFileName ,  bool saveToFile)
         {
             this.saveToFile = saveToFile;
 
             if (saveToFile)
             {
                 string dateTimeStr = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string fileName = Config.AppName + "Log_" + dateTimeStr + ".txt";
+                string fileName = prefixFileName + "Log_" + dateTimeStr + ".txt";
 
                 string logPath = Utils.GetLogPath();
                 string filePath = Path.Combine(logPath, fileName);
@@ -138,6 +138,7 @@ namespace EmotivUnityPlugin
         {
             lock (_object)
             {
+                LogType myLogType = logType;
                 string type = "";
                 switch (logType)
                 {
@@ -146,12 +147,17 @@ namespace EmotivUnityPlugin
                         break;
                     case LogType.Warning:
                         type = "warning";
+                        myLogType = LogType.Log;
                         break;
                     case LogType.Error:
                         type = "error";
+                        myLogType = LogType.Log;
+                        break;
+                    case LogType.Exception:
+                        type = "exception";
                         break;
                     default:
-                        type = "exception";
+                        type = "info";
                         break;
                 }
 
@@ -181,7 +187,7 @@ namespace EmotivUnityPlugin
 
                 if (showConsoleLog)
                 {
-                    m_DefaultLogHandler.LogFormat(logType, context, newFormat, tmpArgs);
+                    m_DefaultLogHandler.LogFormat(myLogType, context, newFormat, tmpArgs);
                 }
             }
         }
