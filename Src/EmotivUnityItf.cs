@@ -98,6 +98,7 @@ namespace EmotivUnityPlugin
         public List<MentalStateModel> MentalStateDatas { get => _mentalStateDatas; set => _mentalStateDatas = value; }
         public bool IsWebViewOpened { get => _isWebViewOpened; set => _isWebViewOpened = value; }
         public string LoadedProfileName { get => _loadedProfileName; set => _loadedProfileName = value; }
+        public string WorkingHeadsetId { get => _workingHeadsetId; set => _workingHeadsetId = value; }
 
 
 #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
@@ -206,7 +207,7 @@ namespace EmotivUnityPlugin
                 return;
             }
             Utils.Init();
-            MyLogger.Instance.Init(allowSaveLogToFile);
+            MyLogger.Instance.Init(appName, allowSaveLogToFile);
 
             // init authentication for Android and Embedded Cortex Desktop
             #if UNITY_ANDROID || USE_EMBEDDED_LIB || UNITY_IOS
@@ -773,6 +774,12 @@ namespace EmotivUnityPlugin
         /// <param name="levels">The list of sensitivity levels. It is array of 4 numbers in range 1-10 </param>
         public void SetMentalCommandActionSensitivity(List<int> levels)
         {
+            if (string.IsNullOrEmpty(_loadedProfileName))
+            {
+                UnityEngine.Debug.LogError("Please load a profile before setting sensitivity levels.");
+                return;
+            }
+
             _bciTraining.SetMentalCommandActionSensitivity(_loadedProfileName, levels);
         }
 
