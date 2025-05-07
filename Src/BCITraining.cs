@@ -17,6 +17,8 @@ namespace EmotivUnityPlugin
 
         private string _wantedProfileName = "";
 
+        private string _unloadingProfileName = "";
+
         private string _workingHeadsetId = "";
         private string _currAction = "";
 
@@ -120,7 +122,6 @@ namespace EmotivUnityPlugin
         {
             _wantedProfileName = profileName;
             _workingHeadsetId = headsetId;
-
             // query profile after that the profile will be created and loaded
             QueryProfile();
         }
@@ -130,6 +131,7 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void UnLoadProfile(string profileName, string headsetId)
         {
+            _unloadingProfileName = profileName;    
             _trainingHandler.UnLoadProfile(profileName, headsetId);
         }
 
@@ -219,18 +221,31 @@ namespace EmotivUnityPlugin
         // Event handers
         private void OnProfileUnLoaded(object sender, bool e)
         {
-            UnityEngine.Debug.Log("OnProfileUnLoaded");
-            // TODO: verify unload is for current profile
-            InformUnLoadProfileDone(this, _wantedProfileName);
-            _workingHeadsetId = "";
-            _wantedProfileName = "";
+            
+            if (!string.IsNullOrEmpty(_unloadingProfileName) && _unloadingProfileName == _wantedProfileName)
+            {
+                UnityEngine.Debug.Log("OnProfileUnLoaded: the profile " + _unloadingProfileName + " is unloaded successfully.");
+                InformUnLoadProfileDone(this, _wantedProfileName);
+                _workingHeadsetId = "";
+                _wantedProfileName = "";
+            }
+            else if (_unloadingProfileName != _wantedProfileName) {
+                _unloadingProfileName = "";
+                UnityEngine.Debug.Log("OnProfileUnLoaded: the profile " + _unloadingProfileName + " is unloaded successfully. But it is not the wanted profile " + _wantedProfileName);
+                // Load wanted profile after unloading the current profile
+                if (!string.IsNullOrEmpty(_wantedProfileName) && !string.IsNullOrEmpty(_workingHeadsetId))
+                {
+                    // load wanted profile
+                    LoadProfileWithHeadset(_wantedProfileName, _workingHeadsetId);
+                }
+            }
         }
         private void OnGetCurrentProfileDone(object sender, JObject data)
         {
             if (data["name"].Type == JTokenType.Null)
             {
                 // no profile loaded with the headset. Load profile
-                UnityEngine.Debug.Log("OnGetCurrentProfileDone: no profile loaded with the headset");
+                UnityEngine.Debug.Log("OnGetCurrentProfileDone: no profile loaded for the headset " + _workingHeadsetId);
                 _trainingHandler.LoadProfile(_wantedProfileName, _workingHeadsetId);
             }
             else
@@ -238,18 +253,23 @@ namespace EmotivUnityPlugin
                 string name = data["name"].ToString();
                 bool loadByThisApp = (bool)data["loadedByThisApp"];
 
-                if (name != _wantedProfileName)
-                {
-                    UnityEngine.Debug.LogError("There is profile " + name + " is loaded for headset " + _workingHeadsetId);
-                }
-                else if (loadByThisApp)
-                {
-                    InformLoadProfileDone(this, name);
+                if (loadByThisApp) {
+                    UnityEngine.Debug.Log("OnGetCurrentProfileDone: the profile " + name + " is loaded by this app.");
+                    if (name != _wantedProfileName)
+                    {
+                        UnityEngine.Debug.LogError("There is profile " + name + " is loaded for headset " + _workingHeadsetId + " but not " + _wantedProfileName);
+                        // the profile is loaded by this app -> unload
+                        _unloadingProfileName = name;
+                        _trainingHandler.UnLoadProfile(name, _workingHeadsetId);
+                    }
+                    else
+                    {
+                        InformLoadProfileDone(this, name);
+                    }
                 }
                 else
                 {
-                    // the profile is loaded by other apps -> unload
-                    _trainingHandler.UnLoadProfile(_wantedProfileName, _workingHeadsetId);
+                    UnityEngine.Debug.LogError("OnGetCurrentProfileDone: the profile " + name + " is loaded by other apps.");
                 }
             }
         }
@@ -326,15 +346,16 @@ namespace EmotivUnityPlugin
                     {
                         UnityEngine.Debug.Log("OnQueryProfileOK: the profile" + _wantedProfileName + " is existed.");
                         foundProfile = true;
-                        // get current profile
-                        _trainingHandler.GetCurrentProfile(_workingHeadsetId);
-                        return;
+                        break;
                     }
                 }
                 if (!foundProfile)
                 {
                     // create new profile
                     _trainingHandler.CreateProfile(_wantedProfileName, _workingHeadsetId);
+                }
+                else {
+                    _trainingHandler.GetCurrentProfile(_workingHeadsetId);
                 }
             }
         }
