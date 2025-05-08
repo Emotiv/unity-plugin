@@ -35,14 +35,36 @@ namespace EmotivUnityPlugin
                     case BatteryType.NORMAL_BATTERY_PERCENT:
                         return GetContactQuality(Channel_t.CHAN_BATTERY_PERCENT);
                     case BatteryType.TWOSIDE_BATTERY_PERCENT: {
-                        float minValue = Mathf.Min((float)GetContactQuality(Channel_t.CHAN_BATTERY_LEFT),
-                                                     (float)GetContactQuality(Channel_t.CHAN_BATTERY_RIGHT));
+                        float minValue = Mathf.Min((float)GetContactQuality(Channel_t.CHAN_BATTERY_LEFT_PERCENT),
+                                                     (float)GetContactQuality(Channel_t.CHAN_BATTERY_RIGHT_PERCENT));
                         return minValue;
                     }
                     case BatteryType.NO_BATTERY_PERCENT:
                     default:
                         return GetContactQuality(Channel_t.CHAN_BATTERY);
                 }
+            }
+        }
+
+        // left battery level
+        public double BatteryLeft
+        {
+            get {
+                if (_batteryType == BatteryType.TWOSIDE_BATTERY_PERCENT)
+                    return GetContactQuality(Channel_t.CHAN_BATTERY_LEFT_PERCENT);
+                else
+                    return -1;
+            }
+        }
+
+         // right battery level
+        public double BatteryRight
+        {
+            get {
+                if (_batteryType == BatteryType.TWOSIDE_BATTERY_PERCENT)
+                    return GetContactQuality(Channel_t.CHAN_BATTERY_RIGHT_PERCENT);
+                else
+                    return -1;
             }
         }
 
@@ -68,16 +90,17 @@ namespace EmotivUnityPlugin
             }
         }
 
-        public void SetChannels(JArray devChannels) 
+        public void SetChannels(JArray devChannels, bool isDevStream = true)  
         {
             _devChannels.Add(Channel_t.CHAN_TIME_SYSTEM);
-            _devChannels.Add(Channel_t.CHAN_BATTERY);
-            _devChannels.Add(Channel_t.CHAN_SIGNAL_STRENGTH);
-
+            if (isDevStream) {
+                _devChannels.Add(Channel_t.CHAN_BATTERY);
+                _devChannels.Add(Channel_t.CHAN_SIGNAL_STRENGTH);
+            }
+            
             foreach(var item in devChannels){
 
                 string chanStr = item.ToString();
-
                 if (chanStr == "BatteryPercent") {
                     _batteryType = BatteryType.NORMAL_BATTERY_PERCENT;
                     _devChannels.Add(Channel_t.CHAN_BATTERY_PERCENT);
@@ -85,7 +108,7 @@ namespace EmotivUnityPlugin
                 else if (chanStr != "Battery" &&  chanStr != "Signal") { // added above
                     Channel_t chanID = ChannelStringList.StringToChannel(chanStr);
                     _devChannels.Add(chanID);
-                    if(chanID == Channel_t.CHAN_BATTERY_LEFT || chanID == Channel_t.CHAN_BATTERY_RIGHT)
+                    if(chanID == Channel_t.CHAN_BATTERY_LEFT_PERCENT || chanID == Channel_t.CHAN_BATTERY_RIGHT_PERCENT)
                         _batteryType = BatteryType.TWOSIDE_BATTERY_PERCENT;
                 }
             }

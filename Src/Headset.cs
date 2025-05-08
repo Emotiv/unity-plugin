@@ -53,7 +53,7 @@ namespace EmotivUnityPlugin
             }
             else if (HeadsetID.Contains(HeadsetNames.mw20))
             {
-                HeadsetType = HeadsetTypes.HEADSET_TYPE_MND;
+                HeadsetType = HeadsetTypes.HEADSET_TYPE_MW20;
             }
             else if (HeadsetID.Contains(HeadsetNames.xtrode))
             {

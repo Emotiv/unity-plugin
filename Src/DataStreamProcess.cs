@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -25,6 +25,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<ArrayList> MotionDataReceived;      // motion data
         public event EventHandler<ArrayList> EEGDataReceived;         // eeg data
         public event EventHandler<ArrayList> DevDataReceived;         // contact quality
+        public event EventHandler<ArrayList> EQDataReceived;         // EEG quality
         public event EventHandler<ArrayList> PerfDataReceived;        // performance metric
         public event EventHandler<ArrayList> BandPowerDataReceived;   // band power
         public event EventHandler<ArrayList> FacialExpReceived;       // Facial expressions
@@ -34,6 +35,8 @@ namespace EmotivUnityPlugin
         public event EventHandler<DateTime> LicenseExpired;           // inform license expired
         public event EventHandler<DateTime> LicenseValidTo;           // inform license valid to date
 
+        public static DataStreamProcess Instance { get; } = new DataStreamProcess();
+        
         // notify headset connecting status
         public event EventHandler<HeadsetConnectEventArgs> HeadsetConnectNotify
         {
@@ -69,6 +72,18 @@ namespace EmotivUnityPlugin
         {
             add { _ctxClient.HeadsetScanFinished += value; }
             remove { _ctxClient.HeadsetScanFinished -= value; }
+        }
+
+        public event EventHandler<List<DateTime>> QueryDatesHavingConsumerDataDone
+        {
+            add { _ctxClient.QueryDatesHavingConsumerDataDone += value; }
+            remove { _ctxClient.QueryDatesHavingConsumerDataDone -= value; }
+        }
+
+        public event EventHandler<List<MentalStateModel>> QueryDayDetailOfConsumerDataDone
+        {
+            add { _ctxClient.QueryDayDetailOfConsumerDataDone += value; }
+            remove { _ctxClient.QueryDayDetailOfConsumerDataDone -= value; }
         }
 
         /// <summary>
@@ -117,7 +132,7 @@ namespace EmotivUnityPlugin
         {
             UnityEngine.Debug.Log("OnConnectServiceStateChanged: " + state);
             if (state == ConnectToCortexStates.Service_connecting) {
-                StopQueryHeadset();
+                // StopQueryHeadset();
                 // TODO: should check change state at Connect headset controllers
             }
 
@@ -133,7 +148,7 @@ namespace EmotivUnityPlugin
         {
             LicenseValidTo(this, lic.validTo);
             // auto scan headset
-            _headsetFinder.FinderInit();
+            // _headsetFinder.FinderInit();
         }
 
         private void OnStreamStopNotify(object sender, string sessionId)
@@ -165,21 +180,22 @@ namespace EmotivUnityPlugin
 
         private void OnUnSubscribeDataDone(object sender, MultipleResultEventArgs e)
         {
+            List<string> unSubList = new List<string>();
             foreach (JObject ele in e.SuccessList)
             {
                 lock (_locker)
                 {
                     string streamName = (string)ele["streamName"];
-                    List<string> unSubList = new List<string>();
                     if (_streams.Contains(streamName)) {
                         _streams.Remove(streamName);
                         unSubList.Add(streamName);
                     }
-                    if (unSubList.Count > 0) {
-                        StreamStopNotify(this, unSubList);
-                    }
                 }
             }
+            if (unSubList.Count > 0) {
+                StreamStopNotify(this, unSubList);
+            }
+            
             foreach (JObject ele in e.FailList)
             {
                 string streamName = (string)ele["streamName"];
@@ -284,6 +300,10 @@ namespace EmotivUnityPlugin
             else if (e.StreamName == DataStreamName.DevInfos)
             {
                 DevDataReceived(this, e.Data);
+            }
+            else if (e.StreamName == DataStreamName.EQ)
+            {
+                EQDataReceived(this, e.Data);
             } 
             else if (e.StreamName == DataStreamName.FacialExpressions) 
             {
@@ -307,7 +327,7 @@ namespace EmotivUnityPlugin
             UnityEngine.Debug.Log("MessageErrorRecieved :code " + errorCode
                                    + " message " + message 
                                    + "method name " + method);
-            if (errorInfo.MethodName == "createSession") {
+            if (errorInfo.MethodName == "createSession" || errorInfo.MethodName == "controlDevice") {
                 _sessionHandler.ClearSessionData();
                 CreateSessionFail(this, message);
             }
@@ -380,14 +400,12 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Start authorizing process. 
         /// </summary>
-        public void StartAuthorize(string licenseID = "")
+        public void StartAuthorize(string licenseID = "", object context = null)
         {
             UnityEngine.Debug.Log("DataStreamProcess: Start...");
+            _authorizer.LicenseID = licenseID; 
             // Init websocket client
-            _ctxClient.InitWebSocketClient();
-
-            // Start connecting to cortex service
-            _authorizer.StartAction(licenseID);
+            _ctxClient.Init(context);
         }
 
         /// <summary>
@@ -438,9 +456,9 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// Force close websocket client. 
         /// </summary>
-        public void ForceCloseWebsocket()
+        public void CloseCortexClient()
         {
-            _ctxClient.ForceCloseWSC();
+            _ctxClient.Close();
         }
 
         /// <summary>
@@ -449,5 +467,31 @@ namespace EmotivUnityPlugin
         public void RefreshHeadset() {
             _headsetFinder.RefreshHeadset();
         }
+
+        // log out
+        public void Logout() {
+            _authorizer.Logout();
+        }
+
+        public void QueryDatesHavingConsumerData(DateTime from, DateTime to) {
+            
+            _ctxClient.QueryDatesHavingConsumerData(_authorizer.CortexToken, from, to);
+        }
+
+        public void QueryDayDetailOfConsumerData (DateTime date) {
+            _ctxClient.QueryDayDetailOfConsumerData(_authorizer.CortexToken, date);
+        }
+
+        public void AcceptEulaAndPrivacyPolicy()
+        {
+            _ctxClient.AcceptEulaAndPrivacyPolicy(_authorizer.CortexToken);
+        }
+
+        public void LoginWithAuthenticationCode(string code)
+        {
+            _connectCortexState = ConnectToCortexStates.Login_waiting;
+            _ctxClient.LoginWithAuthenticationCode(code);
+        }
+
     }
 }

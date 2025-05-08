@@ -25,43 +25,31 @@
 
 using System;
 using System.Threading;
-using WebSocket4Net;
 using Newtonsoft.Json.Linq;
+
 using System.Collections.Generic;
 using System.Collections;
-using System.Timers;
+using UnityEngine;
+using System.Threading.Tasks;
 
 namespace EmotivUnityPlugin
 {
-    /// <summary>
-    /// Represents a simple client for the Cortex service.
-    /// </summary>
-    public class CortexClient
+    public abstract class CortexClient
     {
-        const string Url = "wss://localhost:6868";
-        static readonly object _locker = new object();
-        private Dictionary<int, string> _methodForRequestId;
+        protected Dictionary<int, string> _methodForRequestId = new Dictionary<int, string>();
 
-        /// <summary>
-        /// Websocket Client.
-        /// </summary>
-        private WebSocket _wSC;
+        static readonly object _locker = new object();
 
         /// <summary>
         /// Unique id for each request
         /// </summary>
         /// <remarks>The id will be reset to 0 when reach to 100</remarks>
-        private int _nextRequestId;
+        protected int _nextRequestId = 1;
         
-        /// <summary>
-        /// Timer for connecting to Emotiv Cortex Service
-        /// </summary>
-        private System.Timers.Timer _wscTimer = null;
-        
-        private AutoResetEvent m_MessageReceiveEvent = new AutoResetEvent(false);
-        private AutoResetEvent m_OpenedEvent = new AutoResetEvent(false);
+        public AutoResetEvent m_MessageReceiveEvent = new AutoResetEvent(false);
+        public AutoResetEvent m_OpenedEvent = new AutoResetEvent(false);
 
-        public event EventHandler<bool> WSConnectDone;
+        public event EventHandler<bool>  WSConnectDone;
         public event EventHandler<ErrorMsgEventArgs> ErrorMsgReceived;
         public event EventHandler<StreamDataEventArgs> StreamDataReceived;
         public event EventHandler<List<Headset>> QueryHeadsetOK;
@@ -74,7 +62,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> AuthorizeOK;
         public event EventHandler<UserDataInfo> GetUserLoginDone;
         public event EventHandler<string> EULAAccepted;
-        public event EventHandler<string> EULANotAccepted;
+        public event EventHandler<string> EULANotAccepted; // return cortexToken if user has not accept eula to proceed next step
         public event EventHandler<string> UserLoginNotify;
         public event EventHandler<string> UserLogoutNotify;
         public event EventHandler<License> GetLicenseInfoDone;
@@ -104,124 +92,73 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> SessionClosedNotify;
         public event EventHandler<string> RefreshTokenOK;
         public event EventHandler<string> HeadsetScanFinished;
+        public event EventHandler<List<int>> GetMentalCommandActionSensitivityOK;
+        public event EventHandler<bool> SetMentalCommandActionSensitivityOK;
+        public event EventHandler<Dictionary<string, int>> InformTrainedSignatureActions;
 
         public event EventHandler<bool> BTLEPermissionGrantedNotify; // notify btle permision grant status
+        
+        //list of having consumer data
+        public event EventHandler<List<DateTime>> QueryDatesHavingConsumerDataDone;
+        public event EventHandler<List<MentalStateModel>> QueryDayDetailOfConsumerDataDone;
 
-        private CortexClient()
+        public virtual void Init(object context = null) {}
+
+        public virtual void Open() {}
+        
+        public virtual void Close() {}
+
+        public virtual void SendTextMessage(JObject param, string method, bool hasParam = true) {}
+
+        protected static CortexClient instance;
+    
+        public static CortexClient Instance
         {
-            
-        }
-        public void InitWebSocketClient()
-        {
-            _nextRequestId = 1;
-            _wSC = new WebSocket(Config.AppUrl);
-            // Since Emotiv Cortex 3.7.0, the supported SSL Protocol will be TLS1.2 or later
-            _wSC.Security.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
-
-            _methodForRequestId = new Dictionary<int, string>();
-
-            _wSC.Opened += new EventHandler(WebSocketClient_Opened);
-            _wSC.Error  += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>(WebSocketClient_Error);
-            _wSC.Closed += WebSocketClient_Closed;
-            _wSC.MessageReceived += WebSocketClient_MessageReceived;
-            _wSC.DataReceived += WebSocketClient_DataReceived;
-        }
-
-        public void ForceCloseWSC()
-        {
-            UnityEngine.Debug.Log("Force close websocket client.");
-            if (_wscTimer != null) {
-                _wscTimer = null;
-            }
-            // stop websocket client
-            if (_wSC != null)
-                _wSC.Close();
-        }
-
-        /// <summary>
-        /// Singleton Instance of Cortex Client
-        /// </summary>
-        public static CortexClient Instance { get; } = new CortexClient();
-
-
-        /// <summary>
-        /// Set up timer for connecting to Emotiv Cortex service
-        /// </summary>
-        private void SetWSCTimer() {
-            if (_wscTimer != null)
-                return;
-            _wscTimer = new System.Timers.Timer(Config.RETRY_CORTEXSERVICE_TIME);
-            // Hook up the Elapsed event for the timer.
-            _wscTimer.Elapsed       += OnTimerEvent;
-            _wscTimer.AutoReset     = false; // do not auto reset
-            _wscTimer.Enabled       = true; 
-        }
-
-        /// <summary>
-        /// Handle for _wscTimer timer timeout
-        //  Retry Connect when time out 
-        /// </summary>
-        private void OnTimerEvent(object sender, ElapsedEventArgs e)
-        {
-            UnityEngine.Debug.Log("OnTimerEvent: Retry connect to CortexService....");
-            RetryConnect();
-        }
-
-        private void RetryConnect() {
-           m_OpenedEvent.Reset();
-            if (_wSC == null || (_wSC.State != WebSocketState.None && _wSC.State != WebSocketState.Closed))
-                return;
-            
-            _wSC.Open();
-        }
-
-        private void WebSocketClient_DataReceived(object sender, DataReceivedEventArgs e)
-        {
-            // TODO
-            UnityEngine.Debug.Log("WebSocketClient_DataReceived");
-        }
-
-        /// <summary>
-        /// Build a json rpc request and send message via websocket
-        /// </summary>
-        private void SendTextMessage(JObject param, string method, bool hasParam = true)
-        {
-            lock(_locker)
+            get
             {
-                JObject request = new JObject(
-                new JProperty("jsonrpc", "2.0"),
-                new JProperty("id", _nextRequestId),
-                new JProperty("method", method));
-
-                if (hasParam) {
-                    request.Add("params", param);
+                if (instance == null)
+                {
+                    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
+                        instance = new EmbeddedCortexClient();
+                    #else
+                        instance = new WebsocketCortexClient();
+                    #endif
                 }
-                // UnityEngine.Debug.Log("Send " + method);
-                // UnityEngine.Debug.Log(request.ToString());
-
-                // send the json message
-                _wSC.Send(request.ToString());
-
-                // add to dictionary, replace if a key is existed
-                _methodForRequestId[_nextRequestId] = method;
-
-                if (_nextRequestId > 100) {
-                    _nextRequestId = 1;
-                }
-                else
-                    _nextRequestId++;
+                return instance;
             }
         }
 
-        /// <summary>
-        /// Handle message received return from Emotiv Cortex Service
-        /// </summary> 
-        private void WebSocketClient_MessageReceived(object sender, MessageReceivedEventArgs e)
-        {
-            string receievedMsg = e.Message;
-            //UnityEngine.Debug.Log("WebSocketClient_MessageReceived " + receievedMsg);
+        // prepare json rpc request
+        protected string PrepareRequest(string method, JObject param, bool hasParam = true) {
+            JObject request = new JObject(
+            new JProperty("jsonrpc", "2.0"),
+            new JProperty("id", _nextRequestId),
+            new JProperty("method", method));
 
-            JObject response = JObject.Parse(e.Message);
+            if (hasParam) {
+                request.Add("params", param);
+            }
+            // add to dictionary, replace if a key is existed
+            _methodForRequestId[_nextRequestId] = method;
+
+            _nextRequestId++;
+
+            return request.ToString();
+        }
+
+        public void OnWSConnected(bool isConnected)
+        {
+            WSConnectDone(this, isConnected);
+        }
+
+        /// <summary>
+        /// Handle message received return from Emotiv Cortex
+        /// </summary> 
+        public void OnMessageReceived(string receievedMsg)
+        {
+            // UnityEngine.Debug.Log("OnMessageReceived " + receievedMsg);
+
+            JObject response = JObject.Parse(receievedMsg);
 
             if (response["id"] != null)
             {
@@ -230,7 +167,11 @@ namespace EmotivUnityPlugin
                 {
                     int id = (int)response["id"];
                     method = _methodForRequestId[id];
-                    _methodForRequestId.Remove(id);
+                    bool remove_res = _methodForRequestId.Remove(id);
+                    if (!remove_res)
+                    {
+                        UnityEngine.Debug.Log("qCannot remove key " + id + " method:" + method);
+                    }
                 }
                 
                 
@@ -254,7 +195,8 @@ namespace EmotivUnityPlugin
                         if ((int)attentionObj["code"] == WarningCode.BTLEPermissionNotGranted) {
                             btlePermisionGranted = false;
                         }
-                        BTLEPermissionGrantedNotify(this, btlePermisionGranted);
+                        UnityEngine.Debug.Log("BTLEPermissionGrantedNotify: " + btlePermisionGranted);
+                        // BTLEPermissionGrantedNotify(this, btlePermisionGranted);
                     }
                 }
             }
@@ -352,6 +294,21 @@ namespace EmotivUnityPlugin
                 }
                 GetUserLoginDone(this, loginData);
             }
+            else if (method == "login" || method == "loginWithAuthenticationCode")
+            {
+                UserDataInfo loginData = new UserDataInfo();
+                loginData.EmotivId = data["username"].ToString();
+                String message = data["message"].ToString();
+                UnityEngine.Debug.Log("login message: " + message);
+                GetUserLoginDone(this, loginData);
+            }
+            else if (method == "logout")
+            {
+                String message = data["message"].ToString();
+                UserLogoutNotify(this, message);
+                // get user login info
+                GetUserLogin();
+            }
             else if (method == "hasAccessRight")
             {
                 bool hasAccessRight = (bool)data["accessGranted"];
@@ -382,11 +339,21 @@ namespace EmotivUnityPlugin
                 if (data["warning"] != null)
                 {
                     JObject warning         = (JObject)data["warning"];
-                    string warningMessage   = warning["message"].ToString();
-                    UnityEngine.Debug.Log("User has not accepted eula. Please accept EULA on EMOTIV Launcher to proceed.");
-                    EULANotAccepted(this, warningMessage);
+                    int code                = (int)warning["code"];
+                    if (code == WarningCode.UserNotAcceptLicense || 
+                        code == WarningCode.UserNotAcceptPrivateEULA) {
+                        UnityEngine.Debug.Log("User has not accepted eula. Please accept EULA on EMOTIV Launcher to proceed.");
+                        EULANotAccepted(this, token);
+                        return;
+                    }
                 }
+                
                 AuthorizeOK(this, token);
+            }
+            else if (method == "acceptLicense")
+            {
+                string message = data["message"].ToString();
+                EULAAccepted(this, message);
             }
             else if (method == "createSession")
             {
@@ -507,9 +474,58 @@ namespace EmotivUnityPlugin
             {
                 TrainingOK(this, (JObject)data);
             }
+            else if (method == "getTrainedSignatureActions")
+            {
+                JArray trainedActions = (JArray)data["trainedActions"];
+                Dictionary<string, int> trainedActionsDict = new Dictionary<string, int>();
+                foreach (JObject actionObj in trainedActions)
+                {
+                    string action = actionObj["action"].ToString();
+                    int times = (int)actionObj["times"];
+                    trainedActionsDict[action] = times;
+                }
+                InformTrainedSignatureActions(this, trainedActionsDict);
+                
+            }
             else if (method == "getTrainingTime")
             {
                 GetTrainingTimeDone(this, (double)data["time"]);
+            }
+            else if (method  == "mentalCommandActionSensitivity") {
+                // check data is array or string
+                if (data.Type == JTokenType.Array) {
+                    JArray dataList = (JArray)data;
+                    List<int> sensitivityList = new List<int>();
+                    foreach (int val in dataList) {
+                        sensitivityList.Add(val);
+                    }
+                    GetMentalCommandActionSensitivityOK(this, sensitivityList);
+                }
+                else {
+                    SetMentalCommandActionSensitivityOK(this, true);
+                }
+            }
+            else if (method == "queryDatesHavingConsumerData")
+            {
+                // array of date string
+                JArray dateList = (JArray)data;
+                List<DateTime> dateListConverted = new List<DateTime>();
+                foreach (string dateStr in dateList)
+                {
+                    dateListConverted.Add(DateTime.ParseExact(dateStr, "yyyy-MM-dd", 
+                                          System.Globalization.CultureInfo.InvariantCulture));
+                }
+                QueryDatesHavingConsumerDataDone(this, dateListConverted);
+            }
+            else if (method == "queryDayDetailOfConsumerData")
+            {
+                List<MentalStateModel> mentalStateList = new List<MentalStateModel>();
+                JArray dataList = (JArray)data;
+                foreach (JToken item in dataList)
+                {
+                    mentalStateList.Add(new MentalStateModel(item.ToObject<JObject>()));
+                }
+                QueryDayDetailOfConsumerDataDone(this, mentalStateList);
             }
         }
 
@@ -523,6 +539,10 @@ namespace EmotivUnityPlugin
             if (code == WarningCode.StreamStop ) {
                 string sessionId = messageData["sessionId"].ToString();
                StreamStopNotify(this, sessionId);
+            }
+            else if (code == WarningCode.CortexIsReady ) {
+                // get user login info
+                GetUserLogin();
             }
             else if (code == WarningCode.SessionAutoClosed ) {
                 string sessionId = messageData["sessionId"].ToString();
@@ -540,7 +560,8 @@ namespace EmotivUnityPlugin
             else if (code == WarningCode.UserNotAcceptLicense)
             {
                 string message = messageData.ToString();
-                EULANotAccepted(this, message);
+                UnityEngine.Debug.Log(message);
+                EULANotAccepted(this, "");
             }
             else if (code == WarningCode.EULAAccepted)
             {
@@ -582,63 +603,6 @@ namespace EmotivUnityPlugin
             }
         }
 
-        /// <summary>
-        /// Handle when socket close
-        /// </summary>
-        private void WebSocketClient_Closed(object sender, EventArgs e)
-        {
-            WSConnectDone(this, false);
-            // start connecting cortex service again
-            if (_wscTimer != null)
-                _wscTimer.Start();
-        }
-        
-        /// <summary>
-        /// Handle when socket open
-        /// </summary>
-        private void WebSocketClient_Opened(object sender, EventArgs e)
-        {
-            m_OpenedEvent.Set();
-            if (_wSC.State == WebSocketState.Open) {
-                WSConnectDone(this, true);
-                // stop timer
-                _wscTimer.Stop();
-
-            } else {
-                UnityEngine.Debug.Log("Open Websocket unsuccessfully.");
-            }
-        }
-
-        /// <summary>
-        /// Handle error when try to open socket
-        /// </summary>
-        private void WebSocketClient_Error(object sender, SuperSocket.ClientEngine.ErrorEventArgs e)
-        {
-            UnityEngine.Debug.Log(e.Exception.GetType() + ":" + e.Exception.Message + Environment.NewLine + e.Exception.StackTrace);
-
-            if (e.Exception.InnerException != null) {
-                UnityEngine.Debug.Log(e.Exception.InnerException.GetType());
-                WSConnectDone(this, false);
-                // start connecting cortex service again
-                _wscTimer.Start();
-            }
-        }
-
-        /// <summary>
-        /// Open a websocket client.
-        /// </summary>
-        public void Open()
-        {
-            // set timer for connect cortex service
-            SetWSCTimer();
-            //Open websocket
-            m_OpenedEvent.Reset();
-            if (_wSC == null || (_wSC.State != WebSocketState.None && _wSC.State != WebSocketState.Closed))
-                return;
-            
-            _wSC.Open();
-        }
-
         // Has Access Right
         public void HasAccessRights()
         {
@@ -666,9 +630,30 @@ namespace EmotivUnityPlugin
             if (!String.IsNullOrEmpty(licenseID)) {
                 param.Add("license", licenseID);
             }
-            param.Add("debit", debitNumber);
+            if (debitNumber > 0)
+                param.Add("debit", debitNumber);
             SendTextMessage(param, "authorize", true);
         }
+
+        // authorize with authorization code
+        public void LoginWithAuthenticationCode(string code)
+        {
+            JObject param = new JObject();
+            param.Add("clientId", Config.AppClientId);
+            param.Add("clientSecret", Config.AppClientSecret);
+            param.Add("code", code);
+            SendTextMessage(param, "loginWithAuthenticationCode", true);
+        }
+
+        // accept eula
+        public void AcceptEulaAndPrivacyPolicy(string cortexToken)
+        {
+            JObject param = new JObject(
+                    new JProperty("cortexToken", cortexToken)
+                );
+            SendTextMessage(param, "acceptLicense", true);
+        }
+
         // get license information
         public void GetLicenseInfo(string cortexToken)
         {
@@ -683,6 +668,27 @@ namespace EmotivUnityPlugin
                     new JProperty("cortexToken", cortexToken)
                 );
             SendTextMessage(param, "getUserInformation", true);
+        }
+
+        // Login
+        public void Login (string username, string password)
+        {
+            JObject param = new JObject(
+                    new JProperty("clientId", Config.AppClientId),
+                    new JProperty("clientSecret", Config.AppClientSecret),
+                    new JProperty("username", username),
+                    new JProperty("password", password)
+                );
+            SendTextMessage(param, "login", true);
+        }
+
+        // Logout
+        public void Logout(string username)
+        {
+            JObject param = new JObject(
+                    new JProperty("username", username)
+                );
+            SendTextMessage(param, "logout", true);
         }
 
         // GetUserLogin
@@ -709,7 +715,7 @@ namespace EmotivUnityPlugin
             if (!String.IsNullOrEmpty(headsetId)) {
                 param.Add("id", headsetId);
             }
-            SendTextMessage(param, "queryHeadsets", false);
+            SendTextMessage(param, "queryHeadsets", true);
         }
 
         // controlDevice
@@ -959,6 +965,64 @@ namespace EmotivUnityPlugin
             param.Add("action", action);
 
             SendTextMessage(param, "training", true);
+        }
+
+        // getTrainedSignatureActions
+        // Required params: cortexToken, detection, sessionId or profileName
+        public void GetTrainedSignatureActions(string cortexToken, string detection, string sessionId, string profileName)
+        {
+            JObject param = new JObject();
+            param.Add("cortexToken", cortexToken);
+            param.Add("detection", detection);
+            // if (sessionId != "")
+            //     param.Add("session", sessionId);
+
+            if (profileName != "")
+                param.Add("profile", profileName);
+            SendTextMessage(param, "getTrainedSignatureActions", true);
+        }
+
+        public void MentalCommandActionSensitivity (string cortexToken, string status, string sessionId, string profileName, List<int> values = null)
+        {
+            JObject param = new JObject();
+            param.Add("cortexToken", cortexToken);
+            param.Add("status", status);
+
+            // check session id is empty
+            if (sessionId != "")
+                param.Add("session", sessionId);
+
+            // check profile name is empty
+            if (profileName != "")
+                param.Add("profile", profileName);
+
+            if (values != null) {
+                JArray valuesArr = new JArray();
+                // parse values to array and add to param
+                foreach (int ele in values){
+                    valuesArr.Add(ele);
+                }
+                param.Add("values", valuesArr);
+                
+            }
+            SendTextMessage(param, "mentalCommandActionSensitivity", true);
+        }
+
+        public void QueryDatesHavingConsumerData(string cortexToken, DateTime start, DateTime end)
+        {
+            JObject param = new JObject();
+            param.Add("cortexToken", cortexToken);
+            param.Add("startDate", start.Date.ToString("yyyy-MM-dd"));
+            param.Add("endDate", end.Date.ToString("yyyy-MM-dd"));
+            SendTextMessage(param, "queryDatesHavingConsumerData", true);
+        }
+
+        public void QueryDayDetailOfConsumerData(string cortexToken, DateTime date)
+        {
+            JObject param = new JObject();
+            param.Add("cortexToken", cortexToken);
+            param.Add("date", date.Date.ToString("yyyy-MM-dd"));
+            SendTextMessage(param, "queryDayDetailOfConsumerData", true);
         }
     }
 }
