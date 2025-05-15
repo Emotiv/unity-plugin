@@ -82,7 +82,7 @@ namespace EmotivUnityPlugin
         private void OnErrorMsgReceived(object sender, ErrorMsgEventArgs errorInfo) {
             if (errorInfo.Code == ErrorCode.AuthorizeTokenError || errorInfo.Code == ErrorCode.LoginTokenError)
             {
-                UnityEngine.Debug.LogError("OnErrorMsgReceived error: " + errorInfo.MessageError  + ". Need to re-login for user " + Config.UserName + " emotivId: " + _emotivId);
+                UnityEngine.Debug.LogError("OnErrorMsgReceived error: " + errorInfo.MessageError  + ". Need to re-login for emotivId: " + _emotivId);
                 if (_emotivId == "")
                     return;
                 // logout user
