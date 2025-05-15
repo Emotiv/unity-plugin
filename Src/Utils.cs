@@ -67,25 +67,23 @@ namespace EmotivUnityPlugin
         public static string GetAppTmpPath() 
         {
             string homePath = "";
-        #if UNITY_STANDALONE_WIN || USE_EMBEDDED_LIB
+        #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             homePath = Environment.GetEnvironmentVariable("LocalAppData");
-        #elif UNITY_STANDALONE_OSX
+        #elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
             homePath = Environment.GetEnvironmentVariable("HOME");
             string currentTempPath = Path.Combine(homePath, "Library/Application Support");
             homePath = currentTempPath;
         #elif UNITY_STANDALONE_LINUX
             homePath = Environment.GetEnvironmentVariable("HOME");
-            // TODO
         #elif UNITY_IOS
             homePath = Application.persistentDataPath;
         #elif UNITY_ANDROID
             // return application data path on android
             return Application.persistentDataPath;
         #else
-            // TODO
             homePath = Directory.GetCurrentDirectory();
         #endif
-            string targetPath = Path.Combine(homePath, Config.TmpAppDataDir);
+            string targetPath = Path.Combine(homePath, Config.AppName);
             return targetPath;
         }
 

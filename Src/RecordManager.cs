@@ -34,7 +34,6 @@ namespace EmotivUnityPlugin
             _sessionHandler.StopRecordOK    += OnStopRecordOK;
             _ctxClient.InjectMarkerOK += OnInjectMarkerOK;
             _ctxClient.UpdateMarkerOK += OnUpdateMarkerOK;
-            _ctxClient.ErrorMsgReceived += MessageErrorRecieved;
         }
 
         private void OnStopRecordOK(object sender, Record record)
@@ -60,25 +59,6 @@ namespace EmotivUnityPlugin
         {
             informMarkerResult(this, markerObj);
         }
-
-        private void MessageErrorRecieved(object sender, ErrorMsgEventArgs errorInfo)
-        {
-            
-            string message  = errorInfo.MessageError;
-            string method   = errorInfo.MethodName;
-            int errorCode   = errorInfo.Code;
-            UnityEngine.Debug.Log("MessageErrorRecieved :code " + errorCode
-                                   + " message " + message 
-                                   + "method name " + method);
-            //string errorMsg = method +" gets error: "+ message;
-            //if (method == "injectMarker" || method == "updateMarker") {
-            //    informMarkerResult(this, errorMsg);
-            //}
-            //else if (method == "createRecord" || method == "stopRecord") {
-            //    informRecordResult(this, errorMsg);
-            //}
-        }
-
 
         /// <summary>
         /// Create a new record.

@@ -236,11 +236,12 @@ namespace EmotivUnityPlugin
         /// Load token from local app data
         /// </summary>
         private static UserDataInfo LoadToken() {
-            string fileDir = Path.Combine(Utils.DataDirectory, Config.TmpDataFileName);
-            if (!File.Exists(fileDir)) {
-                UnityEngine.Debug.Log("LoadToken: not exists token file " + fileDir);
+            string fileDir = GetSavedTokenFilePath();
+            if (String.IsNullOrEmpty(fileDir)) {
+                UnityEngine.Debug.Log("LoadToken: no saved token file found.");
                 return new UserDataInfo();
             }
+
             try
             {
                 // get tokenSavedInfo from file
@@ -267,7 +268,12 @@ namespace EmotivUnityPlugin
         /// Save token to local app data for next using
         /// </summary>
         private static void SaveToken(UserDataInfo tokenSavedInfo) {
-            string fileDir = Path.Combine(Utils.DataDirectory, Config.TmpDataFileName);
+            string fileDir = GetSavedTokenFilePath();
+            if (String.IsNullOrEmpty(fileDir)) {
+                UnityEngine.Debug.Log("SaveToken: no saved token file found.");
+                return;
+            }
+
             try
             {
                 // save tokenSavedInfo to file
@@ -289,11 +295,12 @@ namespace EmotivUnityPlugin
         /// Remove token when user logout 
         /// </summary>
         private static void RemoveToken() {
-            string fileDir = Path.Combine(Utils.DataDirectory, Config.TmpDataFileName);
-            if (!File.Exists(fileDir)) {
-                UnityEngine.Debug.Log("RemoveCortexToken: not exists file " + fileDir);
+            string fileDir = GetSavedTokenFilePath();
+            if (String.IsNullOrEmpty(fileDir)) {
+                UnityEngine.Debug.Log("RemoveCortexToken: no saved token file found.");
                 return;
             }
+
             // Remove token file
             try
             {
@@ -304,6 +311,19 @@ namespace EmotivUnityPlugin
                 UnityEngine.Debug.Log("RemoveCortexToken: " + ioExp.Message);
             }
             UnityEngine.Debug.Log("Remove token done.");
+        }
+
+        private static string GetSavedTokenFilePath()
+        {
+            if (String.IsNullOrEmpty(Utils.DataDirectory)) {
+                return "";
+            }
+            string fileDir = Path.Combine(Utils.DataDirectory, Config.TmpDataFileName);
+            if (!File.Exists(fileDir)) {
+                UnityEngine.Debug.Log("GetSavedTokenFilePath: not exists file " + fileDir);
+                return "";
+            }
+            return fileDir;
         }
 
         private void OnAccessRightGrantedOK(object sender, bool isGranted)
@@ -408,16 +428,10 @@ namespace EmotivUnityPlugin
                 }  
             } 
             else {
-
-                // for embedded cortex lib need to call login  windows and androids
                 #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
-                    UnityEngine.Debug.Log("No emotiv user login. Need to call login for username " + Config.UserName);
+                    // for mobile platform or embedded cortex lib
+                    // check if user has logged in or not. return state Login_notYet 
                     ConnectServiceStateChanged(this, ConnectToCortexStates.Login_notYet);
-                    if (Config.UserName == "")
-                        return;
-                    
-                    // _ctxClient.Login(Config.UserName, Config.Password);
-
                 #else
                     bool checkEmotivAppRequire = true; // require to check emotiv apps installed or not
                     #if UNITY_EDITOR

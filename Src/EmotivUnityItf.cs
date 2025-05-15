@@ -183,7 +183,7 @@ namespace EmotivUnityPlugin
                                  string appVersion, string appName,
                                  string appUrl = "", string emotivAppsPath = "")
         {
-            _dsManager.SetAppConfig(clientId, clientSecret, appVersion, appName);
+            _dsManager.SetAppConfig(clientId, clientSecret, appVersion, appName, appUrl, emotivAppsPath);
         }
 
         /// <summary>
@@ -193,19 +193,22 @@ namespace EmotivUnityPlugin
         /// <param name="clientSecret">The client secret of the application.</param>
         /// <param name="appName">The name of the application.</param>
         /// <param name="appVersion">The version of the application (optional).</param>
-        /// <param name="username">The username for login. Only for Test purpose when use private login in some special case.</param>
-        /// <param name="password">The password for login. Only for Test purpose when use private login in some special case.</param>
         /// <param name="isDataBufferUsing"> Set to true whether to use data buffer to store data before get from Unity script. 
         ///                Otherwise, the subscribing data only are handled on xyDataReceived() and displayed on Message Log   </param>
         public void Init(string clientId, string clientSecret, string appName,
-                         string appVersion = "", string username = "", string password = "", bool allowSaveLogToFile = true, bool isDataBufferUsing = true)
+                         string appVersion = "", string appUrl = "", bool allowSaveLogToFile = true, bool isDataBufferUsing = true)
         {
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
                 UnityEngine.Debug.LogError("The clientId or clientSecret is empty. Please fill them before starting.");
                 return;
             }
-            Utils.Init();
+            
+            if (allowSaveLogToFile) {
+                // to create log directory and data directory to save token 
+                Utils.Init();
+            }
+            
             MyLogger.Instance.Init(appName, allowSaveLogToFile);
 
             // init authentication for Android and Embedded Cortex Desktop
@@ -213,7 +216,7 @@ namespace EmotivUnityPlugin
             InitForAuthentication(clientId, clientSecret);
             #endif
 
-            _dsManager.SetAppConfig(clientId, clientSecret, appVersion, appName, username, password);
+            _dsManager.SetAppConfig(clientId, clientSecret, appVersion, appName, appUrl);
             _dsManager.IsDataBufferUsing = isDataBufferUsing;
             // init bcitraining
             _bciTraining.Init();
