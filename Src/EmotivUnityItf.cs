@@ -171,44 +171,37 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Sets up the application configuration.
-        /// </summary>
-        /// <param name="clientId">The client ID of the application.</param>
-        /// <param name="clientSecret">The client secret of the application.</param>
-        /// <param name="appVersion">The version of the application.</param>
-        /// <param name="appName">The name of the application.</param>
-        /// <param name="appUrl">The URL of the application (optional). Only for desktop version and work with Cortex Service.</param>
-        /// <param name="emotivAppsPath">The path to Emotiv Launcher file path (optional). Only for desktop version and work with Cortex Service. </param>
-        public void SetAppConfig(string clientId, string clientSecret,
-                                 string appVersion, string appName,
-                                 string appUrl = "", string emotivAppsPath = "")
-        {
-            _dsManager.SetAppConfig(clientId, clientSecret, appVersion, appName, appUrl, emotivAppsPath);
-        }
-
-        /// <summary>
         /// Initializes the Emotiv Unity Interface.
         /// </summary>
         /// <param name="clientId">The client ID of the application.</param>
         /// <param name="clientSecret">The client secret of the application.</param>
-        /// <param name="appName">The name of the application.</param>
-        /// <param name="appVersion">The version of the application (optional).</param>
+        /// <param name="appName">The name of the application. the Appname must not be empty</param>
+        /// <param name="allowSaveLogToFile">Set to true whether to save log and token to file or not.
         /// <param name="isDataBufferUsing"> Set to true whether to use data buffer to store data before get from Unity script. 
         ///                Otherwise, the subscribing data only are handled on xyDataReceived() and displayed on Message Log   </param>
+        /// <param name="appUrl">The URL of the application (optional). Only for desktop version and work with Cortex Service.</param>
+        /// <param name="providerName">The provider name (optional). Used to create a subdirectory in the application data directory.</param>
+        /// <param name="emotivAppsPath">The path to Emotiv Launcher file path (optional). Only for desktop version and work with Cortex Service. </param>
         public void Init(string clientId, string clientSecret, string appName,
-                         string appVersion = "", string appUrl = "", bool allowSaveLogToFile = true, bool isDataBufferUsing = true)
+                         bool allowSaveLogToFile = true, bool isDataBufferUsing = true,
+                         string appUrl = "", string providerName = "", string emotivAppsPath = "")
         {
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
                 UnityEngine.Debug.LogError("The clientId or clientSecret is empty. Please fill them before starting.");
                 return;
             }
-            
-            if (allowSaveLogToFile) {
-                // to create log directory and data directory to save token 
-                Utils.Init();
+
+            if (string.IsNullOrEmpty(appName))
+            {
+                UnityEngine.Debug.LogError("The appName is empty. Please fill it before starting.");
+                return;
             }
-            
+
+            // init configuration
+            Config.Init(clientId, clientSecret, appName, allowSaveLogToFile, appUrl, providerName, emotivAppsPath);
+
+            // init logger
             MyLogger.Instance.Init(appName, allowSaveLogToFile);
 
             // init authentication for Android and Embedded Cortex Desktop
@@ -216,7 +209,6 @@ namespace EmotivUnityPlugin
             InitForAuthentication(clientId, clientSecret);
             #endif
 
-            _dsManager.SetAppConfig(clientId, clientSecret, appVersion, appName, appUrl);
             _dsManager.IsDataBufferUsing = isDataBufferUsing;
             // init bcitraining
             _bciTraining.Init();

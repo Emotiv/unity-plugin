@@ -44,7 +44,7 @@ namespace EmotivUnityPlugin
                 string dateTimeStr = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 string fileName = prefixFileName + "Log_" + dateTimeStr + ".txt";
 
-                string logPath = Utils.GetLogPath();
+                string logPath = Config.LogDirectory;
                 string filePath = Path.Combine(logPath, fileName);
                 m_FileStream = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
                 m_StreamWriter = new StreamWriter(m_FileStream);

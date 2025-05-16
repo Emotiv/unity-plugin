@@ -7,49 +7,6 @@ namespace EmotivUnityPlugin
 {
     public static class Utils
     {
-        
-        private static string _logDirectory;
-        private static string _dataDirectory;
-
-        public static string LogDirectory { get => _logDirectory; set => _logDirectory = value; }
-        public static string DataDirectory { get => _dataDirectory; set => _dataDirectory = value; }
-        
-        // init Utils to create needed directories for unity app. It should be called at Start() and before logger.Init() method
-        public static void Init()
-        {
-            // create tmp directory for unity app
-            string tmpPath = GetAppTmpPath();
-            _logDirectory = Path.Combine(tmpPath, Config.LogsDir);
-            _dataDirectory = Path.Combine(tmpPath, Config.ProfilesDir);
-
-            // Ensure the directories exist
-            // check directory is existed or not to create
-        if (!Directory.Exists(_logDirectory))
-            {
-                try
-                {
-                    Directory.CreateDirectory(_logDirectory);
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    UnityEngine.Debug.LogError("Failed to create Log Directory: " + _logDirectory + " - " + ex.Message);
-                    throw;
-                }
-            }
-
-            if (!Directory.Exists(_dataDirectory))
-            {
-                try
-                {
-                    Directory.CreateDirectory(_dataDirectory);
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    UnityEngine.Debug.LogError("Failed to create Data Directory: " + _dataDirectory + " - " + ex.Message);
-                    throw;
-                }
-            }
-        }
 
         public static Int64 GetEpochTimeNow()
         {
@@ -63,8 +20,7 @@ namespace EmotivUnityPlugin
             return prefix + "-" + GetEpochTimeNow();
         }
 
-        // keep some tmp data of Unity App
-        public static string GetAppTmpPath() 
+        public static string GetAppTmpPath(string providerName, string appName)
         {
             string homePath = "";
         #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
@@ -83,13 +39,11 @@ namespace EmotivUnityPlugin
         #else
             homePath = Directory.GetCurrentDirectory();
         #endif
-            string targetPath = Path.Combine(homePath, Config.AppName);
-            return targetPath;
-        }
-
-        public static string GetLogPath() 
-        {
-            return _logDirectory;
+            string targetFolderName = appName;
+            if (!string.IsNullOrEmpty(providerName))
+                targetFolderName = Path.Combine(providerName, appName);
+            
+            return Path.Combine(homePath, targetFolderName);
         }
 
         public static DateTime StringToIsoDateTime(string time) {
@@ -154,55 +108,6 @@ namespace EmotivUnityPlugin
             return true;
         #endif
             
-        }
-
-        public static bool IsSameAppVersion(string appVersion){
-            string rootPath = Utils.GetAppTmpPath();
-
-            string targetDir = Path.Combine(rootPath, Config.ProfilesDir);
-            if (!Directory.Exists(targetDir)){
-                UnityEngine.Debug.Log("IsSameAppVersion: not exists directory " + targetDir);
-                return false;
-            }
-            string fileDir = Path.Combine(targetDir, Config.TmpVersionFileName);
-            if (!File.Exists(fileDir)) {
-                UnityEngine.Debug.Log("IsSameAppVersion: not exists file " + fileDir);
-                return false;
-            }
-            string savedAppVer = File.ReadAllText(fileDir);
-            if (savedAppVer == appVersion) {
-                return true;
-            }
-            else {
-                return false;
-            }
-        }
-        // save cortexToken to File
-        public static void SaveAppVersion(string appVersion) {
-            //get tmp Path of App 
-            string rootPath = Utils.GetAppTmpPath();
-
-            string targetDir = Path.Combine(rootPath, Config.ProfilesDir);
-            if (!Directory.Exists(targetDir)) {
-                try
-                {
-                    // create directory
-                    Directory.CreateDirectory(targetDir);
-                    UnityEngine.Debug.Log("SaveAppVersion: create directory " + targetDir);
-                }
-                catch (Exception e)
-                {      
-                    UnityEngine.Debug.Log("Can not create directory: " + targetDir + " : failed: " + e.ToString());
-                    return;
-                }
-                finally {}
-            }
-            string fileDir = Path.Combine(targetDir, Config.TmpVersionFileName);
-
-            using(var fileStream = new FileStream(fileDir, FileMode.Create)) {
-                byte[] dataByte = new UTF8Encoding(true).GetBytes(appVersion);
-                fileStream.Write(dataByte, 0, dataByte.Length);
-            }
         }
 
         public static bool IsNumericType(object o)

@@ -216,12 +216,7 @@ namespace EmotivUnityPlugin
                     _cortexToken        = cortexToken;
                 }
 
-                // do not save token for mobile platform
-                #if !UNITY_ANDROID && !UNITY_IOS && !USE_EMBEDDED_LIB
-                    UnityEngine.Debug.Log("Save token for next using.");
-                    // Save App version
-                    Utils.SaveAppVersion(Config.AppVersion);
-                #endif
+                // save token for next using
                 Authorizer.SaveToken(tokenInfo);
 
                 // get license information
@@ -315,10 +310,10 @@ namespace EmotivUnityPlugin
 
         private static string GetSavedTokenFilePath()
         {
-            if (String.IsNullOrEmpty(Utils.DataDirectory)) {
+            if (String.IsNullOrEmpty(Config.DataDirectory)) {
                 return "";
             }
-            string fileDir = Path.Combine(Utils.DataDirectory, Config.TmpDataFileName);
+            string fileDir = Path.Combine(Config.DataDirectory, Config.TmpDataFileName);
             if (!File.Exists(fileDir)) {
                 UnityEngine.Debug.Log("GetSavedTokenFilePath: not exists file " + fileDir);
                 return "";

@@ -1,26 +1,20 @@
-﻿namespace EmotivUnityPlugin
+﻿using System.IO;
+
+namespace EmotivUnityPlugin
 {
     /// <summary>
     /// Contain common Config of a Unity App.
     /// </summary>
     public static class Config
     {
-        
-        /// <summary>ClientId of your application.
-        /// <para>To get a client id and a client secret, you must connect to your Emotiv
-        /// account on emotiv.com and create a Cortex app.
-        /// https://www.emotiv.com/my-account/cortex-apps/.</para></summary>
         public static string AppClientId            = "";
         public static string AppClientSecret        = "";
+        public static string AppUrl = "";
+        public static string AppName = "";
+        public static string ProviderName = "";
+        public static string LogDirectory = "";
+        public static string DataDirectory = "";
 
-        public static string AppUrl                 = "wss://localhost:6868"; // default
-        public static string AppVersion             = "1.0.0"; // default
-        public static string AppName                = "UnityApp"; // default app name
-        
-        /// <summary>
-        /// Name of directory where contain tmp data and logs file.
-        /// </summary>
-        public static string TmpAppDataDir          = "UnityApp";
         public static string EmotivAppsPath         = ""; // location of emotiv Apps . Eg: C:\Program Files\EmotivApps
         public static string TmpVersionFileName     = "version.ini";
         public static string TmpDataFileName        = "data.dat";
@@ -36,6 +30,49 @@
         public static string FlexMapping = @"{
                                   'CMS':'TP8', 'DRL':'P6',
                                   'RM':'TP10','RN':'P4','RO':'P8'}";
+
+        public static void Init(
+            string clientId,
+            string clientSecret,
+            string appName,
+            bool allowSaveLogAndDataToFile,
+            string appUrl,
+            string providerName,
+            string emotivAppsPath
+        )
+        {
+            AppClientId = clientId;
+            AppClientSecret = clientSecret;
+            AppName = appName;
+            AppUrl = appUrl;
+            ProviderName = providerName;
+            EmotivAppsPath = emotivAppsPath;
+
+            if (allowSaveLogAndDataToFile)
+            {
+                // create tmp directory for unity app
+                string tmpPath = Utils.GetAppTmpPath(appName, providerName);
+                LogDirectory = Path.Combine(tmpPath, LogsDir);
+                DataDirectory = Path.Combine(tmpPath, ProfilesDir);
+
+                // Ensure the directories exist
+                if (!Directory.Exists(LogDirectory))
+                {
+                    Directory.CreateDirectory(LogDirectory);
+                }
+
+                if (!Directory.Exists(DataDirectory))
+                {
+                    Directory.CreateDirectory(DataDirectory);
+                }
+            }
+            else
+            {
+                LogDirectory = "";
+                DataDirectory = "";
+            }
+
+        }
     }
 
     public static class DataStreamName

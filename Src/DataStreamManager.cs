@@ -577,47 +577,7 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void StartAuthorize(string licenseKey = "", object context = null)
         {
-            if (string.IsNullOrEmpty(Config.AppClientId) || 
-                string.IsNullOrEmpty(Config.AppClientSecret) || 
-                string.IsNullOrEmpty(Config.AppVersion)) {
-                UnityEngine.Debug.Log(" Can not start App because invalid application configuration.");
-                return;
-            }
             _dsProcess.StartAuthorize(licenseKey, context);
-        }
-
-        /// <summary>
-        /// Set up App configuration.
-        /// </summary>
-        /// <param name="clientId">A clientId of Application.</param>
-        /// <param name="clientSecret">A clientSecret of Application.</param>
-        /// <param name="appVersion">Application version.</param>
-        /// <param name="appName">Application name.</param>
-        public void SetAppConfig(string clientId, string clientSecret,
-                                 string appVersion="", string appName="",
-                                 string appUrl = "", string emotivAppsPath = "") 
-        {
-            if (string.IsNullOrEmpty(clientId)) {
-                UnityEngine.Debug.LogError("Empty clientId. Please fill in the clientId before running.");
-                return;
-            }
-            if (string.IsNullOrEmpty(clientSecret))
-            {
-                UnityEngine.Debug.LogError("Empty clientSecret. Please fill in the clientId before running.");
-                return;
-            }
-
-            Config.AppClientId      = clientId;
-            Config.AppClientSecret  = clientSecret;
-
-            if (!string.IsNullOrEmpty(appVersion))
-                Config.AppVersion       = appVersion;
-            if (!string.IsNullOrEmpty(appUrl))
-                Config.AppUrl       = appUrl;
-            if (!string.IsNullOrEmpty(emotivAppsPath))
-                Config.EmotivAppsPath = emotivAppsPath;
-            if (!string.IsNullOrEmpty(appName))
-                Config.AppName = appName;
         }
 
         /// <summary>
