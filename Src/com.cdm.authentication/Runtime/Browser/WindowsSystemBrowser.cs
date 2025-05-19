@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
- #if USE_EMBEDDED_LIB && (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
+#if USE_EMBEDDED_LIB && (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
 using IdentityModel.Client;
 #endif
 using UnityEngine;
@@ -70,6 +70,7 @@ namespace Cdm.Authentication.Browser
         public  static async Task ProcessCallback(string args)
         {
             UnityEngine.Debug.Log("Processing callback" + args);
+            #if USE_EMBEDDED_LIB && (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
             var response = new AuthorizeResponse(args);
             if (!String.IsNullOrWhiteSpace(response.State))
             {
@@ -83,6 +84,7 @@ namespace Cdm.Authentication.Browser
             {
                 UnityEngine.Debug.Log("Error: no state on response");
             }
+            #endif
         }
     }
 

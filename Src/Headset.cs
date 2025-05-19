@@ -87,6 +87,9 @@ namespace EmotivUnityPlugin
             if (cnnBy == "dongle") {
                 HeadsetConnection = ConnectionType.CONN_TYPE_DONGLE;
             }
+            else if (cnnBy == "nRF bluetooth") {
+                HeadsetConnection = ConnectionType.CONN_TYPE_NRF_BLUETOOTH;
+            }
             else if (cnnBy == "bluetooth") {
                 HeadsetConnection = ConnectionType.CONN_TYPE_BTLE;
             }
