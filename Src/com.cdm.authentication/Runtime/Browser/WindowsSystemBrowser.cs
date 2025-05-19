@@ -2,7 +2,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+ #if USE_EMBEDDED_LIB && (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
 using IdentityModel.Client;
+#endif
 using UnityEngine;
 
 namespace Cdm.Authentication.Browser
