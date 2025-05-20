@@ -147,6 +147,7 @@ namespace EmotivUnityPlugin
         CONN_TYPE_USB_CHARGING,
         CONN_TYPE_EXTENDER, // Extender pass throught mode
         CONN_TYPE_BTLE,
+        CONN_TYPE_NRF_BLUETOOTH,
         CONN_TYPE_FILE_EDF,
         CONN_TYPE_FILE_CSV,
         CONN_TYPE_FILE_EED,
