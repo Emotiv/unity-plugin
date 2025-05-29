@@ -237,6 +237,7 @@ namespace EmotivUnityPlugin
             _dsManager.StreamStopNotify += OnStreamStopNotify;
             _dsManager.QueryDatesHavingConsumerDataDone += OnQueryDatesHavingConsumerDataDone;
             _dsManager.QueryDayDetailOfConsumerDataDone += OnQueryDayDetailOfConsumerDataDone;
+            _dsManager.BTLEPermissionGrantedNotify += onBTLEPermissionGrantedNotify;
 
             // bind to record manager 
             _recordMgr.informMarkerResult += OnInformMarkerResult;
@@ -1126,6 +1127,18 @@ namespace EmotivUnityPlugin
             UnityEngine.Debug.Log(mentalStateText);
             // _messageLog = mentalStateText;
             _mentalStateDatas = mentalStateList;
+        }
+
+        private void onBTLEPermissionGrantedNotify(object sender, bool isBTLEPermissionGranted)
+		{
+            if (isBTLEPermissionGranted)
+            {
+                _messageLog = "The Bluetooth permission granted.";
+            }
+            else
+            {
+                _messageLog = "Bluetooth permission was denied. Please enable Bluetooth permissions to scan for headsets.";
+            }
         }
 
         // clear data
