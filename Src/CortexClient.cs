@@ -196,7 +196,7 @@ namespace EmotivUnityPlugin
                             btlePermisionGranted = false;
                         }
                         UnityEngine.Debug.Log("BTLEPermissionGrantedNotify: " + btlePermisionGranted);
-                        // BTLEPermissionGrantedNotify(this, btlePermisionGranted);
+                        BTLEPermissionGrantedNotify(this, btlePermisionGranted);
                     }
                 }
             }
