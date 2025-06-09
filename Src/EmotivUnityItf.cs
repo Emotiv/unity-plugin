@@ -109,7 +109,7 @@ namespace EmotivUnityPlugin
 
         #endif
 
-        #if USE_EMBEDDED_LIB && (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
+        #if USE_EMBEDDED_LIB && UNITY_STANDALONE_WIN && !UNITY_EDITOR
         public  async Task ProcessCallback(string args)
         {
             await WindowsSystemBrowser.ProcessCallback(args);
@@ -1202,12 +1202,13 @@ namespace EmotivUnityPlugin
         private void InitForAuthentication(string clientId, string clientSecret)
         {
             string server = "";
-            #if DEVELOPMENT_BUILD
+ #if DEV_SERVER
+            UnityEngine.Debug.Log("Development build detected. Using development server.");
             server = "cerebrum-dev.emotivcloud.com";
-            #endif
-            #if PRODUCTION_BUILD
+#else
+            UnityEngine.Debug.Log("Production build detected. Using production server.");
             server = "cerebrum.emotivcloud.com";
-            #endif
+#endif
             string hash = Md5(clientId);
             string prefixRedirectUrl = "emotiv-" + hash;
             string redirectUrl = prefixRedirectUrl + "://authorize";
