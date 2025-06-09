@@ -155,9 +155,9 @@ namespace EmotivUnityPlugin
             return emotivUnityItf.MentalStateDatas;
         }
 
-        #if USE_EMBEDDED_LIB && (UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN)
+        #if USE_EMBEDDED_LIB && UNITY_STANDALONE_WIN && !UNITY_EDITOR
         /// <summary>
-        /// Process callback to handle authorization response from Emotiv Cloud when login. It use for embedded library on Windows.
+        /// Process callback to handle authorization response from Emotiv Cloud when login. It use for embedded library on Windows and not for editor mode.
         /// </summary>
         public  async Task ProcessCallback(string args) {
             await emotivUnityItf.ProcessCallback(args);

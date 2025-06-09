@@ -1,8 +1,8 @@
 using System;
 using System.Reflection;
 using System.IO;
-#if NETFRAMEWORK || NET5_0_OR_GREATER
-using Microsoft.Win32;
+#if UNITY_STANDALONE_WIN && NET_4_6
+using Microsoft.Win32; // For registry operations but only supported on Windows with .NET Framework version >= 4.6, not for .NET Standard
 #endif
 using UnityEngine;
 
@@ -17,15 +17,15 @@ namespace EmotivUnityPlugin
 
         public void Configure()
         {
-#if NETFRAMEWORK || NET5_0_OR_GREATER
+#if UNITY_STANDALONE_WIN && NET_4_6
             if (NeedToAddKeys()) AddRegKeys();
 #else
-            Debug.LogWarning("RegistryConfig is only supported on Windows.");
+            Debug.LogWarning("RegistryConfig is only supported on Windows and with .NET Framework version >= 4.6, not for .NET Standard");
 #endif  
         }
 
         private string CustomUriScheme { get; }
-#if NETFRAMEWORK || NET5_0_OR_GREATER
+#if UNITY_STANDALONE_WIN && NET_4_6
         string CustomUriSchemeKeyPath => RootKeyPath + @"\" + CustomUriScheme;
         string CustomUriSchemeKeyValueValue => "URL:" + CustomUriScheme;
         string CommandKeyPath => CustomUriSchemeKeyPath + @"\shell\open\command";

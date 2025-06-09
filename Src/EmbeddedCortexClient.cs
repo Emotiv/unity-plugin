@@ -31,15 +31,6 @@ using System.Runtime.InteropServices;
 
 namespace EmotivUnityPlugin
 {
-    // These flags are set in the build profile
-    #if DEVELOPMENT_BUILD
-    // Config client_id/secrets for development
-    #endif
-
-    #if PRODUCTION_BUILD
-    // Config client_id/secrets for production
-    #endif
-
     #if UNITY_ANDROID
     public class CortexLibInterfaceProxy : AndroidJavaProxy
     {
@@ -251,11 +242,9 @@ namespace EmotivUnityPlugin
                 _cortexLibManager.Call("setJavaLogInterface", _cortexLogHandler);
                 // start the cortex lib
                 _cortexLibManager.Call("start", cortexLibInterfaceProxy);
-                #if DEVELOPMENT_BUILD
+                #if DEV_SERVER
                 Debug.Log("Build is Development");
-                #endif
-
-                #if PRODUCTION_BUILD
+                #else
                 Debug.Log("Build is Production");
                 #endif
             }
