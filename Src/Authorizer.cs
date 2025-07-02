@@ -263,12 +263,12 @@ namespace EmotivUnityPlugin
         /// Save token to local app data for next using
         /// </summary>
         private static void SaveToken(UserDataInfo tokenSavedInfo) {
-            string fileDir = GetSavedTokenFilePath();
-            if (String.IsNullOrEmpty(fileDir)) {
-                UnityEngine.Debug.Log("SaveToken: no saved token file found.");
+            if (String.IsNullOrEmpty(Config.DataDirectory)) {
+                UnityEngine.Debug.Log("SaveToken: no data directory found.");
                 return;
             }
 
+            string fileDir = Path.Combine(Config.DataDirectory, Config.TmpDataFileName);
             try
             {
                 // save tokenSavedInfo to file
@@ -385,7 +385,6 @@ namespace EmotivUnityPlugin
 
         private void OnGetUserLoginDone(object sender, UserDataInfo loginData)
         {
-            UnityEngine.Debug.Log("OnGetUserLoginDone.");
             // if emotivId is not empty -> has login user
             if (!String.IsNullOrEmpty(loginData.EmotivId)) {
                 // stop timer
@@ -402,8 +401,7 @@ namespace EmotivUnityPlugin
                 string savedEmotivId    = tokenInfo.EmotivId;
 
                 // print saved EmotivId and saved time and token
-                UnityEngine.Debug.Log("Saved EmotivId: " + savedEmotivId + " current logged in emotivId " + loginData.EmotivId +
-                  " saved token: " + tokenInfo.CortexToken);
+                UnityEngine.Debug.Log("OnGetUserLoginDone: Saved EmotivId: " + savedEmotivId + " current logged in emotivId " + loginData.EmotivId);
 
                 // check cortex token
                 if (!string.IsNullOrEmpty(savedEmotivId) && !string.IsNullOrEmpty(tokenInfo.CortexToken) && savedEmotivId == loginData.EmotivId) {

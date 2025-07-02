@@ -16,7 +16,6 @@ namespace EmotivUnityPlugin
         public static string DataDirectory = "";
 
         public static string EmotivAppsPath         = ""; // location of emotiv Apps . Eg: C:\Program Files\EmotivApps
-        public static string TmpVersionFileName     = "version.ini";
         public static string TmpDataFileName        = "data.dat";
         public static string ProfilesDir            = "Profiles";
         public static string LogsDir                = "UnityLogs";
@@ -51,7 +50,7 @@ namespace EmotivUnityPlugin
             if (allowSaveLogAndDataToFile)
             {
                 // create tmp directory for unity app
-                string tmpPath = Utils.GetAppTmpPath(appName, providerName);
+                string tmpPath = Utils.GetAppTmpPath(providerName, appName);
                 LogDirectory = Path.Combine(tmpPath, LogsDir);
                 DataDirectory = Path.Combine(tmpPath, ProfilesDir);
 
