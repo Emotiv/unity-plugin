@@ -77,11 +77,14 @@ namespace EmotivUnityPlugin
     public class CortexStarted : CortexStartedEventHandler
     {
         public CortexStarted() : base()
-        {}
+        {
+            UnityEngine.Debug.Log("qqq CortexStarted constructor called");
+
+        }
 
         public override void onCortexStarted()
         {
-            UnityEngine.Debug.Log("Cortex Started");
+            UnityEngine.Debug.Log("qqqqqq Cortex Started");
             OnCortexStarted?.Invoke(this, true);
         }
 
@@ -151,11 +154,7 @@ namespace EmotivUnityPlugin
         private  CortexLogHandler _cortexLogHandler;
         #elif USE_EMBEDDED_LIB
         private CortexReponseHandler _responseHandler;
-        #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
         private EmbeddedCortexClientWin _cortexClient; // Cortex client for windows
-        #elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-        // Not supported yet
-        #endif
         #endif
 
         // Private constructor to prevent direct instantiation
@@ -181,9 +180,29 @@ namespace EmotivUnityPlugin
             // Enable this line if you want to see the cortex log messages.   
             //CortexLog logger = new();
             //CortexLib.setLogHandler(1, logger);
-            CortexStarted startEvent = new();
-            startEvent.OnCortexStarted += CortexStarted; 
+            UnityEngine.Debug.Log("qqqqqqq CortexLib is starting...");
+            CortexStarted startEvent = null;
+            try
+            {
+                startEvent = new CortexStarted();
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.Log($"Exception while creating CortexStarted: {ex}");
+                return;
+            }
+            if (startEvent == null)
+            {
+                UnityEngine.Debug.Log("Failed to create CortexStarted event.");
+                return;
+            }
+            UnityEngine.Debug.Log("qqqqqqq CortexLib start called");
+            startEvent.OnCortexStarted += CortexStarted;
+            UnityEngine.Debug.Log("qqqqqqq CortexLib start event registered");
             CortexLib.start(startEvent);
+
+            UnityEngine.Debug.Log("qqqqqqq CortexLib started");
+
             #elif UNITY_IOS
             CortexIOSHandler.RegisterCallback();
             CortexIOSHandler.InitCortexLib();
@@ -202,7 +221,9 @@ namespace EmotivUnityPlugin
 
         private void CortexStarted(object? sender, bool e)
         {
-            #if (USE_EMBEDDED_LIB && UNITY_STANDALONE_WIN)
+            
+            #if USE_EMBEDDED_LIB
+            UnityEngine.Debug.Log("qqqqqqqqqq Cortex Started");
             _cortexClient = new EmbeddedCortexClientWin();
             _responseHandler = new CortexReponseHandler();
             _responseHandler.OnCortexResponse += OnCortexResponse;
@@ -219,7 +240,7 @@ namespace EmotivUnityPlugin
             {
                 _cortexLibManager.Call("stop");
             }
-            #elif (USE_EMBEDDED_LIB && UNITY_STANDALONE_WIN)
+            #elif USE_EMBEDDED_LIB
             _cortexClient.close();
             #elif UNITY_IOS
             CortexIOSHandler.StopCortexLib();
@@ -267,7 +288,7 @@ namespace EmotivUnityPlugin
             // UnityEngine.Debug.Log("SendTextMessage: " + request);
             #if UNITY_ANDROID
             _cortexLibManager.Call("sendRequest", request);
-            #elif (USE_EMBEDDED_LIB && UNITY_STANDALONE_WIN)
+            #elif (USE_EMBEDDED_LIB)
             _cortexClient.sendRequest(request);
             #elif UNITY_IOS
             CortexIOSHandler.SendRequest(request);

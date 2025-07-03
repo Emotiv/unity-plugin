@@ -9,11 +9,14 @@
 //------------------------------------------------------------------------------
 
 
+using System;
+
 public class CortexLib : global::System.IDisposable {
   private global::System.Runtime.InteropServices.HandleRef swigCPtr;
   protected bool swigCMemOwn;
 
   internal CortexLib(global::System.IntPtr cPtr, bool cMemoryOwn) {
+    UnityEngine.Debug.Log("qqqq CortexLib constructor called");
     swigCMemOwn = cMemoryOwn;
     swigCPtr = new global::System.Runtime.InteropServices.HandleRef(this, cPtr);
   }
@@ -36,6 +39,7 @@ public class CortexLib : global::System.IDisposable {
   }
 
   ~CortexLib() {
+    UnityEngine.Debug.Log("qqqq CortexLib destructor called");
     Dispose(false);
   }
 
@@ -56,8 +60,33 @@ public class CortexLib : global::System.IDisposable {
     }
   }
 
-  public static void start(CortexStartedEventHandler handler) {
-    EmotivCortexLibPINVOKE.CortexLib_start(CortexStartedEventHandler.getCPtr(handler));
+  public static void start(CortexStartedEventHandler handler)
+  {
+    // try
+    // {
+    //   UnityEngine.Debug.Log("qqqq CortexLib start called");
+    //   EmotivCortexLibPINVOKE.CortexLib_start(CortexStartedEventHandler.getCPtr(handler));
+    //   UnityEngine.Debug.Log("qqqq CortexLib started successfully");
+    // }
+    // catch (DllNotFoundException ex)
+    // {
+    //   throw new System.InvalidOperationException("qqqqqq Failed to load the required native library (.dylib). Make sure the EmotivCortexLib dylib is present and accessible.", ex);
+    // }
+    
+    try {
+      // EmotivCortexLibPINVOKE.CortexLib_start(new System.Runtime.InteropServices.HandleRef(null, System.IntPtr.Zero));
+      UnityEngine.Debug.Log("qqqq CortexLib start called");
+      EmotivCortexLibPINVOKE.CortexLib_start(CortexStartedEventHandler.getCPtr(handler));
+      UnityEngine.Debug.Log("EmotivCortexLib.dylib loaded and function called.");
+    } catch (DllNotFoundException e) {
+        UnityEngine.Debug.Log("EmotivCortexLib.dylib NOT loaded: " + e.Message);
+    } catch (EntryPointNotFoundException e) {
+        UnityEngine.Debug.Log("Function not found in EmotivCortexLib.dylib: " + e.Message);
+    } catch (Exception e) {
+        UnityEngine.Debug.Log("Other error: " + e.Message);
+    }
+
+
   }
 
   public static void stop() {
@@ -68,7 +97,9 @@ public class CortexLib : global::System.IDisposable {
     EmotivCortexLibPINVOKE.CortexLib_setLogHandler(logLevel, CortexLogEventHandler.getCPtr(handler));
   }
 
-  public CortexLib() : this(EmotivCortexLibPINVOKE.new_CortexLib(), true) {
+  public CortexLib() : this(EmotivCortexLibPINVOKE.new_CortexLib(), true)
+  {
+    UnityEngine.Debug.Log("qqqq CortexLib instance created");
   }
 
 }
