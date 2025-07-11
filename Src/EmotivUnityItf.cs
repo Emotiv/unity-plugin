@@ -1225,11 +1225,13 @@ namespace EmotivUnityPlugin
             _crossPlatformBrowser = new CrossPlatformBrowser();
             _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsEditor, new WindowsSystemBrowser());
             _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsPlayer, new WindowsSystemBrowser());
+            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXEditor, new DeepLinkBrowser());
+            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXPlayer, new DeepLinkBrowser());
 
             // windows
-            #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
             new RegistryConfig(prefixRedirectUrl).Configure();
-            #endif
+#endif
 
             var configuration = new AuthorizationCodeFlow.Configuration()
             {

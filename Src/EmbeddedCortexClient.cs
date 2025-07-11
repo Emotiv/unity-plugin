@@ -31,142 +31,75 @@ using System.Runtime.InteropServices;
 
 namespace EmotivUnityPlugin
 {
+    // Platform-specific helper classes
     #if UNITY_ANDROID
     public class CortexLibInterfaceProxy : AndroidJavaProxy
     {
         public CortexLibInterfaceProxy() : base("com.emotiv.unityplugin.CortexConnectionInterface") { }
-
-        void onReceivedMessage(String msg) {
-            // Handle the callback in Unity
-            EmbeddedCortexClient.Instance.OnMessageReceived(msg);
-        }
-
-        void onCortexStarted() {
-            Debug.Log("Cortex Lib Started");
-            // Start your timer or perform other initialization
-            EmbeddedCortexClient.Instance.OnWSConnected(true);
-        }
+        void onReceivedMessage(String msg) => EmbeddedCortexClient.Instance.OnMessageReceived(msg);
+        void onCortexStarted() { Debug.Log("Cortex Lib Started"); EmbeddedCortexClient.Instance.OnWSConnected(true); }
     }
-
-    // implement CortexLogHandler java class
     public class CortexLogHandler : AndroidJavaProxy
     {
         public CortexLogHandler() : base("com.emotiv.unityplugin.JavaLogInterface") { }
-
-        public void onReceivedLog(String msg) {
-            MyLogger.Instance.Log(LogType.Log, "CortexLog", msg, null);
-        }
+        public void onReceivedLog(String msg) => MyLogger.Instance.Log(LogType.Log, "CortexLog", msg, null);
     }
-
-    
     #elif USE_EMBEDDED_LIB
     public class CortexReponseHandler : ResponseHandlerCpp
     {
-        public CortexReponseHandler() : base()
-        {}
-
-        public override void processResponse(string responseMessage)
-        {
-            if(OnCortexResponse != null)
-                OnCortexResponse(this, responseMessage);
-        }
-
+        public CortexReponseHandler() : base() {}
+        public override void processResponse(string responseMessage) => OnCortexResponse?.Invoke(this, responseMessage);
         public event EventHandler<string>? OnCortexResponse;
     }
-
     public class CortexStarted : CortexStartedEventHandler
     {
-        public CortexStarted() : base()
-        {}
-
-        public override void onCortexStarted()
-        {
-            UnityEngine.Debug.Log("Cortex Started");
-            OnCortexStarted?.Invoke(this, true);
-        }
-
+        public CortexStarted() : base() {}
+        public override void onCortexStarted() { UnityEngine.Debug.Log("Cortex Started"); OnCortexStarted?.Invoke(this, true); }
         public event EventHandler<bool>? OnCortexStarted;
     }
-
     public class CortexLog : CortexLogEventHandler
     {
-        public CortexLog() : base()
-        {}
-
-        public override void onLogMessage(string message)
-        {
-            UnityEngine.Debug.Log(message);
-        }
+        public CortexLog() : base() {}
+        public override void onLogMessage(string message) => UnityEngine.Debug.Log(message);
     }
-
-    #endif
-
-    #if UNITY_IOS
+    #elif UNITY_IOS
     public class CortexIOSHandler 
     {
-        [DllImport("__Internal")]
-        public static extern bool InitCortexLib();
-        
-        [DllImport("__Internal")]
-        public static extern void SendRequest(string request);
-        
-        [DllImport("__Internal")]
-        public static extern void StopCortexLib();
-
+        [DllImport("__Internal")] public static extern bool InitCortexLib();
+        [DllImport("__Internal")] public static extern void SendRequest(string request);
+        [DllImport("__Internal")] public static extern void StopCortexLib();
         public delegate void MessageCallback(string message);
         public delegate void StartedCallback();
-        
-        [DllImport("__Internal")]
-        private static extern void RegisterUnityResponseCallback(MessageCallback callback);
-        [DllImport("__Internal")]
-        private static extern void RegisterUnityStartedCallback(StartedCallback callback);
-        
+        [DllImport("__Internal")] private static extern void RegisterUnityResponseCallback(MessageCallback callback);
+        [DllImport("__Internal")] private static extern void RegisterUnityStartedCallback(StartedCallback callback);
         [AOT.MonoPInvokeCallback(typeof(MessageCallback))]
-        private static void OnMessageReceived(string message)
-        {
-            EmbeddedCortexClient.Instance.OnMessageReceived(message);
-        }
-
+        private static void OnMessageReceived(string message) => EmbeddedCortexClient.Instance.OnMessageReceived(message);
         [AOT.MonoPInvokeCallback(typeof(StartedCallback))]
-        private static void OnCortexLibIosStarted()
-        {
-            Debug.Log("OnCortexLibIosStarted");
-            EmbeddedCortexClient.Instance.OnWSConnected(true);
-        }
-
-        public static void RegisterCallback()
-        {
-            RegisterUnityResponseCallback(OnMessageReceived);
-            RegisterUnityStartedCallback(OnCortexLibIosStarted);
-        }
+        private static void OnCortexLibIosStarted() { Debug.Log("OnCortexLibIosStarted"); EmbeddedCortexClient.Instance.OnWSConnected(true); }
+        public static void RegisterCallback() { RegisterUnityResponseCallback(OnMessageReceived); RegisterUnityStartedCallback(OnCortexLibIosStarted); }
     }
     #endif
 
+    // Main client class
     #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
     public class EmbeddedCortexClient : CortexClient
     {
+        // Platform-specific fields
         #if UNITY_ANDROID
         private AndroidJavaObject _cortexLibManager;
         private CortexLibInterfaceProxy cortexLibInterfaceProxy;
-        private  CortexLogHandler _cortexLogHandler;
+        private CortexLogHandler _cortexLogHandler;
         #elif USE_EMBEDDED_LIB
         private CortexReponseHandler _responseHandler;
-        #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-        private EmbeddedCortexClientWin _cortexClient; // Cortex client for windows
-        #elif UNITY_STANDALONE_OSX || UNITY_EDITOR_OSX
-        // Not supported yet
-        #endif
+        private EmbeddedCortexClientNative _cortexClient;
         #endif
 
-        // Private constructor to prevent direct instantiation
+        private IntPtr _cortexLibPtr = IntPtr.Zero; // Only used for native P/Invoke
+
         public EmbeddedCortexClient() { }
 
-        // Implementation of the abstract method
-
-        // override the init method
         public override void Init(object context = null)
         {
-
             #if UNITY_ANDROID
             if (context is AndroidJavaObject activity)
             {
@@ -182,7 +115,7 @@ namespace EmotivUnityPlugin
             //CortexLog logger = new();
             //CortexLib.setLogHandler(1, logger);
             CortexStarted startEvent = new();
-            startEvent.OnCortexStarted += CortexStarted; 
+            startEvent.OnCortexStarted += CortexStarted;
             CortexLib.start(startEvent);
             #elif UNITY_IOS
             CortexIOSHandler.RegisterCallback();
@@ -190,37 +123,25 @@ namespace EmotivUnityPlugin
             #endif
         }
 
-        private static void OnMessageReceivedStatic(string message)
-        {
-            EmbeddedCortexClient.Instance.OnMessageReceived(message);
-        }
+        private static void OnMessageReceivedStatic(string message) => EmbeddedCortexClient.Instance.OnMessageReceived(message);
+        private static void OnWSConnectedStatic() => EmbeddedCortexClient.Instance.OnWSConnected(true);
 
-        private static void OnWSConnectedStatic()
-        {
-            EmbeddedCortexClient.Instance.OnWSConnected(true);
-        }
-
+        #if USE_EMBEDDED_LIB
         private void CortexStarted(object? sender, bool e)
         {
-            #if (USE_EMBEDDED_LIB && UNITY_STANDALONE_WIN)
-            _cortexClient = new EmbeddedCortexClientWin();
+            _cortexClient = new EmbeddedCortexClientNative();
             _responseHandler = new CortexReponseHandler();
             _responseHandler.OnCortexResponse += OnCortexResponse;
             _cortexClient.registerResponseHandler(_responseHandler);
-            #endif
         }
+        #endif
 
-        // override the close method
         public override void Close()
         {
-            // stop the cortex lib
             #if UNITY_ANDROID
-            if (_cortexLibManager != null)
-            {
-                _cortexLibManager.Call("stop");
-            }
-            #elif (USE_EMBEDDED_LIB && UNITY_STANDALONE_WIN)
-            _cortexClient.close();
+            if (_cortexLibManager != null) _cortexLibManager.Call("stop");
+            #elif USE_EMBEDDED_LIB
+            _cortexClient?.close();
             #elif UNITY_IOS
             CortexIOSHandler.StopCortexLib();
             #endif
@@ -231,16 +152,12 @@ namespace EmotivUnityPlugin
         {
             cortexLibInterfaceProxy = new CortexLibInterfaceProxy();
             AndroidJavaClass cortexLibActivityClass = new AndroidJavaClass("com.emotiv.unityplugin.CortexLibActivity");
-            // Get the instance of CortexLibActivity
             _cortexLibManager = cortexLibActivityClass.CallStatic<AndroidJavaObject>("getInstance");
-            
-            bool isCortexLibManagerNotNull = _cortexLibManager != null;
-            if (isCortexLibManagerNotNull) {
+            if (_cortexLibManager != null)
+            {
                 _cortexLibManager.Call("load", application);
-                // set log handler
                 _cortexLogHandler = new CortexLogHandler();
                 _cortexLibManager.Call("setJavaLogInterface", _cortexLogHandler);
-                // start the cortex lib
                 _cortexLibManager.Call("start", cortexLibInterfaceProxy);
                 #if DEV_SERVER
                 Debug.Log("Build is Development");
@@ -248,26 +165,18 @@ namespace EmotivUnityPlugin
                 Debug.Log("Build is Production");
                 #endif
             }
-            else
-                Debug.LogError("CortexLibManager is null. Cannot load cortex lib.");
-
+            else Debug.LogError("CortexLibManager is null. Cannot load cortex lib.");
         }
         #elif USE_EMBEDDED_LIB
-        private void OnCortexResponse(object? sender, string message) {
-            // Handle the callback in Unity
-            EmbeddedCortexClient.Instance.OnMessageReceived(message);;
-        }
+        private void OnCortexResponse(object? sender, string message) => EmbeddedCortexClient.Instance.OnMessageReceived(message);
         #endif
-        /// <summary>
-        /// Build a json rpc request and send message via websocket
-        /// </summary>
+
         public override void SendTextMessage(JObject param, string method, bool hasParam = true)
         {
             string request = PrepareRequest(method, param, hasParam);
-            // UnityEngine.Debug.Log("SendTextMessage: " + request);
             #if UNITY_ANDROID
             _cortexLibManager.Call("sendRequest", request);
-            #elif (USE_EMBEDDED_LIB && UNITY_STANDALONE_WIN)
+            #elif USE_EMBEDDED_LIB
             _cortexClient.sendRequest(request);
             #elif UNITY_IOS
             CortexIOSHandler.SendRequest(request);

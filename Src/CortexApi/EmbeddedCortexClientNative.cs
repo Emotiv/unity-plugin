@@ -9,20 +9,20 @@
 //------------------------------------------------------------------------------
 
 
-public class EmbeddedCortexClientWin : global::System.IDisposable {
+public class EmbeddedCortexClientNative : global::System.IDisposable {
   private global::System.Runtime.InteropServices.HandleRef swigCPtr;
   protected bool swigCMemOwn;
 
-  internal EmbeddedCortexClientWin(global::System.IntPtr cPtr, bool cMemoryOwn) {
+  internal EmbeddedCortexClientNative(global::System.IntPtr cPtr, bool cMemoryOwn) {
     swigCMemOwn = cMemoryOwn;
     swigCPtr = new global::System.Runtime.InteropServices.HandleRef(this, cPtr);
   }
 
-  internal static global::System.Runtime.InteropServices.HandleRef getCPtr(EmbeddedCortexClientWin obj) {
+  internal static global::System.Runtime.InteropServices.HandleRef getCPtr(EmbeddedCortexClientNative obj) {
     return (obj == null) ? new global::System.Runtime.InteropServices.HandleRef(null, global::System.IntPtr.Zero) : obj.swigCPtr;
   }
 
-  internal static global::System.Runtime.InteropServices.HandleRef swigRelease(EmbeddedCortexClientWin obj) {
+  internal static global::System.Runtime.InteropServices.HandleRef swigRelease(EmbeddedCortexClientNative obj) {
     if (obj != null) {
       if (!obj.swigCMemOwn)
         throw new global::System.ApplicationException("Cannot release ownership as memory is not owned");
@@ -35,7 +35,7 @@ public class EmbeddedCortexClientWin : global::System.IDisposable {
     }
   }
 
-  ~EmbeddedCortexClientWin() {
+  ~EmbeddedCortexClientNative() {
     Dispose(false);
   }
 
@@ -56,7 +56,7 @@ public class EmbeddedCortexClientWin : global::System.IDisposable {
     }
   }
 
-  public EmbeddedCortexClientWin() : this(EmotivCortexLibPINVOKE.new_CortexClient(), true) {
+  public EmbeddedCortexClientNative() : this(EmotivCortexLibPINVOKE.new_CortexClient(), true) {
   }
 
   public void sendRequest(string message) {
