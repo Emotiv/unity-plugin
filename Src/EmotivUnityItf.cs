@@ -34,7 +34,13 @@ namespace EmotivUnityPlugin
     }
 
     /// <summary>
-    /// EmotivUnityItf as interface for 3rd parties application work with Emotiv Unity Plugin
+    /// <para>
+    /// <b>EmotivUnityItf</b> is an interface class for Unity applications to interact with the Emotiv Cortex API. 
+    /// It supports both Emotiv Cortex Service (desktop only, without USE_EMBEDDED_LIB) 
+    /// and Emotiv embedded library (when USE_EMBEDDED_LIB is defined (desktop) or mobile platform).
+    /// The class provides unified access for cortex connection creation, authorization, headset management, 
+    /// session creation, data subscription, recording, training, and profile management.
+    /// </para>
     /// </summary>
     public class EmotivUnityItf
     {
@@ -1130,7 +1136,7 @@ namespace EmotivUnityPlugin
         }
 
         private void onBTLEPermissionGrantedNotify(object sender, bool isBTLEPermissionGranted)
-		{
+        {
             if (isBTLEPermissionGranted)
             {
                 _messageLog = "The Bluetooth permission granted.";
@@ -1162,7 +1168,6 @@ namespace EmotivUnityPlugin
                     
                 }
             );
-            // UniWebViewManager.Instance.OpenURL(url);
             #else
             Application.OpenURL(url);
             #endif
@@ -1228,8 +1233,8 @@ namespace EmotivUnityPlugin
             _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXEditor, new DeepLinkBrowser());
             _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXPlayer, new DeepLinkBrowser());
 
-            // windows
 #if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
+            // Deep linking is not supported on Windows (except UWP), so RegistryConfig is used to handle this case.
             new RegistryConfig(prefixRedirectUrl).Configure();
 #endif
 
