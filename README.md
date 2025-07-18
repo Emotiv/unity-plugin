@@ -157,3 +157,9 @@ EmotivUnityItf.Instance.CreateSessionWithHeadset(headsetId);
 ---
 
 For more details, see the comments in `EmotivUnityItf.cs` or contact Emotiv for support.
+
+## Release Notes
+See [Documentation/ReleaseNotes.md](Documentation/ReleaseNotes.md).
+
+## License
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.

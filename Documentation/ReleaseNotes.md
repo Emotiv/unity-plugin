@@ -1,5 +1,11 @@
 # <a id="release-notes"></a>Release Notes
 
+## Version 4.7 (July 2025)
+### Added
+- Support for mobile platforms
+- Integration with Emotiv Embedded library
+
+
 ## Version 3.7 (November 2023)
 ### Added
 - Support new headset refreshing flow where App need to to call ScanHeadsets() to start headset scanning.
