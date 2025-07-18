@@ -1,171 +1,159 @@
-# Emotiv Unity Plugin
+# Emotiv Cortex Unity Integration Guide
 
-This plugin enables Unity applications to work with the Emotiv Cortex Service (Cortex) for EEG headset integration, data streaming, training, and recording.
+This guide will help you work with the Emotiv Cortex API to build your Unity application, supporting both mobile (Android, iOS) and desktop (Windows, macOS) platforms. It covers both available integration options: Emotiv Cortex Service and Emotiv Embedded Library.
+
+## Overview
+
+- **Supported Platforms:**
+  - Desktop: Windows, macOS
+  - Mobile: Android, iOS
+- **Integration Options:**
+  1. **Emotiv Cortex Service** (Desktop only)
+  2. **Emotiv Embedded Library** (Mobile and Desktop with `USE_EMBEDDED_LIB` defined)
 
 ---
 
-## Prerequisites
+## Option 1: Emotiv Cortex Service (Desktop Only)
 
-1. [Download and install](https://www.emotiv.com/developer/) the EMOTIV Launcher with Cortex service (Windows/macOS).
-2. Install Unity from [unity3d.com](https://unity3d.com/get-unity/download).
+### What is it?
+Connects your Unity app to the Emotiv Cortex Service running on your desktop. This is the simplest way to get started on Windows and macOS.
+
+### Setup Steps
+1. **Install EMOTIV Launcher**
+   - Download and install the [EMOTIV Launcher](https://www.emotiv.com/products/emotiv-launcher) on your desktop.
+2. **Project Configuration**
+   - Ensure the scripting symbol `USE_EMBEDDED_LIB` is **not** defined in your Unity project.
+   - No need to configure or add the Emotiv Embedded library.
+3. **Authentication**
+   - Login via the EMOTIV Launcher before running your Unity application.
 
 ---
 
-## Setup
+## Option 2: Emotiv Embedded Library (Mobile & Desktop)
 
-Clone the repo manually or add as a submodule:
-```sh
-git submodule add https://github.com/Emotiv/unity-plugin.git /Assets/Plugins/Emotiv-Unity-Plugin
+### What is it?
+Integrates the Emotiv Cortex API directly into your Unity app using the Emotiv Embedded Library. This is required for mobile platforms and can also be used on desktop (in development).
+
+### Setup Steps
+1. **Contact Emotiv**
+  - Contact Emotiv to request access to the Emotiv Embedded Library and the private UniWebView submodule: [Contact Emotiv](https://www.emotiv.com/pages/contact).
+2. **Add the Embedded Library**
+  - **Android:** Place `EmotivCortexLib.aar` in `Src/AndroidPlugin/EmotivCortexLib/`.
+  - **iOS:** Place `EmotivCortexLib.xcframework` in `Src/IosPlugin/`.
+3. **Add UniWebView Submodule**
+   - Pull the UniWebView submodule (private repo; access required from Emotiv).
+   - UniWebView is used to open a webview for authentication on mobile.
+4. **Project Configuration**
+   - Define the scripting symbol `USE_EMBEDDED_LIB` in your Unity project settings.
+   - For desktop, support is experimental and still under development.
+5. **Authentication**
+   - On mobile, authentication is handled in-app via a webview.
+
+---
+
+## Quick Start: Using `EmotivUnityItf.cs`
+
+The main interface for your Unity app is the `EmotivUnityItf` class.
+
+### Initialization
+1. **Call `Init()`**
+   - Pass your client ID, client secret, app name, and other optional parameters.
+   - It is recommended to set `isDataBufferUsing = true` so you can retrieve data from the buffer (see example below).
+2. **Call `Start()`**
+   - On Android, pass the current activity as a parameter: `Start(currentActivity)`
+   - On other platforms, you can call `Start()` with no parameters.
+
+### Connecting to a Headset
+1. **After authorization is complete**, call `QueryHeadsets()` to discover available headsets.
+2. **Create a session** with a headset using `CreateSessionWithHeadset(headsetId)`.
+   - This only creates a session. To receive data, you must call `SubscribeData(streamList)` with the desired data streams (e.g., EEG, motion, etc.).
+   - Alternatively, you can use `StartDataStream(streamList, headsetId)` to create a session and subscribe to data in one step.
+
+#### Example: Creating a session and subscribing to EEG data
+```csharp
+// Create session with headset
+EmotivUnityItf.Instance.CreateSessionWithHeadset(headsetId);
+// Before subscribing, check if the session is created
+if (EmotivUnityItf.Instance.IsSessionCreated)
+{
+  // Subscribe to EEG data
+  EmotivUnityItf.Instance.SubscribeData(new List<string> { "eeg" });
+}
+// OR combine both steps:
+EmotivUnityItf.Instance.StartDataStream(new List<string> { "eeg" }, headsetId);
 ```
-See the [Unity example](https://github.com/Emotiv/cortex-v2-example/tree/master/unity) for reference.
+
+#### Example: Getting EEG data from buffer
+```csharp
+// Make sure isDataBufferUsing = true in Init()
+int n = EmotivUnityItf.Instance.GetNumberEEGSamples();
+if (n > 0)
+{
+    foreach (var chan in EmotivUnityItf.Instance.GetEEGChannels())
+    {
+        double[] data = EmotivUnityItf.Instance.GetEEGData(chan);
+        // process data
+    }
+}
+```
 
 ---
 
-## Platform Support
+## Recording and Markers
 
-The Emotiv Unity Plugin supports:
-- **Cortex Service** (Windows/macOS)
-- **Embedded Cortex** (internal use) on **Windows**, **iOS**, and **Android**
-
----
-
-## Usage Guide
-
-### Unified Interface
-
-**You only need to use [`EmotivUnityItf`](./Src/EmotivUnityItf.cs)** for all Cortex operations.  
-You do **not** need to interact directly with `DataStreamManager`, `BCITraining`, or `RecordManager` as previous version.
-
-All public methods and properties are documented in [`EmotivUnityItf.cs`](./Src/EmotivUnityItf.cs).
-
----
-
-### Typical Workflow
-
-**1.Initialize the Plugin**
-
-   Call `Init()` with your app credentials and options:
-   ```csharp
-   EmotivUnityPlugin.EmotivUnityItf.Instance.Init(
-       clientId: "YOUR_CLIENT_ID",
-       clientSecret: "YOUR_CLIENT_SECRET",
-       appName: "YOUR_APP_NAME"
-       allowSaveLogToFile: true,
-       isDataBufferUsing: true // or false, see Data Streaming section below
-       // ...other optional parameters
-       // ...other optional parameters
-   );
-   ```
-
-**2.Start Connection and Authorization**
-
-   Call `Start()` to connect to Cortex and authorize:
-   ```csharp
-   EmotivUnityPlugin.EmotivUnityItf.Instance.Start();
-   ```
-
-**3.Query for Available Headsets**
-
-   Call `QueryHeadsets()` to get the list of detected headsets:
-   ```csharp
-   EmotivUnityPlugin.EmotivUnityItf.Instance.QueryHeadsets();
-   ```
-
-**4.Create a Session with a Headset**
-
-   Once you have at least one headset, call `CreateSessionWithHeadset()`:
-   ```csharp
-   EmotivUnityPlugin.EmotivUnityItf.Instance.CreateSessionWithHeadset(headsetId);
-   ```
-   - `headsetId` is a string like `"EPOCX-12345"`.
-   - If you pass an empty string, the first headset in the list will be used.
-
-**5.Subscribe to Data, Training, and Recording**
-
-   After the session is created, you can:
-   - **Subscribe to data streams:**  
-     `SubscribeData(listOfStreams)`
-   - **Start/stop recording:**  
-     `StartRecord(title)`, `StopRecord()`
-   - **Inject markers:**  
-     `InjectMarker(label, value)`
-   - **Manage profiles:**  
-     `LoadProfile(profileName)`, `SaveProfile()`, `UnLoadProfile()`
-   - **Start/stop training:**  
-	 `StartMCTraining()`, `AcceptMCTraining()`, etc.
-
-   See [`EmotivUnityItf.cs`](./Src/EmotivUnityItf.cs) for all available methods and detailed documentation.
-
----
-
-### Data Streaming Modes
-
-When calling `Init()`, you can set the `isDataBufferUsing` parameter:
-
-- **`isDataBufferUsing = false`:**
-  Subscribed data (EEG, motion, etc.) will be saved to the internal `_messageLog` and can be accessed via the `MessageLog` property.  
-  This is suitable for simple applications or demos.
-
-- **`isDataBufferUsing = true` (default):**
-  Data is not automatically buffered.  
-  You must manually retrieve data using functions such as:
-  - `GetNumberEEGSamples()`
-  - `GetEEGData(Channel_t chan)`
-  - `GetNumberMotionSamples()`
-  - `GetMotionData(Channel_t chan)`
-  
-  **Usage Example:**
-  ```csharp
-  int n = emotiv.GetNumberEEGSamples();
-  if (n > 0)
-  {
-      foreach (var chan in emotiv.GetEEGChannels())
-      {
-          double[] data = emotiv.GetEEGData(chan);
-          // process data
-      }
-  }
-  ```
-  Always check that the number of samples is greater than 0 before retrieving data for each channel.
-
----
-
-
-### Example
+After creating a session, you can start recording EEG data and inject markers:
 
 ```csharp
-var emotiv = EmotivUnityPlugin.EmotivUnityItf.Instance;
-emotiv.Init("clientId", "clientSecret", "appName");
-emotiv.Start();
-// ... should wait for authorize done...
-emotiv.QueryHeadsets();
-// ...wait for headset list...
-emotiv.CreateSessionWithHeadset("HEADSET_ID");
-// Now you can subscribe to data, train, or record
+// Start recording
+EmotivUnityItf.Instance.StartRecord("MyRecordTitle");
+// Inject a marker
+EmotivUnityItf.Instance.InjectMarker("EventLabel", "EventValue");
+// Stop recording
+EmotivUnityItf.Instance.StopRecord();
 ```
 
 ---
 
-## API Reference
+## Profile Management and Training
 
-- All public methods and properties are documented in [`EmotivUnityItf.cs`](./Src/EmotivUnityItf.cs).
-- Please refer to the source file for up-to-date descriptions and parameter details.
+To use BCI training, you need to load a profile for the current headset.
 
----
+```csharp
+// Load or create and load a profile for the current headset.If the profile does not exist, it will be created and loaded automatically.
+EmotivUnityItf.Instance.LoadProfile("ProfileName");
+// Start mental command training for an action (e.g., "push")
+EmotivUnityItf.Instance.StartMCTraining("push");
+```
 
-## Additional Resources
-
-- [Unity Example Project](https://github.com/Emotiv/cortex-v2-example/tree/master/unity)
-- [Cortex API Documentation](https://emotiv.gitbook.io/cortex-api/)
-
----
-
-## Release Notes
-
-See [Documentation/ReleaseNotes.md](Documentation/ReleaseNotes.md).
+See `EmotivUnityItf.cs` for more training and profile management functions.
 
 ---
 
-## License
+## Additional Notes
+- For mobile builds, ensure all required permissions (Bluetooth, etc.) are set in your Unity project.
+- For Option 2, both the Embedded Library and UniWebView are private and require Emotiv approval for access.
+- For the latest updates and troubleshooting, contact Emotiv support.
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+---
+
+## Example Code
+
+```csharp
+// Initialization
+EmotivUnityItf.Instance.Init(clientId, clientSecret, appName);
+
+// Start authorization (Android requires currentActivity)
+#if UNITY_ANDROID
+EmotivUnityItf.Instance.Start(currentActivity);
+#else
+EmotivUnityItf.Instance.Start();
+#endif
+
+// After authorization
+EmotivUnityItf.Instance.QueryHeadsets();
+EmotivUnityItf.Instance.CreateSessionWithHeadset(headsetId);
+```
+
+---
+
+For more details, see the comments in `EmotivUnityItf.cs` or contact Emotiv for support.
