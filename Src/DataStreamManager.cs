@@ -116,7 +116,6 @@ namespace EmotivUnityPlugin
             _dsProcess.HeadsetConnectNotify     += OnHeadsetConnectNotify;
             _dsProcess.StreamStopNotify         += OnStreamStopNotify;
             _dsProcess.LicenseValidTo           += OnLicenseValidTo;
-            _dsProcess.LicenseExpired           += OnLicenseExpired;
             _dsProcess.SessionActivedOK         += OnSessionActivedOK;
             _dsProcess.CreateSessionFail        += OnCreateSessionFail;
             _dsProcess.QueryHeadsetOK           += OnQueryHeadsetOK;
@@ -261,12 +260,6 @@ namespace EmotivUnityPlugin
                     UnityEngine.Debug.Log("Session is activated but for headset " + sessionInfo.HeadsetId);
                 }
             }
-        }
-
-        private void OnLicenseExpired(object sender, DateTime hardLimitTime)
-        {
-            UnityEngine.Debug.Log("OnLicenseExpired: Please re-authorize before hard limit time " + Utils.ISODateTimeToString(hardLimitTime));
-            // TODO: Inform user buy license and re-authorize before hard limit time.
         }
 
         private void OnLicenseValidTo(object sender, DateTime validTo)
