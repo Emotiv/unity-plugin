@@ -32,7 +32,6 @@ namespace EmotivUnityPlugin
         public event EventHandler<ArrayList> MentalCommandReceived;   // mental command
         public event EventHandler<ArrayList> SysEventsReceived;       // Training events of the mental commands and facial expressions
         public event EventHandler<Dictionary<string, JArray>> SubscribedOK;
-        public event EventHandler<DateTime> LicenseExpired;           // inform license expired
         public event EventHandler<DateTime> LicenseValidTo;           // inform license valid to date
 
         public static DataStreamProcess Instance { get; } = new DataStreamProcess();
@@ -104,7 +103,6 @@ namespace EmotivUnityPlugin
         {
             _streams = new List<string>();
             // Event register
-            _ctxClient.ErrorMsgReceived             += MessageErrorRecieved;
             _ctxClient.StreamDataReceived           += OnStreamDataReceived;
             _ctxClient.SubscribeDataDone            += OnSubscribeDataDone;
             _ctxClient.UnSubscribeDataDone          += OnUnSubscribeDataDone;
@@ -113,7 +111,7 @@ namespace EmotivUnityPlugin
             _authorizer.UserLogoutNotify            += OnUserLogoutNotify;
             _authorizer.AuthorizedFailed            += OnAuthorizedFailed;
             _authorizer.GetLicenseInfoDone          += OnGetLicenseInfoDone;
-            _authorizer.LicenseExpired              += OnLicenseExpired;
+            _authorizer.ErrorMsgReceived            += MessageErrorRecieved;
             _authorizer.ConnectServiceStateChanged  += OnConnectServiceStateChanged;
             _sessionHandler.SessionClosedOK         += OnSessionClosedOK;
             _sessionHandler.SessionClosedNotify     += OnSessionClosedNotify;
@@ -139,10 +137,6 @@ namespace EmotivUnityPlugin
             _connectCortexState = state;
         }
 
-        private void OnLicenseExpired(object sender, License lic)
-        {
-            LicenseExpired(this, lic.hardLimitTime); // inform hard limit
-        }
 
         private void OnGetLicenseInfoDone(object sender, License lic)
         {

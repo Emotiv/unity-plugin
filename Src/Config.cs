@@ -126,6 +126,7 @@ namespace EmotivUnityPlugin
         public const int CloudTokenIsRefreshing = -32130;
         public const int NotReAuthorizedError = -32170;
         public const int CortexTokenCompareErrorAppInfo = -32135;
+        public const int CortexTokenNotFit = -32034;
 
     }
 

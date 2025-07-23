@@ -47,7 +47,7 @@ namespace EmotivUnityPlugin
         private DataStreamManager _dsManager = DataStreamManager.Instance;
         private BCITraining _bciTraining = BCITraining.Instance;
         private RecordManager _recordMgr = RecordManager.Instance;
-        private CortexClient   _ctxClient  = CortexClient.Instance;
+        private Authorizer     _authorizer = Authorizer.Instance;
 
         bool _isAuthorizedOK = false;
         bool _isRecording = false;
@@ -259,7 +259,9 @@ namespace EmotivUnityPlugin
             _bciTraining.ProfileSavedOK += OnProfileSavedOK;
             _bciTraining.GetMentalCommandActionSensitivityOK += OnGetMentalCommandActionSensitivityOK;
             // get error message
-            _ctxClient.ErrorMsgReceived += MessageErrorRecieved;
+            _authorizer.ErrorMsgReceived += MessageErrorRecieved;
+            _authorizer.LicenseExpired += OnLicenseExpired;
+            _authorizer.NoAccessRightNotify += OnNoAccessRightNotify;
         }
 
         /// <summary>
@@ -1147,6 +1149,17 @@ namespace EmotivUnityPlugin
             }
         }
 
+        private void OnNoAccessRightNotify(object sender, string msg)
+        {
+            _messageLog = msg;
+        }
+
+        private void OnLicenseExpired(object sender, License e)
+        {
+            _messageLog = "License expired. Please contact Emotiv to renew your license. \n" +
+                          "Please relogin to apply new license.";
+
+        }
         // clear data
         private void ClearData()
         {
