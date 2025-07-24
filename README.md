@@ -101,18 +101,30 @@ if (n > 0)
 
 ## Recording and Markers
 
-After creating a session, you can start recording EEG data and inject markers:
+After creating a session, you can start recording EEG data, inject markers, and export multiple records. Please note that when stopping a recording, wait until you receive `WarningCode = 30` to ensure data processing is finished before exporting the record.
 
-```csharp
-// Start recording
-EmotivUnityItf.Instance.StartRecord("MyRecordTitle");
-// Inject a marker
-EmotivUnityItf.Instance.InjectMarker("EventLabel", "EventValue");
-// Stop recording
-EmotivUnityItf.Instance.StopRecord();
-```
-
----
+- Start recording:
+   ```csharp
+   EmotivUnityItf.Instance.StartRecord("MyRecordTitle");
+   ```
+- Inject a marker:
+   ```csharp
+   EmotivUnityItf.Instance.InjectMarker("EventLabel", "EventValue");
+   ```
+- Stop recording:
+   ```csharp
+   EmotivUnityItf.Instance.StopRecord();
+   ```
+- Export multiple records (after data processing is complete):
+   ```csharp
+    // Export a record to the desktop
+     string folderPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
+     List<string> recordsToExport = new List<string> { "recordId" };
+     List<string> streamTypes = new List<string> { "EEG", "MOTION" }; // Specify the stream types you want to export
+     string format = "CSV"; // or "CSV", "EDFPLUS", "BDFPLUS"
+     string version = "V2"; // Optional, specify if needed
+     EmotivUnityItf.Instance.ExportRecord(recordsToExport, folderPath, streamTypes, format, version);
+   ```
 
 ## Profile Management and Training
 
