@@ -101,6 +101,8 @@ namespace EmotivUnityPlugin
         //list of having consumer data
         public event EventHandler<List<DateTime>> QueryDatesHavingConsumerDataDone;
         public event EventHandler<List<MentalStateModel>> QueryDayDetailOfConsumerDataDone;
+        public event EventHandler<MultipleResultEventArgs> ExportRecordsFinished;
+        public event EventHandler<string> DataPostProcessingFinished;
 
         public virtual void Init(object context = null) {}
 
@@ -527,6 +529,12 @@ namespace EmotivUnityPlugin
                 }
                 QueryDayDetailOfConsumerDataDone(this, mentalStateList);
             }
+            else if (method == "exportRecord")
+            {
+                JArray successList = (JArray)data["success"];
+                JArray failList = (JArray)data["failure"];
+                ExportRecordsFinished(this, new MultipleResultEventArgs(successList, failList));
+            }
         }
 
         /// <summary>
@@ -600,6 +608,10 @@ namespace EmotivUnityPlugin
             {
                 string message = messageData["behavior"].ToString();
                 HeadsetScanFinished(this, message);
+            }
+            else if (code == WarningCode.DataPostProcessingFinished)
+            {
+                DataPostProcessingFinished(this, messageData["recordId"].ToString());
             }
         }
 
@@ -834,6 +846,52 @@ namespace EmotivUnityPlugin
             param.Add("records", JArray.FromObject(records));
             param.Add("cortexToken", cortexToken);
             SendTextMessage(param, "deleteRecord", true);
+        }
+        
+        // Export Records
+        // Required params: cortexToken, records, folderPath, streamTypes, format
+        public void ExportRecord(string cortexToken, List<string> records, string folderPath,
+                                 List<string> streamTypes, string format, string version = null,
+                                 List<string> licenseIds = null, bool includeDemographics = false,
+                                 bool includeMarkerExtraInfos = false, bool includeSurvey = false,
+                                 bool includeDeprecatedPM = false)
+        {
+            JObject param = new JObject();
+            param.Add("recordIds", JArray.FromObject(records));
+            param.Add("cortexToken", cortexToken);
+            param.Add("folder", folderPath);
+            param.Add("streamTypes", JArray.FromObject(streamTypes));
+            param.Add("format", format); // EDF, CSV, EDFPLUS, BDFPLUS
+
+            // If the format is "EDF", then you must omit version parameter. 
+            // If the format is "CSV", then version parameter must be "V1" or "V2".
+            if (version != null)
+            {
+                param.Add("version", version);
+            }
+            if (licenseIds != null)
+            {
+                param.Add("licenseIds", JArray.FromObject(licenseIds));
+            }
+
+            if (includeDemographics)
+            {
+                param.Add("includeDemographics", includeDemographics);
+            }
+            if (includeMarkerExtraInfos)
+            {
+                param.Add("includeMarkerExtraInfos", includeMarkerExtraInfos);
+            }
+            if (includeSurvey)
+            {
+                param.Add("includeSurvey", includeSurvey);
+            }
+            if (includeDeprecatedPM)
+            {
+                param.Add("includeDeprecatedPM", includeDeprecatedPM);
+            }
+
+            SendTextMessage(param, "exportRecord", true);
         }
 
         // InjectMarker

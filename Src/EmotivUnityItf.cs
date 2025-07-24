@@ -51,7 +51,7 @@ namespace EmotivUnityPlugin
 
         bool _isAuthorizedOK = false;
         bool _isRecording = false;
-
+        Record _recentRecord = null; // the most recent record created and just stopped
         bool _isAutoAcceptTraining = false;
 
         bool _isAutoSaveProfile = false;
@@ -104,6 +104,7 @@ namespace EmotivUnityPlugin
         public bool IsWebViewOpened { get => _isWebViewOpened; set => _isWebViewOpened = value; }
         public string LoadedProfileName { get => _loadedProfileName; set => _loadedProfileName = value; }
         public string WorkingHeadsetId { get => _workingHeadsetId; set => _workingHeadsetId = value; }
+        public Record RecentRecord { get => _recentRecord; set => _recentRecord = value; }
 
 
 #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
@@ -249,6 +250,8 @@ namespace EmotivUnityPlugin
             _recordMgr.informMarkerResult += OnInformMarkerResult;
             _recordMgr.informStartRecordResult += OnInformStartRecordResult;
             _recordMgr.informStopRecordResult += OnInformStopRecordResult;
+            _recordMgr.DataPostProcessingFinished += OnDataPostProcessingFinished;
+            _recordMgr.ExportRecordsFinished += OnExportRecordsFinished;
 
             // bci training
             _bciTraining.InformLoadProfileDone += OnInformLoadProfileDone;
@@ -580,6 +583,32 @@ namespace EmotivUnityPlugin
             _recordMgr.StopRecord();
         }
 
+
+        /// <summary>
+        /// Export one or more records to a specified folder with customizable options.
+        /// </summary>
+        /// <param name="records">List of record UUIDs to export</param>
+        /// <param name="folderPath">Absolute path to the folder for exported files</param>
+        /// <param name="streamTypes">List of stream types to include (e.g., "EEG", "MOTION")</param>
+        /// <param name="format">Export file format ("EDF", "EDFPLUS", "BDFPLUS", "CSV")</param>
+        /// <param name="version">Optional. For "CSV" format, use "V1" or "V2"</param>
+        /// <param name="licenseIds">Optional. License IDs for exporting records from other apps</param>
+        /// <param name="includeDemographics">Include demographic info</param>
+        /// <param name="includeMarkerExtraInfos">Include extra marker info</param>
+        /// <param name="includeSurvey">Include survey data</param>
+        /// <param name="includeDeprecatedPM">Include deprecated performance metrics</param>
+        /// <remarks>See https://emotiv.gitbook.io/cortex-api/records/exportrecord for details</remarks>
+        public void ExportRecord(List<string> records, string folderPath,
+                                 List<string> streamTypes, string format, string version = null,
+                                 List<string> licenseIds = null, bool includeDemographics = false,
+                                 bool includeMarkerExtraInfos = false, bool includeSurvey = false,
+                                 bool includeDeprecatedPM = false)
+        {
+            _recordMgr.ExportRecord(records, folderPath, streamTypes, format, version,
+                                     licenseIds, includeDemographics, includeMarkerExtraInfos,
+                                     includeSurvey, includeDeprecatedPM);
+        }
+
         /// <summary>
         /// Injects an instance marker into the current record.
         /// </summary>
@@ -871,6 +900,7 @@ namespace EmotivUnityPlugin
             UnityEngine.Debug.Log("OnInformStartRecordResult recordId: " + record.Uuid + ", title: "
                 + record.Title + ", startDateTime: " + record.StartDateTime);
             _isRecording = true;
+            _recentRecord = record; // store the recent record
             _messageLog = "The record " + record.Title + " is created at " + record.StartDateTime;
 
         }
@@ -880,6 +910,7 @@ namespace EmotivUnityPlugin
             UnityEngine.Debug.Log("OnInformStopRecordResult recordId: " + record.Uuid + ", title: "
                 + record.Title + ", startDateTime: " + record.StartDateTime + ", endDateTime: " + record.EndDateTime);
             _isRecording = false;
+            _recentRecord = record; // update the recent record
             _messageLog = "The record " + record.Title + " is ended at " + record.EndDateTime;
 
         }
@@ -1160,6 +1191,40 @@ namespace EmotivUnityPlugin
                           "Please relogin to apply new license.";
 
         }
+
+        private void OnExportRecordsFinished(object sender, MultipleResultEventArgs e)
+        {
+            // get successful list
+            JArray successfulList = e.SuccessList;
+            // check _recentRecordId is in the successful list
+            bool exportRecentRecordSuccess = false;
+            if (successfulList != null && successfulList.Count > 0)
+            {
+                foreach (var record in successfulList)
+                {
+                    if (record is JObject recordObj && recordObj["recordId"]?.ToString() == _recentRecord?.Uuid)
+                    {
+                        exportRecentRecordSuccess = true;
+                        break;
+                    }
+                }
+            }
+
+            _messageLog = "Export record  " + _recentRecord?.Title + (exportRecentRecordSuccess ? " successfully. " : " failed. ") +
+                          " The recordId: " + _recentRecord?.Uuid;
+        }
+
+        private void OnDataPostProcessingFinished(object sender, string recordId)
+        {
+            if (recordId == _recentRecord?.Uuid)
+            {
+                _isRecording = false;
+                // ready for exporting recent record
+                _messageLog = "Data post processing finished for record: " + _recentRecord?.Title;
+            }
+        }
+
+
         // clear data
         private void ClearData()
         {

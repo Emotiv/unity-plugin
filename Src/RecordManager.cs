@@ -16,16 +16,27 @@ namespace EmotivUnityPlugin
         private Authorizer     _authorizer      = Authorizer.Instance;
         private SessionHandler _sessionHandler  = SessionHandler.Instance;
 
-        private string _currRecordId;
         private string _currMarkerId;
 
         public static RecordManager Instance { get; } = new RecordManager();
-        
+
         // Event
         public event EventHandler<Record> informStartRecordResult;
         public event EventHandler<Record> informStopRecordResult;
 
         public event EventHandler<JObject> informMarkerResult;
+
+        public event EventHandler<string> DataPostProcessingFinished
+        {
+            add { _ctxClient.DataPostProcessingFinished += value; }
+            remove { _ctxClient.DataPostProcessingFinished -= value; }
+        }
+
+        public event EventHandler<MultipleResultEventArgs> ExportRecordsFinished
+        {
+            add { _ctxClient.ExportRecordsFinished += value; }
+            remove { _ctxClient.ExportRecordsFinished -= value; }
+        }
 
         // Constructor
         public RecordManager ()
@@ -38,16 +49,14 @@ namespace EmotivUnityPlugin
 
         private void OnStopRecordOK(object sender, Record record)
         {
-            UnityEngine.Debug.Log("RecordManager: OnStopRecordOK recordId: " + record.Uuid + 
+            UnityEngine.Debug.Log("RecordManager: OnStopRecordOK recordId: " + record.Uuid +
                                    " at: " + record.EndDateTime);
             informStopRecordResult(this, record);
-            _currRecordId = "";
         }
 
         private void OnCreateRecordOK(object sender, Record record)
         {
             informStopRecordResult(this, record);
-            _currRecordId = record.Uuid;
             informStartRecordResult(this, record);
         }
         private void OnInjectMarkerOK(object sender, JObject markerObj)
@@ -113,6 +122,18 @@ namespace EmotivUnityPlugin
                 // update marker
                 _ctxClient.UpdateMarker(cortexToken, sessionId, _currMarkerId, Utils.GetEpochTimeNow());
             }
+        }
+        
+        public void ExportRecord(List<string> records, string folderPath,
+                                 List<string> streamTypes, string format, string version = null,
+                                 List<string> licenseIds = null, bool includeDemographics = false,
+                                 bool includeMarkerExtraInfos = false, bool includeSurvey = false,
+                                 bool includeDeprecatedPM = false)
+        {
+            _ctxClient.ExportRecord(_authorizer.CortexToken, records, folderPath,
+                                    streamTypes, format, version, licenseIds,
+                                    includeDemographics, includeMarkerExtraInfos,
+                                    includeSurvey, includeDeprecatedPM);
         }
 
     }

@@ -110,7 +110,8 @@ namespace EmotivUnityPlugin
         public const int StreamWritingClosed      = 18;
         public const int CortexIsReady            = 23;
         public const int UserNotAcceptPrivateEULA = 28;
-        public const int HeadsetWrongInformation  = 100;
+        public const int DataPostProcessingFinished = 30; // Data post processing finished, this event is used to notify the app that the data has been processed and is ready for use, for example exporting
+        public const int HeadsetWrongInformation = 100;
         public const int HeadsetCannotConnected   = 101;
         public const int HeadsetConnectingTimeout = 102;
         public const int HeadsetDataTimeOut       = 103;
