@@ -3,7 +3,6 @@ using System.Threading;
 using System.Collections;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
-using ModestTree;
 
 namespace EmotivUnityPlugin
 {
@@ -219,8 +218,10 @@ namespace EmotivUnityPlugin
                     strOut += headset.HeadsetID + "-" + headset.HeadsetConnection + "-" + headset.Status + "; ";
                 }
                 UnityEngine.Debug.Log("DataStreamManager-OnQueryHeadsetOK: " + strOut);
-                if (strOut.IsEmpty())
-                    strOut = "No headset available at "  + DateTime.Now.ToString("HH:mm:ss");
+                if (string.IsNullOrEmpty(strOut))
+                {
+                    strOut = "No headset available at " + DateTime.Now.ToString("HH:mm:ss");
+                }
                 MessageQueryHeadsetOK(this, strOut);
             }
         }
