@@ -56,6 +56,8 @@ namespace EmotivUnityPlugin
 
         public event EventHandler<string> InformEraseDone; // inform erase done for action
 
+        public event EventHandler<string> InformUnsupportedDeviceForProfile; // inform unsupported device for profile
+
         /// <summary>
         /// all profiles of user.
         /// </summary>
@@ -314,11 +316,9 @@ namespace EmotivUnityPlugin
             {
                 UnityEngine.Debug.LogError("BCITraining: OnCreateProfileOK: mismatch profilename ");
             }
-
-
         }
 
-        private void OnQueryProfileOK(object sender, List<string> profiles)
+        private void OnQueryProfileOK(object sender, List<EmoProfile> profiles)
         {
             if (profiles.Count == 0)
             {
@@ -331,31 +331,36 @@ namespace EmotivUnityPlugin
             }
             else
             {
-                _profileLists = new List<string>(profiles);
-                if (string.IsNullOrEmpty(_wantedProfileName))
-                {
-                    return;
-                }
+                _profileLists = new List<string>();
                 bool foundProfile = false;
-
-                UnityEngine.Debug.Log("OnQueryProfileOK: number of profiles " +_profileLists.Count.ToString());
-
-                foreach (var profileName in _profileLists)
+                bool isDeviceSupported = false;
+                foreach (var profile in profiles)
                 {
-                    if (_wantedProfileName == profileName)
+                    _profileLists.Add(profile.ProfileName);
+                    if (profile.ProfileName == _wantedProfileName)
                     {
-                        UnityEngine.Debug.Log("OnQueryProfileOK: the profile" + _wantedProfileName + " is existed.");
                         foundProfile = true;
-                        break;
+                        if (!string.IsNullOrEmpty(_workingHeadsetId))
+                        {
+                            // Check if the profile supports the current headset
+                            isDeviceSupported = profile.IsDeviceSupported(_workingHeadsetId);
+                        }
                     }
                 }
+
                 if (!foundProfile)
                 {
                     // create new profile
                     _trainingHandler.CreateProfile(_wantedProfileName, _workingHeadsetId);
                 }
-                else {
+                else if (isDeviceSupported)
+                {
+                    // load profile
                     _trainingHandler.GetCurrentProfile(_workingHeadsetId);
+                }
+                else
+                {
+                    InformUnsupportedDeviceForProfile?.Invoke(this, _wantedProfileName);
                 }
             }
         }
