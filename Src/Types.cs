@@ -6,6 +6,53 @@ using System.Runtime.Serialization;
 
 namespace EmotivUnityPlugin
 {
+    public class EmoProfile
+    {
+        public string ProfileName { get; set; }
+        public string[] SupportedDevices { get; set; }
+
+        public EmoProfile()
+        {
+            ProfileName = string.Empty;
+            SupportedDevices = new string[0];
+        }
+
+        public EmoProfile(string profileName, List<string> eegChannels)
+        {
+            ProfileName = profileName;
+            SupportedDevices = ParseSupportedDevices(eegChannels);
+        }
+
+        private string[] ParseSupportedDevices(List<string> eegChannels)
+        {
+            if (eegChannels.Count > 0 && (eegChannels[0].StartsWith("Ch-") || (eegChannels.Contains("L1") && eegChannels.Contains("R1"))))
+                return new string[] { "BGX" };
+
+            var insightList = new List<string> { "AF3", "T7", "Pz", "T8", "AF4" };
+            var epocList = new List<string> { "AF3", "F7", "F3", "FC5", "T7", "P7", "O1", "O2", "P8", "T8", "FC6", "F4", "F8", "AF4" };
+            var mn8List = new List<string> { "T7", "T8" };
+
+            if (eegChannels.Count == insightList.Count && eegChannels.TrueForAll(c => insightList.Contains(c)))
+                return new string[] { "INSIGHT" };
+            if (eegChannels.Count == epocList.Count && eegChannels.TrueForAll(c => epocList.Contains(c)))
+                return new string[] { "EPOC", "EPOCFLEX" };
+            if (eegChannels.Count == mn8List.Count && eegChannels.TrueForAll(c => mn8List.Contains(c)))
+                return new string[] { "MN8", "MW20" };
+
+            // Default fallback
+            return new string[] { "EPOCFLEX" };
+        }
+        // check if a profile support the headset with headsetid.
+        public bool IsDeviceSupported(string headsetId)
+        {
+            if (SupportedDevices.Length == 0)
+                return false;
+
+            // Check if the headsetId is in the list of supported devices
+            return Array.Exists(SupportedDevices, device => headsetId.StartsWith(device, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
     public enum ContactQualityValue {
         NO_SIGNAL = 0,
         VERY_BAD,

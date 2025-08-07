@@ -62,6 +62,7 @@ namespace EmotivUnityPlugin
 
         bool _isProfileLoaded = false;
         string _loadedProfileName = "";
+        bool _isSupportedDeviceForProfile = true; // true if the current headset is supported for the profile
 
         private string _workingHeadsetId = "";
         private string _dataSubLog = ""; // data subscribing log
@@ -105,6 +106,7 @@ namespace EmotivUnityPlugin
         public string LoadedProfileName { get => _loadedProfileName; set => _loadedProfileName = value; }
         public string WorkingHeadsetId { get => _workingHeadsetId; set => _workingHeadsetId = value; }
         public Record RecentRecord { get => _recentRecord; set => _recentRecord = value; }
+        public bool IsSupportedDeviceForProfile { get => _isSupportedDeviceForProfile; set => _isSupportedDeviceForProfile = value; }
 
 
 #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
@@ -261,10 +263,16 @@ namespace EmotivUnityPlugin
             _bciTraining.InformTrainedSignatureActions += OnInformTrainedSignatureActions;
             _bciTraining.ProfileSavedOK += OnProfileSavedOK;
             _bciTraining.GetMentalCommandActionSensitivityOK += OnGetMentalCommandActionSensitivityOK;
+            _bciTraining.InformUnsupportedDeviceForProfile += OnInformUnsupportedDeviceForProfile;
             // get error message
             _authorizer.ErrorMsgReceived += MessageErrorRecieved;
             _authorizer.LicenseExpired += OnLicenseExpired;
             _authorizer.NoAccessRightNotify += OnNoAccessRightNotify;
+        }
+
+        private void OnInformUnsupportedDeviceForProfile(object sender, string profileName)
+        {
+            _isSupportedDeviceForProfile = false;
         }
 
         /// <summary>
@@ -868,13 +876,17 @@ namespace EmotivUnityPlugin
         {
             _workingHeadsetId = headsetId;
             _messageLog = "A session working with " + headsetId + " is activated successfully.";
+            // reset profile and training data when session is activated
+            ResetProfileAndTrainingData();
         }
 
         private void OnInformLoadProfileDone(object sender, string profileName)
         {
+            UnityEngine.Debug.Log("OnInformLoadProfileDone:  The profile " + profileName + " is loaded successfully.");
             _messageLog = "The profile "+ profileName + " is loaded successfully.";
             _isProfileLoaded = true;
             _loadedProfileName = profileName;
+            _isSupportedDeviceForProfile = true; // assume the current headset is supported for the profile
             // get trained signature actions
             GetTrainedSignatureActions("mentalCommand");
 
@@ -1229,8 +1241,25 @@ namespace EmotivUnityPlugin
         private void ClearData()
         {
             _isAuthorizedOK = false;
-            _isProfileLoaded = false;
             _workingHeadsetId = "";
+            ResetProfileAndTrainingData();
+        }
+        
+
+        /// <summary>
+        /// Reset the loaded profile and all training-related data.
+        /// </summary>
+        public void ResetProfileAndTrainingData()
+        {
+            _isProfileLoaded = false;
+            _loadedProfileName = "";
+            _isMCTrainingCompleted = false;
+            _isMCTrainingSuccess = false;
+            _isAutoAcceptTraining = false;
+            _isAutoSaveProfile = false;
+            _isSupportedDeviceForProfile = true;
+            _trainedSignatureActions.Clear();
+            _mentalCommandActionSensitivity.Clear();
             _desiredErasingProfiles.Clear();
         }
 
