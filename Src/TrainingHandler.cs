@@ -19,7 +19,7 @@ namespace EmotivUnityPlugin
         
 
         // event
-        public event EventHandler<List<string>> QueryProfileOK;
+        public event EventHandler<List<EmoProfile>> QueryProfileOK;
         public event EventHandler<string> ProfileLoaded;
         public event EventHandler<bool> ProfileUnLoaded;
         public event EventHandler<bool> TrainingSucceeded;
@@ -90,11 +90,17 @@ namespace EmotivUnityPlugin
         private void OnQueryProfileOK(object sender, JArray profiles)
         {
             UnityEngine.Debug.Log("QueryProfileOK" + profiles);
-            List<string> profileLists = new List<string>();
+            List<EmoProfile> profileLists = new List<EmoProfile>();
             foreach (JObject ele in profiles)
             {
                 string name = (string)ele["name"];
-                profileLists.Add(name);
+                List<string> eegChannels = new List<string>();
+                JArray channels = (JArray)ele["eegChannels"];
+                foreach (var channel in channels)
+                {
+                    eegChannels.Add(channel.ToString());
+                }
+                profileLists.Add(new EmoProfile(name, eegChannels));
             }
             QueryProfileOK(this, profileLists);
         }
