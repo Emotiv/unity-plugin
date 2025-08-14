@@ -108,6 +108,15 @@ namespace EmotivUnityPlugin
         public Record RecentRecord { get => _recentRecord; set => _recentRecord = value; }
         public bool IsSupportedDeviceForProfile { get => _isSupportedDeviceForProfile; set => _isSupportedDeviceForProfile = value; }
 
+        /// <summary>
+        /// Gets the current Emotiv ID of the logged-in user.
+        /// </summary>
+        /// <returns>The current Emotiv ID, or empty string if not logged in.</returns>
+        public string GetCurrentEmotivId()
+        {
+            return _authorizer.CurrentEmotivId;
+        }
+
 
 #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
         private CrossPlatformBrowser _crossPlatformBrowser;

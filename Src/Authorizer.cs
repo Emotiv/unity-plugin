@@ -47,6 +47,20 @@ namespace EmotivUnityPlugin
 
         public static Authorizer Instance { get; } = new Authorizer();
         public string LicenseID { get => _licenseID; set => _licenseID = value; }
+        
+        /// <summary>
+        /// Gets the current Emotiv ID of the logged-in user.
+        /// </summary>
+        /// <value>The current Emotiv ID.</value>
+        public string CurrentEmotivId
+        {
+            get {
+                lock (_locker)
+                {
+                    return _emotivId;
+                }
+            }
+        }
 
         public Authorizer()
         {

@@ -337,6 +337,17 @@ namespace EmotivUnityPlugin
             return emotivUnityItf.GetTrainingTimeForAction(action);
         }
 
+
+        // add description
+        /// <summary>
+        /// Gets the current Emotiv ID of the logged-in user.
+        /// </summary>
+        /// <returns>The current Emotiv ID, or empty string if not logged in.</returns>
+        public string GetCurrentEmotivId()
+        {
+            return emotivUnityItf.GetCurrentEmotivId();
+        }
+
         /// <summary>
         /// Get the mental command action sensitivity for the first trained action except neutral (pull action).
         /// Should be called after training is completed. Default sensitivity is 5
