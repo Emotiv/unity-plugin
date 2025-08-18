@@ -56,6 +56,7 @@ public class PostProcessBuild
 
             PlistElementDict rootDict = plist.root;
             rootDict.SetString("NSBluetoothAlwaysUsageDescription", "This will allow app to find and connect to Bluetooth accessories.");
+            rootDict.SetBoolean("ITSAppUsesNonExemptEncryption", false); 
 
             plist.WriteToFile(plistPath);
         }
