@@ -1,0 +1,94 @@
+@Library('shared_jenkins_pipeline@COR-5754') _
+
+import org.emotiv.unity.UnityBuild
+
+def app_unity = new UnityBuild(this)
+
+def build_unity_plugin(builder) {
+    builder.build_unity_plugin('./Src', 'unity-plugin-package-build')
+}
+
+def clean_build_folder(builder) {
+    builder.clean_build_folder()
+}
+
+pipeline {
+    agent none
+    options { 
+        disableConcurrentBuilds abortPrevious: true
+        copyArtifactPermission '*'
+        parallelsAlwaysFailFast() 
+    }
+    environment {
+        custom_workspace = "workspace/emotiv-unity-plugin"
+        UNITY_PATH_MAC = "/Applications/Unity/Hub/Editor/6000.0.36f1/Unity.app/Contents/MacOS/Unity"
+    }
+    stages {
+        stage('Build unity plugin develop version') {
+            when {
+                branch 'develop'
+            }
+            environment {
+                build_type = "Debug"
+            }
+            agent {
+                node {
+                    label 'mac_m2'
+                    customWorkspace env.custom_workspace
+                }
+            }
+            steps {
+                echo 'Building code from branch ' + env.BRANCH_NAME
+                script {
+                    build_unity_plugin(app_unity)
+                }
+            }
+            post { 
+                success { 
+                    archiveArtifacts artifacts: '**/*.unitypackage', 
+                    followSymlinks: false,
+                    fingerprint: true
+                }
+                cleanup {
+                    clean_build_folder(app_unity)
+                }
+            }
+        }
+        stage('Build unity plugin master version') {
+            when {
+                branch 'master'
+            }
+            agent {
+                node {
+                    label 'mac_m2'
+                    customWorkspace env.custom_workspace
+                }
+            }
+            steps {
+                echo 'Building code from branch ' + env.BRANCH_NAME
+                script {
+                    build_unity_app(app_unity, app_version, true)
+                }
+            }
+            post { 
+                success { 
+                    archiveArtifacts artifacts: '**/*.unitypackage', 
+                    followSymlinks: false,
+                    fingerprint: true
+                }
+                cleanup {
+                    clean_build_folder(app_unity)
+                }
+            }
+        }
+        stage('Send Notification') {
+            agent any
+            options { skipDefaultCheckout() }
+            steps {
+                script {
+                    googlechatNotification()
+                }
+            }
+        }
+    }
+}
