@@ -4,8 +4,39 @@ import org.emotiv.unity.UnityBuild
 
 def app_unity = new UnityBuild(this)
 
-def build_unity_plugin(builder) {
-    builder.build_unity_plugin('./Src', 'unity-plugin-package-build')
+def get_cortex_job_build(is_build_product) {
+    def cortex_parent_job = 'Cortex-Lib-Mobile-Native'
+    if(!is_build_product)
+    {
+        def job_name = 'develop'
+        return ["${cortex_parent_job}/${job_name}",
+        "${env.JENKINS_URL}/job/${cortex_parent_job}/job/${job_name}"]
+    }
+    else
+    {
+        def job_name = "${env.BRANCH_NAME}".replace("/", "%2F")
+        return ["${cortex_parent_job}/${job_name}",
+        "${env.JENKINS_URL}/job/${cortex_parent_job}/job/${job_name}"]
+    }
+}
+
+def build_unity_plugin(builder, is_build_product = false) {
+    def cortex_info = get_cortex_job_build(is_build_product)
+    def cortex_lib_name = null
+    builder.clean_build_folder()
+    echo "build with cortex job ${cortex_info[0]}"
+    if (is_build_product) 
+    {
+        cortex_lib_name = "EmotivCortexLib-release" 
+    }
+    else
+    {
+        cortex_lib_name = "EmotivCortexLib-debug"
+    }
+    builder.copy_cortex_lib_android(cortex_info[0], cortex_info[1], cortex_lib_name)
+    builder.build_unity_plugin_android('./Src')
+    builder.copy_cortex_lib_ios(cortex_info[0], cortex_info[1]) 
+    builder.build_unity_plugin_ios('./Src')
 }
 
 def clean_build_folder(builder) {
