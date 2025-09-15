@@ -34,9 +34,8 @@ def build_unity_plugin(builder, is_build_product = false) {
         cortex_lib_name = "EmotivCortexLib-debug"
     }
     builder.copy_cortex_lib_android(cortex_info[0], cortex_info[1], cortex_lib_name)
-    builder.build_unity_plugin_android('./Src')
     builder.copy_cortex_lib_ios(cortex_info[0], cortex_info[1]) 
-    builder.build_unity_plugin_ios('./Src')
+    builder.build_unity_plugin('./Src', 'unity-plugin-package-build')
 }
 
 def clean_build_folder(builder) {
