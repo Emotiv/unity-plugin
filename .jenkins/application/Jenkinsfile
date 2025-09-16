@@ -56,7 +56,7 @@ pipeline {
     stages {
         stage('Build unity plugin develop version') {
             when {
-                branch 'develop'
+                branch 'pkgTest'
             }
             environment {
                 build_type = "Debug"
@@ -108,15 +108,6 @@ pipeline {
                 }
                 cleanup {
                     clean_build_folder(app_unity)
-                }
-            }
-        }
-        stage('Send Notification') {
-            agent any
-            options { skipDefaultCheckout() }
-            steps {
-                script {
-                    googlechatNotification()
                 }
             }
         }
