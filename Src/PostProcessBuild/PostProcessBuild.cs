@@ -30,17 +30,17 @@ public class PostProcessBuild
             }
 
             // Add and link EmotivCortexLib.xcframework to main target
-            // string frameworkPath = Path.Combine(pathToBuiltProject, "Frameworks/EmotivCortexLib.xcframework");
-            // string fileGuid = pbxProject.AddFile(frameworkPath, "Frameworks/EmotivCortexLib.xcframework", PBXSourceTree.Source);
-            // pbxProject.AddFileToBuild(targetGuid, fileGuid);
-            // pbxProject.AddFileToBuild(unityFrameworkTargetGuid, fileGuid);
+            string frameworkPath = Path.Combine(pathToBuiltProject, "Frameworks/EmotivUnityPlugin/IosPlugin/EmotivCortexLib.xcframework");
+            string fileGuid = pbxProject.AddFile(frameworkPath, "Frameworks/EmotivUnityPlugin/IosPlugin/EmotivCortexLib.xcframework", PBXSourceTree.Source);
+            pbxProject.AddFileToBuild(targetGuid, fileGuid);
+            pbxProject.AddFileToBuild(unityFrameworkTargetGuid, fileGuid);
 
             // Add the framework to the "Embed Frameworks" build phase
-            // string embedPhase = pbxProject.AddCopyFilesBuildPhase(targetGuid, "Embed Frameworks", "", "10");
-            // pbxProject.AddFileToBuildSection(targetGuid, embedPhase, fileGuid);
+            string embedPhase = pbxProject.AddCopyFilesBuildPhase(targetGuid, "Embed Frameworks", "", "10");
+            pbxProject.AddFileToBuildSection(targetGuid, embedPhase, fileGuid);
 
             // Ensure "Code Sign On Copy" is enabled for the framework
-            // PBXProjectExtensions.AddFileToEmbedFrameworks(pbxProject, targetGuid, fileGuid);
+            PBXProjectExtensions.AddFileToEmbedFrameworks(pbxProject, targetGuid, fileGuid);
 
             pbxProject.AddBuildProperty(targetGuid, "FRAMEWORK_SEARCH_PATHS", "$(PROJECT_DIR)/Frameworks");
             pbxProject.AddBuildProperty(targetGuid, "OTHER_LDFLAGS", "-framework EmotivCortexLib");
@@ -55,7 +55,6 @@ public class PostProcessBuild
             plist.ReadFromFile(plistPath);
 
             PlistElementDict rootDict = plist.root;
-            string versionNumber = System.Environment.GetEnvironmentVariable("VERSION_NUMBER");
             rootDict.SetString("NSBluetoothAlwaysUsageDescription", "This will allow app to find and connect to Bluetooth accessories.");
             rootDict.SetBoolean("ITSAppUsesNonExemptEncryption", false);
 
