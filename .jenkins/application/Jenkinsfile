@@ -4,6 +4,10 @@ import org.emotiv.unity.UnityBuild
 
 def app_unity = new UnityBuild(this)
 
+def get_app_version() {
+    return processConfig('.jenkins/application/config_release.json')
+}
+
 def get_cortex_job_build(is_build_product) {
     def cortex_parent_job = 'Cortex-Lib-Mobile-Unity'
     if(!is_build_product)
@@ -103,7 +107,7 @@ pipeline {
             steps {
                 echo 'Building code from branch ' + env.BRANCH_NAME
                 script {
-                    build_unity_app(app_unity, app_version, true)
+                    build_unity_plugin(app_unity)
                 }
             }
             post { 
@@ -130,7 +134,8 @@ pipeline {
             steps {
                 echo 'Building code from branch ' + env.BRANCH_NAME
                 script {
-                    build_unity_app(app_unity, app_version, true)
+                    def app_version = get_app_version()
+                    build_unity_plugin(app_unity)
                 }
             }
             post { 
