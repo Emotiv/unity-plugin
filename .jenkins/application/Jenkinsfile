@@ -1,0 +1,153 @@
+@Library('shared_jenkins_pipeline@COR-5754') _
+
+import org.emotiv.unity.UnityBuild
+
+def app_unity = new UnityBuild(this)
+
+def get_app_version() {
+    return processConfig('.jenkins/application/config_release.json')
+}
+
+def get_cortex_job_build(is_build_product) {
+    def cortex_parent_job = 'Cortex-Lib-Mobile-Unity'
+    if(!is_build_product)
+    {
+        def job_name = 'develop'
+        return ["${cortex_parent_job}/${job_name}",
+        "${env.JENKINS_URL}/job/${cortex_parent_job}/job/${job_name}"]
+    }
+    else
+    {
+        if (env.BRANCH_NAME == 'master') {
+            def job_name = 'master'
+            return ["${cortex_parent_job}/${job_name}",
+            "${env.JENKINS_URL}/job/${cortex_parent_job}/job/${job_name}"]
+        } else {
+            def job_name = "${env.BRANCH_NAME}".replace("/", "%2F")
+            return ["${cortex_parent_job}/${job_name}",
+            "${env.JENKINS_URL}/job/${cortex_parent_job}/job/${job_name}"]
+        }
+    }
+}
+
+def build_unity_plugin(builder, is_build_product = false) {
+    def cortex_info = get_cortex_job_build(is_build_product)
+    def cortex_lib_name = null
+    builder.clean_build_folder()
+    echo "build with cortex job ${cortex_info[0]}"
+    if (is_build_product) 
+    {
+        cortex_lib_name = "EmotivCortexLib-release" 
+    }
+    else
+    {
+        cortex_lib_name = "EmotivCortexLib-debug"
+    }
+    builder.copy_cortex_lib_android(cortex_info[0], cortex_info[1], cortex_lib_name)
+    builder.copy_cortex_lib_ios(cortex_info[0], cortex_info[1]) 
+    builder.build_unity_plugin('./Src', 'unity-plugin-package-build')
+}
+
+def clean_build_folder(builder) {
+    builder.clean_build_folder()
+}
+
+pipeline {
+    agent none
+    options { 
+        disableConcurrentBuilds abortPrevious: true
+        copyArtifactPermission '*'
+        parallelsAlwaysFailFast() 
+    }
+    environment {
+        custom_workspace = "workspace/emotiv-unity-plugin"
+        UNITY_PATH_MAC = "/Applications/Unity/Hub/Editor/6000.0.36f1/Unity.app/Contents/MacOS/Unity"
+    }
+    stages {
+        stage('Build unity plugin develop version') {
+            when {
+                branch 'develop'
+            }
+            environment {
+                build_type = "Debug"
+            }
+            agent {
+                node {
+                    label 'mac_m2'
+                    customWorkspace env.custom_workspace
+                }
+            }
+            steps {
+                echo 'Building code from branch ' + env.BRANCH_NAME
+                script {
+                    build_unity_plugin(app_unity)
+                }
+            }
+            post { 
+                success { 
+                    archiveArtifacts artifacts: '**/*.unitypackage', 
+                    followSymlinks: false,
+                    fingerprint: true
+                }
+                cleanup {
+                    clean_build_folder(app_unity)
+                }
+            }
+        }
+        stage('Build unity plugin master version') {
+            when {
+                branch 'master'
+            }
+            agent {
+                node {
+                    label 'mac_m2'
+                    customWorkspace env.custom_workspace
+                }
+            }
+            steps {
+                echo 'Building code from branch ' + env.BRANCH_NAME
+                script {
+                    build_unity_plugin(app_unity)
+                }
+            }
+            post { 
+                success { 
+                    archiveArtifacts artifacts: '**/*.unitypackage', 
+                    followSymlinks: false,
+                    fingerprint: true
+                }
+                cleanup {
+                    clean_build_folder(app_unity)
+                }
+            }
+        }
+        stage('Build unity plugin release version') {
+            when {
+                branch 'release/**'
+            }
+            agent {
+                node {
+                    label 'mac_m2'
+                    customWorkspace env.custom_workspace
+                }
+            }
+            steps {
+                echo 'Building code from branch ' + env.BRANCH_NAME
+                script {
+                    def app_version = get_app_version()
+                    build_unity_plugin(app_unity)
+                }
+            }
+            post { 
+                success { 
+                    archiveArtifacts artifacts: '**/*.unitypackage', 
+                    followSymlinks: false,
+                    fingerprint: true
+                }
+                cleanup {
+                    clean_build_folder(app_unity)
+                }
+            }
+        }
+    }
+}
