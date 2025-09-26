@@ -135,7 +135,7 @@ pipeline {
                 echo 'Building code from branch ' + env.BRANCH_NAME
                 script {
                     def app_version = get_app_version()
-                    build_unity_plugin(app_unity)
+                    build_unity_plugin(app_unity, true)
                 }
             }
             post { 
