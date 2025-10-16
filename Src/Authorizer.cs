@@ -104,12 +104,12 @@ namespace EmotivUnityPlugin
             {
             case ErrorCode.AuthorizeTokenError:
             case ErrorCode.LoginTokenError:
+            case ErrorCode.NoAppInfoOrAccessRightError:
                 UnityEngine.Debug.LogError($"OnErrorMsgReceived error: {errorInfo.MessageError}. Need to re-login for emotivId: {_emotivId}");
-    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
+                #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
                 shouldLogout = !string.IsNullOrEmpty(_emotivId);
-    #endif
+                #endif
                 break;
-
             case ErrorCode.CloudTokenIsRefreshing:
             case ErrorCode.NotReAuthorizedError:
             case ErrorCode.CortexTokenCompareErrorAppInfo:
@@ -117,29 +117,32 @@ namespace EmotivUnityPlugin
                 var tokenInfo = Authorizer.LoadToken();
                 if (string.IsNullOrEmpty(tokenInfo.CortexToken))
                 {
-                UnityEngine.Debug.Log($"OnErrorMsgReceived: No token found. Need to logout user {_emotivId}");
-    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
-                shouldLogout = !string.IsNullOrEmpty(_emotivId);
-    #endif
+                    UnityEngine.Debug.Log($"OnErrorMsgReceived: No token found. Need to logout user {_emotivId}");
+                    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
+                    shouldLogout = !string.IsNullOrEmpty(_emotivId);
+                    #endif
                 }
                 else
                 {
-                UnityEngine.Debug.Log($"OnErrorMsgReceived: {errorInfo.MessageError} Re-authorize again until it is done");
-                shouldAuthorize = true;
+                    UnityEngine.Debug.Log($"OnErrorMsgReceived: {errorInfo.MessageError} Re-authorize again until it is done");
+                    shouldAuthorize = true;
                 }
+                    break;
+            default:
+                // Do nothing. No special handling for other error codes
                 break;
             }
 
             if (shouldLogout)
             {
-            _ctxClient.Logout(_emotivId);
-            return;
+                _ctxClient.Logout(_emotivId);
+                return;
             }
 
             if (shouldAuthorize)
             {
-            _ctxClient.Authorize(_licenseID, _debitNo);
-            return;
+                _ctxClient.Authorize(_licenseID, _debitNo);
+                return;
             }
 
             // send other error messages to EmotivUnityItf
