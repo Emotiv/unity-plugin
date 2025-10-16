@@ -859,7 +859,12 @@ namespace EmotivUnityPlugin
             JObject param = new JObject();
             param.Add("recordIds", JArray.FromObject(records));
             param.Add("cortexToken", cortexToken);
+
+#if !UNITY_IOS
+            // On iOS, the parameter folder doesn't exist. 
+            // Cortex exports the data to the "Documents" folder of the current application.
             param.Add("folder", folderPath);
+#endif
             param.Add("streamTypes", JArray.FromObject(streamTypes));
             param.Add("format", format); // EDF, CSV, EDFPLUS, BDFPLUS
 
