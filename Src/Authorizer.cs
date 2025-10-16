@@ -128,9 +128,6 @@ namespace EmotivUnityPlugin
                     shouldAuthorize = true;
                 }
                     break;
-            default:
-                // Do nothing. No special handling for other error codes
-                break;
             }
 
             if (shouldLogout)
