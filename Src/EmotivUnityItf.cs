@@ -319,7 +319,15 @@ namespace EmotivUnityPlugin
             _dsManager.Logout();
         }
 
-        // acceep eula and privacy policy
+        /// <summary>
+        /// Retry authorization process
+        /// </summary>
+        public void RetryAuthorize()
+        {
+            _authorizer.RetryAuthorize();
+        }
+
+        // accept eula and privacy policy
         public void AcceptEulaAndPrivacyPolicy()
         {
             _dsManager.AcceptEulaAndPrivacyPolicy();

@@ -98,39 +98,27 @@ namespace EmotivUnityPlugin
 
         private void OnErrorMsgReceived(object sender, ErrorMsgEventArgs errorInfo)
         {
+
+            UnityEngine.Debug.Log($"OnErrorMsgReceived: Code={errorInfo.Code}, Message={errorInfo.MessageError}, Method={errorInfo.MethodName}");
+
+#if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
+            // For mobile and embedded lib platforms
             bool shouldLogout = false;
             bool shouldAuthorize = false;
-
             switch (errorInfo.Code)
             {
-            case ErrorCode.AuthorizeTokenError:
-            case ErrorCode.LoginTokenError:
-            case ErrorCode.NoAppInfoOrAccessRightError:
-                UnityEngine.Debug.LogError($"OnErrorMsgReceived error: {errorInfo.MessageError}. Need to re-login for emotivId: {_emotivId}");
-                #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
-                shouldLogout = !string.IsNullOrEmpty(_emotivId);
-                #endif
-                break;
-            case ErrorCode.CloudTokenIsRefreshing:
-            case ErrorCode.NotReAuthorizedError:
-            case ErrorCode.CortexTokenCompareErrorAppInfo:
-            case ErrorCode.CortexTokenNotFit:
-                var tokenInfo = Authorizer.LoadToken();
-                if (string.IsNullOrEmpty(tokenInfo.CortexToken))
-                {
-                    UnityEngine.Debug.Log($"OnErrorMsgReceived: No token found. Need to logout user {_emotivId}");
-                    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
+                case ErrorCode.LoginTokenError:
+                case ErrorCode.NoAppInfoOrAccessRightError:
+                case ErrorCode.AuthorizeTokenError:
                     shouldLogout = !string.IsNullOrEmpty(_emotivId);
-                    #endif
-                }
-                else
-                {
-                    UnityEngine.Debug.Log($"OnErrorMsgReceived: {errorInfo.MessageError} Re-authorize again until it is done");
+                    break;
+                case ErrorCode.NotReAuthorizedError:
+                case ErrorCode.CortexTokenCompareErrorAppInfo:
+                case ErrorCode.CortexTokenNotFit:
+                case ErrorCode.CloudTokenIsRefreshing:
                     shouldAuthorize = true;
-                }
                     break;
             }
-
             if (shouldLogout)
             {
                 _ctxClient.Logout(_emotivId);
@@ -142,7 +130,19 @@ namespace EmotivUnityPlugin
                 _ctxClient.Authorize(_licenseID, _debitNo);
                 return;
             }
-
+#else
+            // For desktop without embedded lib
+            switch (errorInfo.Code)
+            {
+                case ErrorCode.NoAppInfoOrAccessRightError:
+                case ErrorCode.AuthorizeTokenError:
+                case ErrorCode.NotReAuthorizedError:
+                case ErrorCode.CortexTokenCompareErrorAppInfo:
+                case ErrorCode.CortexTokenNotFit:
+                    ConnectServiceStateChanged?.Invoke(this, ConnectToCortexStates.Authorize_failed);
+                    return;
+            }
+#endif
             // send other error messages to EmotivUnityItf
             ErrorMsgReceived?.Invoke(this, errorInfo);
         }
@@ -174,6 +174,13 @@ namespace EmotivUnityPlugin
             if (_emotivId == "")
                 return;
             _ctxClient.Logout(_emotivId);
+        }
+
+        /// <summary>
+        /// Retry authorization process
+        /// </summary>
+        public void RetryAuthorize() {
+            _ctxClient.Authorize(_licenseID, _debitNo);
         }
 
         private void OnGetLicenseInfoDone(object sender, License lic)
