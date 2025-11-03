@@ -108,6 +108,9 @@ namespace EmotivUnityPlugin
         public Record RecentRecord { get => _recentRecord; set => _recentRecord = value; }
         public bool IsSupportedDeviceForProfile { get => _isSupportedDeviceForProfile; set => _isSupportedDeviceForProfile = value; }
 
+        // Events
+        public event EventHandler<ErrorMsgEventArgs> ErrorMsgReceived;
+
         /// <summary>
         /// Gets the current Emotiv ID of the logged-in user.
         /// </summary>
@@ -1094,6 +1097,8 @@ namespace EmotivUnityPlugin
             int errorCode   = errorInfo.Code;
 
             _messageLog = "Get Error: errorCode " + errorCode.ToString() + ", message: " + message + ", API: " + method;  
+            // Emit the error message event
+            ErrorMsgReceived?.Invoke(this, errorInfo);
         }
 
         private void OnStreamStopNotify(object sender, List<string> streams)

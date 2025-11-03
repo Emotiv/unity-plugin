@@ -19,7 +19,6 @@ namespace EmotivUnityPlugin
         private SessionHandler _sessionHandler  = SessionHandler.Instance;
 
         ConnectToCortexStates _connectCortexState = ConnectToCortexStates.Service_connecting;
-        string _connectCortexWarningMessage = "";
 
         // Event
         public event EventHandler<ArrayList> MotionDataReceived;      // motion data
@@ -92,8 +91,6 @@ namespace EmotivUnityPlugin
         /// <value>The current _connectCortexState.</value>
 
         public ConnectToCortexStates GetConnectToCortexState() => _connectCortexState;
-
-        public string GetConnectToCortexWarningMessage() => _connectCortexWarningMessage;
 
         public DataStreamProcess() 
         {
@@ -322,7 +319,6 @@ namespace EmotivUnityPlugin
                 _sessionHandler.ClearSessionData();
                 CreateSessionFail(this, message);
             }
-            _connectCortexWarningMessage = message;
             // ErrorNotify(this, message);
         }
 
