@@ -180,6 +180,8 @@ namespace EmotivUnityPlugin
         /// Retry authorization process
         /// </summary>
         public void RetryAuthorize() {
+            // back to authorizing state
+            ConnectServiceStateChanged(this, ConnectToCortexStates.Authorizing);
             _ctxClient.Authorize(_licenseID, _debitNo);
         }
 
