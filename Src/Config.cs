@@ -122,6 +122,7 @@ namespace EmotivUnityPlugin
 
     // error code
     public static class ErrorCode {
+        public const int NoAppInfoOrAccessRightError = -32102; // app do not have access right to or no app info in the Cortex database
         public const int LoginTokenError = -32108;
         public const int AuthorizeTokenError = -32109;
         public const int CloudTokenIsRefreshing = -32130;

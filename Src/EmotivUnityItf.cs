@@ -108,6 +108,18 @@ namespace EmotivUnityPlugin
         public Record RecentRecord { get => _recentRecord; set => _recentRecord = value; }
         public bool IsSupportedDeviceForProfile { get => _isSupportedDeviceForProfile; set => _isSupportedDeviceForProfile = value; }
 
+        // Events
+        public event EventHandler<ErrorMsgEventArgs> ErrorMsgReceived;
+
+        /// <summary>
+        /// Gets the current Emotiv ID of the logged-in user.
+        /// </summary>
+        /// <returns>The current Emotiv ID, or empty string if not logged in.</returns>
+        public string GetCurrentEmotivId()
+        {
+            return _authorizer.CurrentEmotivId;
+        }
+
 
 #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
         private CrossPlatformBrowser _crossPlatformBrowser;
@@ -310,7 +322,15 @@ namespace EmotivUnityPlugin
             _dsManager.Logout();
         }
 
-        // acceep eula and privacy policy
+        /// <summary>
+        /// Retry authorization process
+        /// </summary>
+        public void RetryAuthorize()
+        {
+            _authorizer.RetryAuthorize();
+        }
+
+        // accept eula and privacy policy
         public void AcceptEulaAndPrivacyPolicy()
         {
             _dsManager.AcceptEulaAndPrivacyPolicy();
@@ -1077,6 +1097,8 @@ namespace EmotivUnityPlugin
             int errorCode   = errorInfo.Code;
 
             _messageLog = "Get Error: errorCode " + errorCode.ToString() + ", message: " + message + ", API: " + method;  
+            // Emit the error message event
+            ErrorMsgReceived?.Invoke(this, errorInfo);
         }
 
         private void OnStreamStopNotify(object sender, List<string> streams)
@@ -1328,7 +1350,7 @@ namespace EmotivUnityPlugin
             #if UNITY_ANDROID || UNITY_IOS
             string authorizationUrl = $"https://{server}/api/oauth/authorize/?response_type=code" +
                         $"&client_id={Uri.EscapeDataString(clientId)}" +
-                        $"&redirect_uri={redirectUrl}";
+                        $"&redirect_uri={redirectUrl}" + $"&hide_signup=1&hide_social_signin=1";
             UniWebViewManager.Instance.Init(
                 authorizationUrl, 
                 prefixRedirectUrl

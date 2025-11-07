@@ -30,8 +30,8 @@ public class PostProcessBuild
             }
 
             // Add and link EmotivCortexLib.xcframework to main target
-            string frameworkPath = Path.Combine(pathToBuiltProject, "Frameworks/EmotivCortexLib.xcframework");
-            string fileGuid = pbxProject.AddFile(frameworkPath, "Frameworks/EmotivCortexLib.xcframework", PBXSourceTree.Source);
+            string frameworkPath = Path.Combine(pathToBuiltProject, "Frameworks/EmotivUnityPlugin/IosPlugin/EmotivCortexLib.xcframework");
+            string fileGuid = pbxProject.AddFile(frameworkPath, "Frameworks/EmotivUnityPlugin/IosPlugin/EmotivCortexLib.xcframework", PBXSourceTree.Source);
             pbxProject.AddFileToBuild(targetGuid, fileGuid);
             pbxProject.AddFileToBuild(unityFrameworkTargetGuid, fileGuid);
 
@@ -56,6 +56,7 @@ public class PostProcessBuild
 
             PlistElementDict rootDict = plist.root;
             rootDict.SetString("NSBluetoothAlwaysUsageDescription", "This will allow app to find and connect to Bluetooth accessories.");
+            rootDict.SetBoolean("ITSAppUsesNonExemptEncryption", false);
 
             plist.WriteToFile(plistPath);
         }

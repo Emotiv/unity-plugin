@@ -16,6 +16,7 @@ namespace EmotivUnityPlugin
         private static string _emotivId = "";
         private string _licenseID = "";
         private static int _debitNo = 5000; // default value
+        private static double _currentLoginTime = 0; // store current login time
 
         /// <summary>
         /// Timer for waiting a user login
@@ -47,6 +48,20 @@ namespace EmotivUnityPlugin
 
         public static Authorizer Instance { get; } = new Authorizer();
         public string LicenseID { get => _licenseID; set => _licenseID = value; }
+        
+        /// <summary>
+        /// Gets the current Emotiv ID of the logged-in user.
+        /// </summary>
+        /// <value>The current Emotiv ID.</value>
+        public string CurrentEmotivId
+        {
+            get {
+                lock (_locker)
+                {
+                    return _emotivId;
+                }
+            }
+        }
 
         public Authorizer()
         {
@@ -83,51 +98,51 @@ namespace EmotivUnityPlugin
 
         private void OnErrorMsgReceived(object sender, ErrorMsgEventArgs errorInfo)
         {
+
+            UnityEngine.Debug.Log($"OnErrorMsgReceived: Code={errorInfo.Code}, Message={errorInfo.MessageError}, Method={errorInfo.MethodName}");
+
+#if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
+            // For mobile and embedded lib platforms
             bool shouldLogout = false;
             bool shouldAuthorize = false;
-
             switch (errorInfo.Code)
             {
-            case ErrorCode.AuthorizeTokenError:
-            case ErrorCode.LoginTokenError:
-                UnityEngine.Debug.LogError($"OnErrorMsgReceived error: {errorInfo.MessageError}. Need to re-login for emotivId: {_emotivId}");
-    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
-                shouldLogout = !string.IsNullOrEmpty(_emotivId);
-    #endif
-                break;
-
-            case ErrorCode.CloudTokenIsRefreshing:
-            case ErrorCode.NotReAuthorizedError:
-            case ErrorCode.CortexTokenCompareErrorAppInfo:
-            case ErrorCode.CortexTokenNotFit:
-                var tokenInfo = Authorizer.LoadToken();
-                if (string.IsNullOrEmpty(tokenInfo.CortexToken))
-                {
-                UnityEngine.Debug.Log($"OnErrorMsgReceived: No token found. Need to logout user {_emotivId}");
-    #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
-                shouldLogout = !string.IsNullOrEmpty(_emotivId);
-    #endif
-                }
-                else
-                {
-                UnityEngine.Debug.Log($"OnErrorMsgReceived: {errorInfo.MessageError} Re-authorize again until it is done");
-                shouldAuthorize = true;
-                }
-                break;
+                case ErrorCode.LoginTokenError:
+                case ErrorCode.NoAppInfoOrAccessRightError:
+                case ErrorCode.AuthorizeTokenError:
+                    shouldLogout = !string.IsNullOrEmpty(_emotivId);
+                    break;
+                case ErrorCode.NotReAuthorizedError:
+                case ErrorCode.CortexTokenCompareErrorAppInfo:
+                case ErrorCode.CortexTokenNotFit:
+                case ErrorCode.CloudTokenIsRefreshing:
+                    shouldAuthorize = true;
+                    break;
             }
-
             if (shouldLogout)
             {
-            _ctxClient.Logout(_emotivId);
-            return;
+                _ctxClient.Logout(_emotivId);
+                return;
             }
 
             if (shouldAuthorize)
             {
-            _ctxClient.Authorize(_licenseID, _debitNo);
-            return;
+                _ctxClient.Authorize(_licenseID, _debitNo);
+                return;
             }
-
+#else
+            // For desktop without embedded lib
+            switch (errorInfo.Code)
+            {
+                case ErrorCode.NoAppInfoOrAccessRightError:
+                case ErrorCode.AuthorizeTokenError:
+                case ErrorCode.NotReAuthorizedError:
+                case ErrorCode.CortexTokenCompareErrorAppInfo:
+                case ErrorCode.CortexTokenNotFit:
+                    ConnectServiceStateChanged?.Invoke(this, ConnectToCortexStates.Authorize_failed);
+                    return;
+            }
+#endif
             // send other error messages to EmotivUnityItf
             ErrorMsgReceived?.Invoke(this, errorInfo);
         }
@@ -161,6 +176,15 @@ namespace EmotivUnityPlugin
             _ctxClient.Logout(_emotivId);
         }
 
+        /// <summary>
+        /// Retry authorization process
+        /// </summary>
+        public void RetryAuthorize() {
+            // back to authorizing state
+            ConnectServiceStateChanged(this, ConnectToCortexStates.Authorizing);
+            _ctxClient.Authorize(_licenseID, _debitNo);
+        }
+
         private void OnGetLicenseInfoDone(object sender, License lic)
         {
             // UnityEngine.Debug.Log(" OnGetLicenseInfoDone:  lic: " + lic.licenseId);
@@ -186,7 +210,7 @@ namespace EmotivUnityPlugin
             // load cortexToken
             UserDataInfo tokenInfo  = new UserDataInfo();
             tokenInfo.CortexToken   = cortexToken;
-            tokenInfo.LastLoginTime = Utils.ISODateTimeToEpocTime(DateTime.Now);
+            tokenInfo.LastLoginTime = _currentLoginTime;
             
             lock(_locker)
             {
@@ -215,8 +239,9 @@ namespace EmotivUnityPlugin
                 lock(_locker)
                 {
                     // clear data
-                    _emotivId       = "";
-                    _cortexToken    = "";
+                    _emotivId           = "";
+                    _cortexToken        = "";
+                    _currentLoginTime   = 0;
                 }
                 ConnectServiceStateChanged(this, ConnectToCortexStates.Service_connecting);
             }
@@ -235,7 +260,7 @@ namespace EmotivUnityPlugin
                 
                 UserDataInfo tokenInfo  = new UserDataInfo();
                 tokenInfo.CortexToken   = cortexToken;
-                tokenInfo.LastLoginTime = Utils.ISODateTimeToEpocTime(DateTime.Now);
+                tokenInfo.LastLoginTime = _currentLoginTime;
                 lock (_locker)
                 {
                     tokenInfo.EmotivId  = _emotivId;
@@ -373,7 +398,7 @@ namespace EmotivUnityPlugin
         {
             UnityEngine.Debug.Log("HasAccessRightOK: " + hasAccessRight);
             if (hasAccessRight) {
-                CheckTokenAndAuthorize(_emotivId);
+                CheckTokenAndAuthorize(_emotivId, _currentLoginTime);
             } else {
                 // clear token and remove token file
                 _cortexToken    = "";
@@ -388,9 +413,10 @@ namespace EmotivUnityPlugin
             UnityEngine.Debug.Log("UserLogoutOK :" + message);
             lock(_locker)
             {
-                _cortexToken    = "";
-                _emotivId       = "";
-                _licenseID      = "";
+                _cortexToken        = "";
+                _emotivId           = "";
+                _licenseID          = "";
+                _currentLoginTime   = 0;
             }
             
             // Remove token
@@ -424,14 +450,18 @@ namespace EmotivUnityPlugin
                 if (_waitUserLoginTimer != null && _waitUserLoginTimer.Enabled)
                     _waitUserLoginTimer.Stop();
 
-                // save emotivId
-                lock (_locker) _emotivId   = loginData.EmotivId;
+                // save emotivId and lastLoginTime
+                lock (_locker) 
+                {
+                    _emotivId = loginData.EmotivId;
+                    _currentLoginTime = loginData.LastLoginTime;
+                }
 
                 // notify change sate
                 ConnectServiceStateChanged(this, ConnectToCortexStates.Authorizing);
                 // if embedded cortex lib or mobile platform, do not check access right
 #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
-                CheckTokenAndAuthorize(loginData.EmotivId);
+                CheckTokenAndAuthorize(loginData.EmotivId, loginData.LastLoginTime);
 #else
                 // check access right to the application working with Emotiv Cortex Service
                 _ctxClient.HasAccessRights();
@@ -465,21 +495,31 @@ namespace EmotivUnityPlugin
             }
         }
 
-        private void CheckTokenAndAuthorize(string emotivId)
+        private void CheckTokenAndAuthorize(string emotivId, double currentLoginTime)
         {
             UserDataInfo tokenInfo = Authorizer.LoadToken();
             string cortexToken = tokenInfo.CortexToken;
             string savedEmotivId = tokenInfo.EmotivId;
+            double savedLoginTime = tokenInfo.LastLoginTime;
+            
             if (!string.IsNullOrEmpty(savedEmotivId) &&
                 !string.IsNullOrEmpty(cortexToken) &&
-                savedEmotivId == emotivId)
+                savedEmotivId == emotivId &&
+                currentLoginTime <= savedLoginTime)
             {
                 UnityEngine.Debug.Log("CheckTokenAndAuthorize: has cortex token, generate new token");
                 _ctxClient.GenerateNewToken(cortexToken);
             }
             else
             {
-                UnityEngine.Debug.Log("CheckTokenAndAuthorize: no cortex token, authorize again");
+                if (currentLoginTime > savedLoginTime)
+                {
+                    UnityEngine.Debug.Log("CheckTokenAndAuthorize: current login time is newer than saved token, authorize again");
+                }
+                else
+                {
+                    UnityEngine.Debug.Log("CheckTokenAndAuthorize: no cortex token or invalid conditions, authorize again");
+                }
                 _ctxClient.Authorize(_licenseID, _debitNo);
             }
         }

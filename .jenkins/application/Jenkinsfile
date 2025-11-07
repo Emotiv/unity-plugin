@@ -61,7 +61,7 @@ pipeline {
     }
     environment {
         custom_workspace = "workspace/emotiv-unity-plugin"
-        UNITY_PATH_MAC = "/Applications/Unity/Hub/Editor/6000.0.36f1/Unity.app/Contents/MacOS/Unity"
+        UNITY_PATH_MAC = "/Applications/Unity/Hub/Editor/6000.0.58f2/Unity.app/Contents/MacOS/Unity"
     }
     stages {
         stage('Build unity plugin develop version') {
@@ -135,7 +135,7 @@ pipeline {
                 echo 'Building code from branch ' + env.BRANCH_NAME
                 script {
                     def app_version = get_app_version()
-                    build_unity_plugin(app_unity)
+                    build_unity_plugin(app_unity, true)
                 }
             }
             post { 
