@@ -1350,7 +1350,7 @@ namespace EmotivUnityPlugin
             #if UNITY_ANDROID || UNITY_IOS
             string authorizationUrl = $"https://{server}/api/oauth/authorize/?response_type=code" +
                         $"&client_id={Uri.EscapeDataString(clientId)}" +
-                        $"&redirect_uri={redirectUrl}";
+                        $"&redirect_uri={redirectUrl}" + $"&hide_signup=1&hide_social_signin=1";
             UniWebViewManager.Instance.Init(
                 authorizationUrl, 
                 prefixRedirectUrl
