@@ -104,7 +104,7 @@ namespace EmotivUnityPlugin
             if (context is AndroidJavaObject activity)
             {
                 AndroidJavaObject application = activity.Call<AndroidJavaObject>("getApplication");
-                LoadCortexLibAndroid(application);
+                LoadCortexLibAndroid(application, activity  );
             }
             else
             {
@@ -148,14 +148,14 @@ namespace EmotivUnityPlugin
         }
 
         #if UNITY_ANDROID
-        private void LoadCortexLibAndroid(AndroidJavaObject application)
+        private void LoadCortexLibAndroid(AndroidJavaObject application, AndroidJavaObject activity)
         {
             cortexLibInterfaceProxy = new CortexLibInterfaceProxy();
             AndroidJavaClass cortexLibActivityClass = new AndroidJavaClass("com.emotiv.unityplugin.CortexLibActivity");
             _cortexLibManager = cortexLibActivityClass.CallStatic<AndroidJavaObject>("getInstance");
             if (_cortexLibManager != null)
             {
-                _cortexLibManager.Call("load", application);
+                _cortexLibManager.Call("load", application, activity);
                 _cortexLogHandler = new CortexLogHandler();
                 _cortexLibManager.Call("setJavaLogInterface", _cortexLogHandler);
                 _cortexLibManager.Call("start", cortexLibInterfaceProxy);

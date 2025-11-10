@@ -12,10 +12,10 @@ public class CortexLibManager {
     private final String TAG = CortexLibManager.class.getName();
 
     // This method should be called before start(), stop()
-    public static void load(Application application) {
+    public static void load(Application application, android.app.Activity activity) {
        Log.i("CortexLibManager", "load start: ");
         EmotivLibraryLoader loader = new EmotivLibraryLoader(application);
-        loader.load();
+        loader.load(activity);
     }
 
     public static void testLoad(int a) {

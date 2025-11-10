@@ -35,8 +35,8 @@ public class CortexLibActivity implements CortexLibInterface {
         return ourInstance;
     }
 
-    public void load(Application application) {
-        CortexLibManager.load(application);
+    public void load(Application application, android.app.Activity activity) {
+        CortexLibManager.load(application, activity);
     }
 
     public void start(CortexConnectionInterface cortexResponseInterface) {
