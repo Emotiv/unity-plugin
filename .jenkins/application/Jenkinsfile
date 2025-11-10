@@ -1,4 +1,4 @@
-@Library('shared_jenkins_pipeline@COR-5754') _
+@Library('shared_jenkins_pipeline') _
 
 import org.emotiv.unity.UnityBuild
 
