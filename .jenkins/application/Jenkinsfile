@@ -49,7 +49,7 @@ def build_unity_plugin(builder, is_build_product = false) {
 }
 
 def clean_build_folder(builder) {
-    // builder.clean_build_folder()
+    builder.clean_build_folder()
 }
 
 pipeline {
