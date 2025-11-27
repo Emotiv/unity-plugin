@@ -42,7 +42,7 @@ namespace EmotivUnityPlugin
     public class CortexLogHandler : AndroidJavaProxy
     {
         public CortexLogHandler() : base("com.emotiv.unityplugin.JavaLogInterface") { }
-        public void onReceivedLog(String msg) => MyLogger.Instance.Log(LogType.Log, "CortexLog", msg, null);
+        public void onReceivedLog(String msg) => DefaultEmotivLogHandler.Instance.Log(LogType.Log, "CortexLog", msg, null);
     }
     #elif USE_EMBEDDED_LIB
     public class CortexReponseHandler : ResponseHandlerCpp

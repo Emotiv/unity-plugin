@@ -120,6 +120,99 @@ namespace EmotivUnityPlugin
             return _authorizer.CurrentEmotivId;
         }
 
+        #if UNITY_ANDROID
+        // Android permission constants
+        private const string FineLocationPermission = "android.permission.ACCESS_FINE_LOCATION";
+        private const string BluetoothScanPermission = "android.permission.BLUETOOTH_SCAN";
+        private const string BluetoothConnectPermission = "android.permission.BLUETOOTH_CONNECT";
+        private const string BluetoothPermission = "android.permission.BLUETOOTH";
+        
+        private bool _isInitialized = false;
+        private bool _permissionsRequested = false;
+
+        /// <summary>
+        /// Check if all required permissions are granted for Android
+        /// </summary>
+        private bool HasAllAndroidPermissions()
+        {
+            // check location permission
+            if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(FineLocationPermission))
+            {
+                return false;
+            }
+
+            // check bluetooth permission based on Android version
+            AndroidJavaClass jc = new AndroidJavaClass("android.os.Build$VERSION");
+            int androidVersion = jc.GetStatic<int>("SDK_INT");
+
+            if (androidVersion >= 31)
+            {
+                // Android 12 or higher: need bluetooth scan and connect permission
+                if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(BluetoothScanPermission) || 
+                    !UnityEngine.Android.Permission.HasUserAuthorizedPermission(BluetoothConnectPermission))
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                // Android 11 or lower: need bluetooth permission
+                if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(BluetoothPermission))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Request required Android permissions
+        /// </summary>
+        private void RequestAndroidPermissions()
+        {
+            if (_permissionsRequested) return;
+            
+            _permissionsRequested = true;
+            
+            // check android version to determine which permissions to request
+            AndroidJavaClass jc = new AndroidJavaClass("android.os.Build$VERSION");
+            int androidVersion = jc.GetStatic<int>("SDK_INT");
+            
+            List<string> permissionsToRequest = new List<string>();
+            
+            if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(FineLocationPermission))
+            {
+                permissionsToRequest.Add(FineLocationPermission);
+            }
+            
+            if (androidVersion >= 31)
+            {
+                // Android 12 or higher
+                if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(BluetoothScanPermission))
+                {
+                    permissionsToRequest.Add(BluetoothScanPermission);
+                }
+                if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(BluetoothConnectPermission))
+                {
+                    permissionsToRequest.Add(BluetoothConnectPermission);
+                }
+            }
+            else
+            {
+                // Android 11 or lower
+                if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(BluetoothPermission))
+                {
+                    permissionsToRequest.Add(BluetoothPermission);
+                }
+            }
+            
+            if (permissionsToRequest.Count > 0)
+            {
+                UnityEngine.Android.Permission.RequestUserPermissions(permissionsToRequest.ToArray());
+            }
+        }
+        #endif
+
 
 #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
         private CrossPlatformBrowser _crossPlatformBrowser;
@@ -192,6 +285,105 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
+        /// Initialize and start the Emotiv Unity Interface with configuration from EmotivCortexSDKWindow.
+        /// This method handles all platform-specific initialization including Android permissions.
+        /// Call this method once at application startup.
+        /// Note: Configuration must be set in Unity Editor via Tools > Emotiv Cortex SDK before building.
+        /// </summary>
+        /// <returns>True if initialization started successfully, false otherwise</returns>
+        public bool InitializeAndStart()
+        {
+
+            var config = EmotivCortexConfigReader.GetConfiguration();
+
+            // If using default Emotiv log handler, override providerName and AllowSaveLogToFile
+            if (config.UseDefaultEmotivLogHandler)
+            {
+                config.ProviderName = "Emotiv";
+                config.AllowSaveLogToFile = true;
+            }
+            
+            if (string.IsNullOrEmpty(config.ClientId) || string.IsNullOrEmpty(config.ClientSecret))
+            {
+                UnityEngine.Debug.LogError("InitializeAndStart: ClientId and ClientSecret must be configured in EmotivCortexSDKWindow (Tools > Emotiv Cortex SDK).");
+                return false;
+            }
+            
+            if (string.IsNullOrEmpty(config.AppName))
+            {
+                UnityEngine.Debug.LogError("InitializeAndStart: AppName must be configured in EmotivCortexSDKWindow (Tools > Emotiv Cortex SDK).");
+                return false;
+            }
+            
+            #if UNITY_EDITOR
+            // Initialize with configuration
+            Init(config.ClientId, config.ClientSecret, config.AppName, 
+                 config.AllowSaveLogToFile, config.IsDataBufferUsing, 
+                 config.AppUrl, config.ProviderName);
+            
+            // Start for desktop in editor
+            Start();
+            UnityEngine.Debug.Log("InitializeAndStart: Emotiv Unity Interface initialized and started (Editor mode).");
+            return true;
+            
+            #elif UNITY_ANDROID
+            // Android: Check permissions first
+            if (!_isInitialized)
+            {
+                if (HasAllAndroidPermissions())
+                {
+                    // Permissions granted, initialize and start
+                    Init(config.ClientId, config.ClientSecret, config.AppName, 
+                         config.AllowSaveLogToFile, config.IsDataBufferUsing, 
+                         config.AppUrl, config.ProviderName);
+                    
+                    // Get Android activity and start
+                    AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                    AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                    Start(currentActivity);
+                    
+                    _isInitialized = true;
+                    UnityEngine.Debug.Log("InitializeAndStart: Emotiv Unity Interface initialized and started (Android).");
+                    return true;
+                }
+                else
+                {
+                    // Request permissions
+                    UnityEngine.Debug.Log("InitializeAndStart: Requesting Android permissions...");
+                    RequestAndroidPermissions();
+                    return false; // Will retry on next call
+                }
+            }
+            return _isInitialized;
+            
+            #elif UNITY_IOS
+            // iOS: Initialize and start directly
+            if (!_isInitialized)
+            {
+                Init(config.ClientId, config.ClientSecret, config.AppName, 
+                     config.AllowSaveLogToFile, config.IsDataBufferUsing, 
+                     config.AppUrl, config.ProviderName);
+                Start();
+                
+                _isInitialized = true;
+                UnityEngine.Debug.Log("InitializeAndStart: Emotiv Unity Interface initialized and started (iOS).");
+                return true;
+            }
+            return _isInitialized;
+            
+            #else
+            // Desktop (Windows/Mac): Initialize and start directly
+            Init(config.ClientId, config.ClientSecret, config.AppName, 
+                 config.AllowSaveLogToFile, config.IsDataBufferUsing, 
+                 config.AppUrl, config.ProviderName);
+            Start();
+            
+            UnityEngine.Debug.Log("InitializeAndStart: Emotiv Unity Interface initialized and started (Desktop).");
+            return true;
+            #endif
+        }
+
+        /// <summary>
         /// Initializes the Emotiv Unity Interface.
         /// </summary>
         /// <param name="clientId">The client ID of the application.</param>
@@ -213,7 +405,11 @@ namespace EmotivUnityPlugin
                 return;
             }
 
-            if (string.IsNullOrEmpty(appName))
+            if (!string.IsNullOrEmpty(appName))
+            {
+                appName = new string(appName.Where(c => !char.IsWhiteSpace(c)).ToArray());
+            }
+            else
             {
                 UnityEngine.Debug.LogError("The appName is empty. Please fill it before starting.");
                 return;
@@ -223,7 +419,7 @@ namespace EmotivUnityPlugin
             Config.Init(clientId, clientSecret, appName, allowSaveLogToFile, appUrl, providerName, emotivAppsPath);
 
             // init logger
-            MyLogger.Instance.Init(appName, allowSaveLogToFile);
+            DefaultEmotivLogHandler.Instance.Init(appName, allowSaveLogToFile);
 
             // init authentication for Android and Embedded Cortex Desktop
             #if UNITY_ANDROID || USE_EMBEDDED_LIB || UNITY_IOS

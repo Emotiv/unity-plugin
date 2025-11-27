@@ -9,13 +9,13 @@ namespace EmotivUnityPlugin
     /// Logger handler: print log at file with format
     /// Not apply for unity editor mode.
     /// </summary>
-    public class MyLogger : ILogger
+    public class DefaultEmotivLogHandler : ILogger
     {
         static readonly object _object = new object();
         private FileStream m_FileStream;
         private StreamWriter m_StreamWriter;
         private ILogHandler m_DefaultLogHandler = Debug.unityLogger.logHandler;
-        public static MyLogger Instance { get; } = new MyLogger();
+        public static DefaultEmotivLogHandler Instance { get; } = new DefaultEmotivLogHandler();
 
         public ILogHandler logHandler { get; set; }
         public bool logEnabled { get; set; }
@@ -23,7 +23,7 @@ namespace EmotivUnityPlugin
         public bool saveToFile { get; set; }
         public bool showConsoleLog { get; set; }
 
-        private MyLogger()
+        private DefaultEmotivLogHandler()
         {
             logHandler = this;
             logEnabled = true;
