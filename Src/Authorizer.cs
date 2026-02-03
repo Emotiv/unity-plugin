@@ -222,7 +222,7 @@ namespace EmotivUnityPlugin
             SaveToken(tokenInfo);
 
             // get license information
-            _ctxClient.GetLicenseInfo(cortexToken);
+            _ctxClient.GetLicenseInfo();
         }
 
         private void OnWSConnectDone(object sender, bool isConnected)
@@ -271,7 +271,7 @@ namespace EmotivUnityPlugin
                 Authorizer.SaveToken(tokenInfo);
 
                 // get license information
-                _ctxClient.GetLicenseInfo(cortexToken);
+                _ctxClient.GetLicenseInfo();
             } else {
                 AuthorizedFailed(this, cortexToken);
                 UnityEngine.Debug.Log("Invalid Token.");

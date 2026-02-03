@@ -381,6 +381,10 @@ namespace EmotivUnityPlugin
         public double LastLoginTime { get; set; }
         public string CortexToken { get; set;}
         public string EmotivId { get; set;}
+        public bool IsAuthorized()
+        {
+            return !string.IsNullOrEmpty(CortexToken) && !string.IsNullOrEmpty(EmotivId);
+        }
 
         public UserDataInfo(SerializationInfo info, StreamingContext ctxt) {
             LastLoginTime   = (double)info.GetValue("lastLoginTime", typeof(double));
