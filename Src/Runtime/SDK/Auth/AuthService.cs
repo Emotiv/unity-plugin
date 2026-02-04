@@ -16,7 +16,7 @@ using Cdm.Authentication.Clients;
 using UnityEngine.Android;
 #endif
 
-namespace Emotiv.Cortex.SDK.Auth
+namespace Emotiv.Cortex.Service
 {
     public class AuthService : IAuthService
     {
@@ -60,10 +60,10 @@ namespace Emotiv.Cortex.SDK.Auth
             _client.Init(context);
             _client.Open();
 
-            bool isConnected = await WaitForWsConnectAsync();
+            bool isConnected = await WaitForCortexConnectionStaredAsync();
             if (!isConnected)
             {
-                return (CortexErrorCode.WebSocketConnectFailed, new UserDataInfo());
+                return (CortexErrorCode.CortexConnectionError, new UserDataInfo());
             }
             _isInitialized = true;
             UnityEngine.Debug.Log("AuthService: InitAndAuthorizeAsync(): WS connected.");
@@ -123,33 +123,6 @@ namespace Emotiv.Cortex.SDK.Auth
 #endif
         }
 
-        public void AcceptEulaAndPrivacyPolicy()
-        {
-            _client.AcceptEulaAndPrivacyPolicy();
-        }
-
-        public void OpenPrivacyPolicy()
-        {
-            string url = "https://id.emotiv.com/eoidc/privacy/privacy_policy/";
-            OpenURL(url);
-        }
-
-        public void OpenSignup()
-        {
-#if DEV_SERVER
-            string url = "https://id-dev.emotiv.com/account/registration/";
-#else
-            string url = "https://id.emotiv.com/eoidc/account/registration/";
-#endif
-            OpenURL(url);
-        }
-
-        public void OpenDeleteAccount()
-        {
-            string url = "https://account.emotiv.com/my-account/delete/";
-            OpenURL(url);
-        }
-
         public void Logout()
         {
             if (string.IsNullOrEmpty(_loggedInUser.EmotivId))
@@ -159,20 +132,6 @@ namespace Emotiv.Cortex.SDK.Auth
             }
             _client.Logout(_loggedInUser.EmotivId);
             _loggedInUser = new UserDataInfo();
-        }
-
-        private void OpenURL(string url)
-        {
-#if UNITY_ANDROID || UNITY_IOS
-            UniWebViewManager.Instance.OpenURL(
-            url,
-            onClosed: (isClosed) => {
-                Debug.Log($"UniWebView closed! isClosed: {isClosed}");
-            }
-            );
-#else
-            Application.OpenURL(url);
-#endif
         }
 
         private async Task<(CortexErrorCode Code, UserDataInfo User)> LoginWithAuthenticationCodeAsync(string code)
@@ -200,7 +159,7 @@ namespace Emotiv.Cortex.SDK.Auth
             if (!hasAccessRight)
             {
                 _client.RequestAccess();
-                return (CortexErrorCode.AccessRightDenied, loginData);
+                return (CortexErrorCode.NoEULAAccepted, loginData);
             }
 #endif
             UnityEngine.Debug.Log("AuthService: CompleteAuthorizationAsync(): Access rights granted.");
@@ -217,7 +176,7 @@ namespace Emotiv.Cortex.SDK.Auth
                 (license != null ? $" expired: {license.expired}" : " license is null"));
             if (license == null || license.expired)
             {
-                return (CortexErrorCode.LicenseExpiredOrInvalid, loginData);
+                return (CortexErrorCode.LicenseError, loginData);
             }
 
             var resultUser = new UserDataInfo(loginData.LastLoginTime, authorizeResult.CortexToken, loginData.EmotivId);
@@ -259,16 +218,16 @@ namespace Emotiv.Cortex.SDK.Auth
 #endif
         }
 
-        private Task<bool> WaitForWsConnectAsync()
+        private Task<bool> WaitForCortexConnectionStaredAsync()
         {
             var tcs = new TaskCompletionSource<bool>();
             EventHandler<bool> handler = null;
             handler = (sender, isConnected) =>
             {
-                _client.WSConnectDone -= handler;
+                _client.CortexConnectionStared -= handler;
                 tcs.TrySetResult(isConnected);
             };
-            _client.WSConnectDone += handler;
+            _client.CortexConnectionStared += handler;
             return tcs.Task;
         }
 

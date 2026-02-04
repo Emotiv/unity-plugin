@@ -50,7 +50,7 @@ namespace EmotivUnityPlugin
         public AutoResetEvent m_MessageReceiveEvent = new AutoResetEvent(false);
         public AutoResetEvent m_OpenedEvent = new AutoResetEvent(false);
 
-        public event EventHandler<bool>  WSConnectDone;
+        public event EventHandler<bool> CortexConnectionStared;
         public event EventHandler<ErrorMsgEventArgs> ErrorMsgReceived;
         public event EventHandler<StreamDataEventArgs> StreamDataReceived;
         public event EventHandler<List<Headset>> QueryHeadsetOK;
@@ -152,9 +152,9 @@ namespace EmotivUnityPlugin
             return request.ToString();
         }
 
-        public void OnWSConnected(bool isConnected)
+        public void OnCortexConnectionStared(bool isConnected)
         {
-            WSConnectDone(this, isConnected);
+            CortexConnectionStared(this, isConnected);
         }
 
         /// <summary>

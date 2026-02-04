@@ -65,7 +65,7 @@ namespace EmotivUnityPlugin
 
         public Authorizer()
         {
-            _ctxClient.WSConnectDone            += OnWSConnectDone;
+            _ctxClient.CortexConnectionStared   += OnCortexConnectionStared;
             _ctxClient.GetUserLoginDone         += OnGetUserLoginDone;
             _ctxClient.UserLoginNotify          += OnUserLoginNotify;          // inform user loggin 
             _ctxClient.UserLogoutNotify         += OnUserLogoutNotify;         // inform user log out
@@ -225,7 +225,7 @@ namespace EmotivUnityPlugin
             _ctxClient.GetLicenseInfo();
         }
 
-        private void OnWSConnectDone(object sender, bool isConnected)
+        private void OnCortexConnectionStared(object sender, bool isConnected)
         {
             if (isConnected) {
                 #if UNITY_ANDROID || UNITY_IOS
