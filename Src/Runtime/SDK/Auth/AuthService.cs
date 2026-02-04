@@ -75,7 +75,52 @@ namespace Emotiv.Cortex.SDK.Auth
         public async Task<(CortexErrorCode Code, UserDataInfo User)> LoginAndAuthorizeAsync()
         {
             UnityEngine.Debug.Log("AuthService: LoginAndAuthorizeAsync(): Start login flow");
-            return await AuthenticateAndAuthorizeAsync();
+#if UNITY_ANDROID || UNITY_IOS
+            var tcs = new TaskCompletionSource<(CortexErrorCode Code, UserDataInfo User)>();
+            UniWebViewManager.Instance.StartAuthorization(
+                onSuccess: async (authCode) => {
+                    Debug.Log("UniWebView Authorization succeeded! Starting login with auth code");
+                    var result = await LoginWithAuthenticationCodeAsync(authCode);
+                    tcs.TrySetResult(result);
+                },
+                onError: (errorCode, errorMessage) => {
+                    Debug.LogError($"Authorization failed! Error {errorCode}: {errorMessage}");
+                    tcs.TrySetResult((CortexErrorCode.AuthorizationFailed, new UserDataInfo()));
+                }
+            );
+            return await tcs.Task;
+#elif USE_EMBEDDED_LIB
+            if (_authenticationSession != null)
+            {
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = new CancellationTokenSource();
+                try
+                {
+                    var accessTokenResponse =
+                        await _authenticationSession.AuthenticateAsync(_cancellationTokenSource.Token);
+
+                    return await LoginWithAuthenticationCodeAsync(accessTokenResponse.accessToken);
+                }
+                catch (AuthorizationCodeRequestException ex)
+                {
+                    Debug.LogError($"{nameof(AuthorizationCodeRequestException)} " +
+                                $"error: {ex.error.code}, description: {ex.error.description}, uri: {ex.error.uri}");
+                }
+                catch (AccessTokenRequestException ex)
+                {
+                    Debug.LogError($"{nameof(AccessTokenRequestException)} " +
+                                $"error: {ex.error.code}, description: {ex.error.description}, uri: {ex.error.uri}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError("Exception " + ex.Message);
+                }
+            }
+            return (CortexErrorCode.UnknownError, new UserDataInfo());
+#else
+            await Task.Yield();
+            return (CortexErrorCode.UnknownError, new UserDataInfo());
+#endif
         }
 
         public void AcceptEulaAndPrivacyPolicy()
@@ -135,61 +180,6 @@ namespace Emotiv.Cortex.SDK.Auth
             UnityEngine.Debug.Log("AuthService: LoginWithAuthenticationCodeAsync(): code: " + code);
             UserDataInfo loginData = await WaitForLoginAsync(code);
             return await CompleteAuthorizationAsync(loginData);
-        }
-
-        private async Task<(CortexErrorCode Code, UserDataInfo User)> AuthenticateAndAuthorizeAsync()
-        {
-            return await AuthenticateAsync();
-        }
-
-        private async Task<(CortexErrorCode Code, UserDataInfo User)> AuthenticateAsync()
-        {
-#if UNITY_ANDROID || UNITY_IOS
-            var tcs = new TaskCompletionSource<(CortexErrorCode Code, UserDataInfo User)>();
-            UniWebViewManager.Instance.StartAuthorization(
-                onSuccess: async (authCode) => {
-                    Debug.Log("UniWebView Authorization succeeded! Starting login with auth code");
-                    var result = await LoginWithAuthenticationCodeAsync(authCode);
-                    tcs.TrySetResult(result);
-                },
-                onError: (errorCode, errorMessage) => {
-                    Debug.LogError($"Authorization failed! Error {errorCode}: {errorMessage}");
-                    tcs.TrySetResult((CortexErrorCode.AuthorizationFailed, new UserDataInfo()));
-                }
-            );
-            return await tcs.Task;
-#elif USE_EMBEDDED_LIB
-            if (_authenticationSession != null)
-            {
-                _cancellationTokenSource?.Dispose();
-                _cancellationTokenSource = new CancellationTokenSource();
-                try
-                {
-                    var accessTokenResponse =
-                        await _authenticationSession.AuthenticateAsync(_cancellationTokenSource.Token);
-
-                    return await LoginWithAuthenticationCodeAsync(accessTokenResponse.accessToken);
-                }
-                catch (AuthorizationCodeRequestException ex)
-                {
-                    Debug.LogError($"{nameof(AuthorizationCodeRequestException)} " +
-                                $"error: {ex.error.code}, description: {ex.error.description}, uri: {ex.error.uri}");
-                }
-                catch (AccessTokenRequestException ex)
-                {
-                    Debug.LogError($"{nameof(AccessTokenRequestException)} " +
-                                $"error: {ex.error.code}, description: {ex.error.description}, uri: {ex.error.uri}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError("Exception " + ex.Message);
-                }
-            }
-            return (CortexErrorCode.UnknownError, new UserDataInfo());
-#else
-            await Task.Yield();
-            return (CortexErrorCode.UnknownError, new UserDataInfo());
-#endif
         }
 
         private async Task<(CortexErrorCode Code, UserDataInfo User)> CompleteAuthorizationAsync(UserDataInfo loginData)
