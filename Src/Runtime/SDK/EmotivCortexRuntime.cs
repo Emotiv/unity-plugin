@@ -10,6 +10,7 @@ namespace Emotiv.Cortex.Service
         private readonly CortexRuntimeContext _context;
         private CortexClient _client;
         private IAuthService _auth;
+        private IHeadsetService _headset;
         
         public EmotivCortexRuntime()
         {
@@ -43,6 +44,9 @@ namespace Emotiv.Cortex.Service
         }
         public IAuthService Auth
             => _auth ??= new AuthService(_context, _client);
+        
+        public IHeadsetService Headset
+            => _headset ??= HeadsetService.Instance;
             
         public void Dispose()
         {

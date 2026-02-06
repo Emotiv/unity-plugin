@@ -312,7 +312,7 @@ namespace EmotivUnityPlugin
         /// <param name="headsetId">The headset id of specific headset if want get headset information of a specific headset. 
         ///                         If use empty string it will query all headsets</param>
         public void QueryHeadsets(string headsetId = "") {
-            _dsManager.QueryHeadsets(headsetId);
+            // _dsManager.QueryHeadsets(headsetId);
         }
 
         /// <summary>

@@ -69,6 +69,8 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> UserLogoutNotify;
         public event EventHandler<License> GetLicenseInfoDone;
         public event EventHandler<(CortexErrorCode error, License data)> GetLicenseInfoResult;
+        public event EventHandler<(CortexErrorCode error, string message)> RefreshHeadsetResult;
+        public event EventHandler<(CortexErrorCode error, List<Headset> data)> QueryHeadsetResult;
         public event EventHandler<SessionEventArgs> CreateSessionOK;
         public event EventHandler<SessionEventArgs> UpdateSessionOK;
         public event EventHandler<MultipleResultEventArgs> SubscribeDataDone;
@@ -194,6 +196,14 @@ namespace EmotivUnityPlugin
                     {
                         GetLicenseInfoResult?.Invoke(this, (CortexErrorCode.UnknownError, null));
                     }
+                    else if (method == "queryHeadsets")
+                    {
+                        QueryHeadsetResult?.Invoke(this, (CortexErrorCode.UnknownError, null));
+                    }
+                    else if (method == "controlDevice")
+                    {
+                        RefreshHeadsetResult?.Invoke(this, (CortexErrorCode.UnknownError, messageError));
+                    }
                     
                 } else {
                     // handle response
@@ -278,7 +288,8 @@ namespace EmotivUnityPlugin
                 foreach (JObject item in data) {
                     headsetLists.Add(new Headset(item));
                 }
-                QueryHeadsetOK(this, headsetLists);
+                // QueryHeadsetOK(this, headsetLists);
+                QueryHeadsetResult?.Invoke(this, (CortexErrorCode.OK, headsetLists));
             }
             else if (method == "controlDevice")
             {
@@ -286,6 +297,10 @@ namespace EmotivUnityPlugin
                 if (command == "disconnect")
                 {
                     HeadsetDisConnectedOK(this, true);
+                }
+                else if (command == "refresh")
+                {
+                    RefreshHeadsetResult?.Invoke(this, (CortexErrorCode.OK, command));
                 }
             }
             else if (method == "getUserLogin")
@@ -778,14 +793,19 @@ namespace EmotivUnityPlugin
         }
 
         // CreateSession
-        // Required params: cortexToken, status
-        public void CreateSession(string cortexToken, string headsetId, string status)
+        // Required params: status
+        public void CreateSession(string headsetId, string status = "active")
         {
             JObject param = new JObject();
             if (!String.IsNullOrEmpty(headsetId)) {
                 param.Add("headset", headsetId);
             }
-            param.Add("cortexToken", cortexToken);
+            if (string.IsNullOrEmpty(CurrentCortexToken))
+            {
+                UnityEngine.Debug.LogWarning("CreateSession requested but no cortex token is available.");
+                return;
+            }
+            param.Add("cortexToken", CurrentCortexToken);
             param.Add("status", status);
             SendTextMessage(param, "createSession", true);
         }

@@ -14,7 +14,6 @@ namespace EmotivUnityPlugin
         static readonly object _locker = new object();
         private CortexClient   _ctxClient  = CortexClient.Instance;
         private List<string>   _streams;
-        private HeadsetFinder  _headsetFinder   = HeadsetFinder.Instance;
         private Authorizer     _authorizer      = Authorizer.Instance;
         private SessionHandler _sessionHandler  = SessionHandler.Instance;
 
@@ -50,12 +49,6 @@ namespace EmotivUnityPlugin
             remove { _sessionHandler.SessionActived -= value; }
         }
         public event EventHandler<string> CreateSessionFail;
-
-        public event EventHandler<List<Headset>> QueryHeadsetOK
-        {
-            add { _headsetFinder.QueryHeadsetOK += value; }
-            remove { _headsetFinder.QueryHeadsetOK -= value; }
-        }
         public event EventHandler<string> UserLogoutNotify;             // inform license valid to date
 
         // For test
@@ -117,7 +110,6 @@ namespace EmotivUnityPlugin
         private void OnUserLogoutNotify(object sender, string message)
         {
             // UnityEngine.Debug.Log("OnUserLogoutNotify: " + message);
-            StopQueryHeadset();
             // Clear session data
             Clear();
             UserLogoutNotify(this, message);
@@ -351,9 +343,8 @@ namespace EmotivUnityPlugin
             // Wait a moment before creating session
             System.Threading.Thread.Sleep(1000);
             // CreateSession
-            string cortexToken = _authorizer.CortexToken;
              UnityEngine.Debug.Log("Create Session with headset " + headsetId);
-             _sessionHandler.Create(cortexToken, headsetId, isActiveSession);
+               _sessionHandler.Create(headsetId, isActiveSession);
         }
 
         /// <summary>
@@ -425,34 +416,11 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Start query headsets to get headsets information. 
-        /// </summary>
-        public void QueryHeadsets(string headsetId = "") 
-        {
-            _ctxClient.QueryHeadsets(headsetId);
-        }
-
-        /// <summary>
-        /// Stop query headsets. 
-        /// </summary>
-        public void StopQueryHeadset()
-        {
-            _headsetFinder.StopQueryHeadset();
-        }
-
-        /// <summary>
         /// Force close websocket client. 
         /// </summary>
         public void CloseCortexClient()
         {
             _ctxClient.Close();
-        }
-
-        /// <summary>
-        /// Refresh headset to trigger scan btle devices from Cortex
-        /// </summary>
-        public void RefreshHeadset() {
-            _headsetFinder.RefreshHeadset();
         }
 
         // log out
