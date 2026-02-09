@@ -13,7 +13,7 @@ namespace Emotiv.Cortex.Service
         /// <returns>
         /// A tuple containing the <see cref="CortexErrorCode"/> and the resulting <see cref="UserDataInfo"/>.
         /// </returns>
-        Task<(CortexErrorCode Code, UserDataInfo User)> InitAndAuthorizeAsync();
+        Task<(CortexErrorCode Code, UserDataInfo User)> InitAsync();
 
         /// <summary>
         /// Starts the interactive login flow and attempts authorization.
@@ -21,7 +21,7 @@ namespace Emotiv.Cortex.Service
         /// <returns>
         /// A tuple containing the <see cref="CortexErrorCode"/> and the resulting <see cref="UserDataInfo"/>.
         /// </returns>
-        Task<(CortexErrorCode Code, UserDataInfo User)> LoginAndAuthorizeAsync();
+        Task<(CortexErrorCode Code, UserDataInfo User)> LoginAsync();
 
         /// <summary>
         /// Logs out the current user and clears local auth state.

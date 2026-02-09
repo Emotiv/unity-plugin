@@ -43,7 +43,7 @@ namespace Emotiv.Cortex.Service
             _client = client ?? throw new ArgumentNullException(nameof(client));
         }
 
-        public async Task<(CortexErrorCode Code, UserDataInfo User)> InitAndAuthorizeAsync()
+        public async Task<(CortexErrorCode Code, UserDataInfo User)> InitAsync()
         {
             if (!await EnsureAndroidPermissionsAsync())
             {
@@ -66,15 +66,15 @@ namespace Emotiv.Cortex.Service
                 return (CortexErrorCode.CortexConnectionError, new UserDataInfo());
             }
             _isInitialized = true;
-            UnityEngine.Debug.Log("AuthService: InitAndAuthorizeAsync(): WS connected.");
+            UnityEngine.Debug.Log("AuthService: InitAsync(): WS connected.");
 
             UserDataInfo loginData = await WaitForGetUserLoginAsync();
             return await CompleteAuthorizationAsync(loginData);
         }
 
-        public async Task<(CortexErrorCode Code, UserDataInfo User)> LoginAndAuthorizeAsync()
+        public async Task<(CortexErrorCode Code, UserDataInfo User)> LoginAsync()
         {
-            UnityEngine.Debug.Log("AuthService: LoginAndAuthorizeAsync(): Start login flow");
+            UnityEngine.Debug.Log("AuthService: LoginAsync(): Start login flow");
 #if UNITY_ANDROID || UNITY_IOS
             var tcs = new TaskCompletionSource<(CortexErrorCode Code, UserDataInfo User)>();
             UniWebViewManager.Instance.StartAuthorization(
