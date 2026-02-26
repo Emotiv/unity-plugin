@@ -12,19 +12,13 @@ using System.Security.Cryptography;
 using System.Text;
 using Cdm.Authentication.Clients;
 #endif
-#if UNITY_ANDROID
-using UnityEngine.Android;
-#endif
 
 namespace Emotiv.Cortex.Service
 {
     public class AuthService : IAuthService
     {
-        public static AuthService Instance { get; } = new AuthService();
-
+        private readonly CortexRuntimeContext _context;
         private readonly CortexClient _client;
-        private UserDataInfo _loggedInUser = new UserDataInfo();
-        private bool _isInitialized;
 
 #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
         private CrossPlatformBrowser _crossPlatformBrowser;
@@ -33,50 +27,40 @@ namespace Emotiv.Cortex.Service
         private static readonly char[] HEX_ARRAY = "0123456789abcdef".ToCharArray();
 #endif
 
-        public AuthService()
+        public AuthService(CortexRuntimeContext context, CortexClient client)
         {
-            _client = CortexClient.Instance;
-        }
-
-        internal AuthService(CortexClient client)
-        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
             _client = client ?? throw new ArgumentNullException(nameof(client));
-        }
-
-        public async Task<(CortexErrorCode Code, UserDataInfo User)> InitAsync()
-        {
-            if (!await EnsureAndroidPermissionsAsync())
-            {
-                return (CortexErrorCode.PermissionsDenied, new UserDataInfo());
-            }
-
-            InitConfigFromAppConfig();
 
 #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
             InitAuthentication(AppConfig.ClientId, AppConfig.ClientSecret);
 #endif
-
-            object context = GetAndroidContext();
-            _client.Init(context);
-            _client.Open();
-
-            bool isConnected = await WaitForCortexConnectionStaredAsync();
-            if (!isConnected)
-            {
-                return (CortexErrorCode.CortexConnectionError, new UserDataInfo());
-            }
-            _isInitialized = true;
-            UnityEngine.Debug.Log("AuthService: InitAsync(): WS connected.");
-
-            UserDataInfo loginData = await WaitForGetUserLoginAsync();
-            return await CompleteAuthorizationAsync(loginData);
         }
 
-        public async Task<(CortexErrorCode Code, UserDataInfo User)> LoginAsync()
+        public async Task<CortexResult<UserDataInfo>> GetApiInfoAsync()
+        {       
+            while (!_context.IsConnected)
+            {
+                // Wait until Cortex connection is established before proceeding with API calls
+                await Task.Delay(1000);
+            }
+            
+            UnityEngine.Debug.Log("AuthService: GetApiInfoAsync(): Cortex connection established, proceeding with GetUserLogin.");
+            var result = await WaitForGetUserLoginAsync();
+            _context.SetUser(result);
+            return CortexResult<UserDataInfo>.Success(result);
+        }
+
+        public async Task<CortexResult<UserDataInfo>> InitAsync()
+        {
+            return await AuthorizationAsync();
+        }
+
+        public async Task<CortexResult<UserDataInfo>> LoginAsync()
         {
             UnityEngine.Debug.Log("AuthService: LoginAsync(): Start login flow");
 #if UNITY_ANDROID || UNITY_IOS
-            var tcs = new TaskCompletionSource<(CortexErrorCode Code, UserDataInfo User)>();
+            var tcs = new TaskCompletionSource<CortexResult<UserDataInfo>>();
             UniWebViewManager.Instance.StartAuthorization(
                 onSuccess: async (authCode) => {
                     Debug.Log("UniWebView Authorization succeeded! Starting login with auth code");
@@ -85,7 +69,8 @@ namespace Emotiv.Cortex.Service
                 },
                 onError: (errorCode, errorMessage) => {
                     Debug.LogError($"Authorization failed! Error {errorCode}: {errorMessage}");
-                    tcs.TrySetResult((CortexErrorCode.AuthorizationFailed, new UserDataInfo()));
+                    tcs.TrySetResult(CortexResult<UserDataInfo>.Fail(
+                        CortexErrorMapper.FromErrorCode(CortexErrorCode.AuthorizationFailed)));
                 }
             );
             return await tcs.Task;
@@ -116,57 +101,49 @@ namespace Emotiv.Cortex.Service
                     Debug.LogError("Exception " + ex.Message);
                 }
             }
-            return (CortexErrorCode.UnknownError, new UserDataInfo());
+            return CortexResult<UserDataInfo>.Fail(
+                CortexErrorMapper.FromErrorCode(CortexErrorCode.UnknownError));
 #else
             await Task.Yield();
-            return (CortexErrorCode.UnknownError, new UserDataInfo());
+            return CortexResult<UserDataInfo>.Fail(
+                CortexErrorMapper.FromErrorCode(CortexErrorCode.UnknownError));
 #endif
         }
 
         public void Logout()
         {
-            if (string.IsNullOrEmpty(_loggedInUser.EmotivId))
+            if (string.IsNullOrEmpty(_context.User.EmotivId))
             {
                 Debug.LogWarning("Logout requested but no user is logged in.");
                 return;
             }
-            _client.Logout(_loggedInUser.EmotivId);
-            _loggedInUser = new UserDataInfo();
+            _client.Logout(_context.User.EmotivId);
+            _context.SetUser(new UserDataInfo());
         }
 
-        private async Task<(CortexErrorCode Code, UserDataInfo User)> LoginWithAuthenticationCodeAsync(string code)
+        private async Task<CortexResult<UserDataInfo>> LoginWithAuthenticationCodeAsync(string code)
         {
             UnityEngine.Debug.Log("AuthService: LoginWithAuthenticationCodeAsync(): code: " + code);
             UserDataInfo loginData = await WaitForLoginAsync(code);
-            return await CompleteAuthorizationAsync(loginData);
+            _context.SetUser(loginData);
+            return await AuthorizationAsync();
         }
 
-        private async Task<(CortexErrorCode Code, UserDataInfo User)> CompleteAuthorizationAsync(UserDataInfo loginData)
+        private async Task<CortexResult<UserDataInfo>> AuthorizationAsync()
         {
+            var loginData = _context.User;
+            
             if (string.IsNullOrEmpty(loginData.EmotivId))
             {
-                return (CortexErrorCode.OK, loginData);
+                return CortexResult<UserDataInfo>.Fail(
+                    CortexErrorMapper.FromErrorCode(CortexErrorCode.NoUserLogin));
             }
-
-            _loggedInUser = loginData;
-
-            UnityEngine.Debug.Log("AuthService: CompleteAuthorizationAsync(): User logged in: " + loginData.EmotivId);
-
-#if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
-            bool hasAccessRight = true;
-#else
-            bool hasAccessRight = await CheckAccessRightsAsync();
-            if (!hasAccessRight)
-            {
-                _client.RequestAccess();
-                return (CortexErrorCode.NoEULAAccepted, loginData);
-            }
-#endif
-            UnityEngine.Debug.Log("AuthService: CompleteAuthorizationAsync(): Access rights granted.");
+            // User is already logged in, proceed with authorization
             var authorizeResult = await AuthorizeAsync();
             if (!authorizeResult.Success)
             {
-                return (CortexErrorCode.AuthorizationFailed, loginData);
+                return CortexResult<UserDataInfo>.Fail(
+                    CortexErrorMapper.FromErrorCode(CortexErrorCode.AuthorizationFailed));
             }
 
             UnityEngine.Debug.Log("AuthService: CompleteAuthorizationAsync(): Authorized.");
@@ -176,60 +153,15 @@ namespace Emotiv.Cortex.Service
                 (license != null ? $" expired: {license.expired}" : " license is null"));
             if (license == null || license.expired)
             {
-                return (CortexErrorCode.LicenseError, loginData);
+                return CortexResult<UserDataInfo>.Fail(
+                    CortexErrorMapper.FromErrorCode(CortexErrorCode.LicenseError));
             }
 
             var resultUser = new UserDataInfo(loginData.LastLoginTime, authorizeResult.CortexToken, loginData.EmotivId);
-            _loggedInUser = resultUser;
-            return (CortexErrorCode.OK, resultUser);
+            _context.SetUser(resultUser);
+            return CortexResult<UserDataInfo>.Success(resultUser);
         }
 
-        private void InitConfigFromAppConfig()
-        {
-            string appUrl = "wss://localhost:6868";
-#if !USE_EMBEDDED_LIB && !UNITY_ANDROID && !UNITY_IOS
-            if (!string.IsNullOrEmpty(AppConfig.AppUrl))
-            {
-                appUrl = AppConfig.AppUrl;
-            }
-#endif
-
-            Config.Init(
-                AppConfig.ClientId,
-                AppConfig.ClientSecret,
-                AppConfig.AppName,
-                AppConfig.AllowSaveLogToFile,
-                appUrl,
-                "",
-                ""
-            );
-
-            MyLogger.Instance.Init(AppConfig.AppName, AppConfig.AllowSaveLogToFile);
-        }
-
-        private object GetAndroidContext()
-        {
-#if UNITY_ANDROID
-            AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-            AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
-            return currentActivity;
-#else
-            return null;
-#endif
-        }
-
-        private Task<bool> WaitForCortexConnectionStaredAsync()
-        {
-            var tcs = new TaskCompletionSource<bool>();
-            EventHandler<bool> handler = null;
-            handler = (sender, isConnected) =>
-            {
-                _client.CortexConnectionStared -= handler;
-                tcs.TrySetResult(isConnected);
-            };
-            _client.CortexConnectionStared += handler;
-            return tcs.Task;
-        }
 
         private Task<UserDataInfo> WaitForGetUserLoginAsync()
         {
@@ -238,10 +170,9 @@ namespace Emotiv.Cortex.Service
             handler = (sender, data) =>
             {
                 _client.GetUserLoginDone -= handler;
-                UnityEngine.Debug.Log("AuthService: WaitForGetUserLoginAsync(): User logged in: " + data.EmotivId);
                 if (!string.IsNullOrEmpty(data.EmotivId))
                 {
-                    _loggedInUser = data;
+                    _context.SetUser(data);
                 }
                 tcs.TrySetResult(data);
             };
@@ -260,43 +191,12 @@ namespace Emotiv.Cortex.Service
                 UnityEngine.Debug.Log("AuthService: WaitForLoginAsync(): User logged in: " + data.EmotivId);
                 if (!string.IsNullOrEmpty(data.EmotivId))
                 {
-                    _loggedInUser = data;
+                    _context.SetUser(data);
                 }
                 tcs.TrySetResult(data);
             };
             _client.LoginDone += handler;
             _client.LoginWithAuthenticationCode(authCode);
-            return tcs.Task;
-        }
-
-        private Task<bool> CheckAccessRightsAsync()
-        {
-            var tcs = new TaskCompletionSource<bool>();
-
-            EventHandler<bool> okHandler = null;
-            EventHandler<ErrorMsgEventArgs> errorHandler = null;
-
-            okHandler = (sender, hasAccessRight) =>
-            {
-                _client.HasAccessRightOK -= okHandler;
-                _client.ErrorMsgReceived -= errorHandler;
-                tcs.TrySetResult(hasAccessRight);
-            };
-
-            errorHandler = (sender, error) =>
-            {
-                if (error.MethodName != "hasAccessRight")
-                {
-                    return;
-                }
-                _client.HasAccessRightOK -= okHandler;
-                _client.ErrorMsgReceived -= errorHandler;
-                tcs.TrySetResult(false);
-            };
-
-            _client.HasAccessRightOK += okHandler;
-            _client.ErrorMsgReceived += errorHandler;
-            _client.HasAccessRights();
             return tcs.Task;
         }
 
@@ -317,6 +217,7 @@ namespace Emotiv.Cortex.Service
             eulaHandler = (sender, token) =>
             {
                 Cleanup();
+                UnityEngine.Debug.LogWarning("AuthService: AuthorizeAsync(): EULA not accepted.");
                 tcs.TrySetResult((false, token));
             };
 
@@ -369,82 +270,6 @@ namespace Emotiv.Cortex.Service
             _client.GetLicenseInfo();
             return tcs.Task;
         }
-
-        private async Task<bool> EnsureAndroidPermissionsAsync()
-        {
-#if UNITY_ANDROID
-            if (HasAllPermissions())
-            {
-                return true;
-            }
-
-            foreach (var permission in GetRequiredPermissions())
-            {
-                if (!Permission.HasUserAuthorizedPermission(permission))
-                {
-                    Permission.RequestUserPermission(permission);
-                    while (!Permission.HasUserAuthorizedPermission(permission))
-                    {
-                        await Task.Delay(100);
-                    }
-                }
-            }
-
-            return HasAllPermissions();
-#else
-            await Task.Yield();
-            return true;
-#endif
-        }
-
-#if UNITY_ANDROID
-        private static string[] GetRequiredPermissions()
-        {
-            if (GetAndroidVersion() >= 31)
-            {
-                return new[] {
-                    "android.permission.ACCESS_FINE_LOCATION",
-                    "android.permission.BLUETOOTH_SCAN",
-                    "android.permission.BLUETOOTH_CONNECT"
-                };
-            }
-
-            return new[] {
-                "android.permission.ACCESS_FINE_LOCATION",
-                "android.permission.BLUETOOTH"
-            };
-        }
-
-        private static bool HasAllPermissions()
-        {
-            foreach (var permission in GetRequiredPermissions())
-            {
-                if (!Permission.HasUserAuthorizedPermission(permission))
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        private static int GetAndroidVersion()
-        {
-            string osInfo = SystemInfo.operatingSystem;
-            if (osInfo.Contains("Android"))
-            {
-                int apiIndex = osInfo.IndexOf("API-");
-                if (apiIndex != -1)
-                {
-                    string apiLevel = osInfo.Substring(apiIndex + 4).Split(' ')[0];
-                    if (int.TryParse(apiLevel, out int androidVersion))
-                    {
-                        return androidVersion;
-                    }
-                }
-            }
-            return 0;
-        }
-#endif
 
         private void InitAuthentication(string clientId, string clientSecret)
         {
