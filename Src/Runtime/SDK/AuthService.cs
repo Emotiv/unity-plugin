@@ -53,7 +53,7 @@ namespace Emotiv.Cortex.Service
 
         public async Task<CortexResult<UserDataInfo>> InitAsync()
         {
-            return await AuthorizationAsync();
+            return await CompleteAuthorizationAsync();
         }
 
         public async Task<CortexResult<UserDataInfo>> LoginAsync()
@@ -126,10 +126,10 @@ namespace Emotiv.Cortex.Service
             UnityEngine.Debug.Log("AuthService: LoginWithAuthenticationCodeAsync(): code: " + code);
             UserDataInfo loginData = await WaitForLoginAsync(code);
             _context.SetUser(loginData);
-            return await AuthorizationAsync();
+            return await CompleteAuthorizationAsync();
         }
 
-        private async Task<CortexResult<UserDataInfo>> AuthorizationAsync()
+        private async Task<CortexResult<UserDataInfo>> CompleteAuthorizationAsync()
         {
             var loginData = _context.User;
             
@@ -140,10 +140,9 @@ namespace Emotiv.Cortex.Service
             }
             // User is already logged in, proceed with authorization
             var authorizeResult = await AuthorizeAsync();
-            if (!authorizeResult.Success)
+            if (!authorizeResult.IsSuccess)
             {
-                return CortexResult<UserDataInfo>.Fail(
-                    CortexErrorMapper.FromErrorCode(CortexErrorCode.AuthorizationFailed));
+                return authorizeResult;
             }
 
             UnityEngine.Debug.Log("AuthService: CompleteAuthorizationAsync(): Authorized.");
@@ -157,7 +156,10 @@ namespace Emotiv.Cortex.Service
                     CortexErrorMapper.FromErrorCode(CortexErrorCode.LicenseError));
             }
 
-            var resultUser = new UserDataInfo(loginData.LastLoginTime, authorizeResult.CortexToken, loginData.EmotivId);
+            var resultUser = new UserDataInfo(loginData.LastLoginTime, authorizeResult.Data.CortexToken, loginData.EmotivId)
+            {
+                EULAAccepted = authorizeResult.Data.EULAAccepted
+            };
             _context.SetUser(resultUser);
             return CortexResult<UserDataInfo>.Success(resultUser);
         }
@@ -200,9 +202,9 @@ namespace Emotiv.Cortex.Service
             return tcs.Task;
         }
 
-        private Task<(bool Success, string CortexToken)> AuthorizeAsync()
+        private Task<CortexResult<UserDataInfo>> AuthorizeAsync()
         {
-            var tcs = new TaskCompletionSource<(bool Success, string CortexToken)>();
+            var tcs = new TaskCompletionSource<CortexResult<UserDataInfo>>();
 
             EventHandler<string> okHandler = null;
             EventHandler<ErrorMsgEventArgs> errorHandler = null;
@@ -211,14 +213,20 @@ namespace Emotiv.Cortex.Service
             okHandler = (sender, token) =>
             {
                 Cleanup();
-                tcs.TrySetResult((true, token));
+                var authorizedUser = new UserDataInfo(_context.User.LastLoginTime, token, _context.User.EmotivId)
+                {
+                    EULAAccepted = true
+                };
+                tcs.TrySetResult(CortexResult<UserDataInfo>.Success(authorizedUser));
             };
 
             eulaHandler = (sender, token) =>
             {
                 Cleanup();
                 UnityEngine.Debug.LogWarning("AuthService: AuthorizeAsync(): EULA not accepted.");
-                tcs.TrySetResult((false, token));
+                _context.User.EULAAccepted = false;
+                tcs.TrySetResult(CortexResult<UserDataInfo>.Fail(
+                    CortexErrorMapper.FromErrorCode(CortexErrorCode.AuthorizationFailed)));
             };
 
             errorHandler = (sender, error) =>
@@ -228,7 +236,11 @@ namespace Emotiv.Cortex.Service
                     return;
                 }
                 Cleanup();
-                tcs.TrySetResult((false, ""));
+                var mappedError = new CortexError(
+                    CortexErrorCode.AuthorizationFailed,
+                    error.MessageError,
+                    error.Code);
+                tcs.TrySetResult(CortexResult<UserDataInfo>.Fail(mappedError));
             };
 
             void Cleanup()

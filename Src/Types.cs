@@ -377,10 +377,13 @@ namespace EmotivUnityPlugin
             LastLoginTime   = time;
             CortexToken     = token;
             EmotivId        = emotivId;
+            EULAAccepted    = false;
         }
         public double LastLoginTime { get; set; }
         public string CortexToken { get; set;}
         public string EmotivId { get; set;}
+
+        public bool EULAAccepted { get; set; }
         public bool IsAuthorized()
         {
             return !string.IsNullOrEmpty(CortexToken) && !string.IsNullOrEmpty(EmotivId);
@@ -390,6 +393,7 @@ namespace EmotivUnityPlugin
             LastLoginTime   = (double)info.GetValue("lastLoginTime", typeof(double));
             CortexToken     = (string)info.GetValue("cortexToken", typeof(string));
             EmotivId        = (string)info.GetValue("emotivId", typeof(string));
+            EULAAccepted    = false;
         }
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
@@ -397,6 +401,7 @@ namespace EmotivUnityPlugin
             info.AddValue("lastLoginTime", LastLoginTime);
             info.AddValue("cortexToken", CortexToken);
             info.AddValue("emotivId", EmotivId);
+            info.AddValue("eulaAccepted", EULAAccepted);
         }
     }
 
