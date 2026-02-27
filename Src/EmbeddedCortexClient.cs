@@ -37,7 +37,7 @@ namespace EmotivUnityPlugin
     {
         public CortexLibInterfaceProxy() : base("com.emotiv.unityplugin.CortexConnectionInterface") { }
         void onReceivedMessage(String msg) => EmbeddedCortexClient.Instance.OnMessageReceived(msg);
-        void onCortexStarted() { Debug.Log("Cortex Lib Started"); EmbeddedCortexClient.Instance.OnWSConnected(true); }
+        void onCortexStarted() { Debug.Log("Cortex Lib Started"); EmbeddedCortexClient.Instance.OnCortexConnectionStared(true); }
     }
     public class CortexLogHandler : AndroidJavaProxy
     {
@@ -75,7 +75,7 @@ namespace EmotivUnityPlugin
         [AOT.MonoPInvokeCallback(typeof(MessageCallback))]
         private static void OnMessageReceived(string message) => EmbeddedCortexClient.Instance.OnMessageReceived(message);
         [AOT.MonoPInvokeCallback(typeof(StartedCallback))]
-        private static void OnCortexLibIosStarted() { Debug.Log("OnCortexLibIosStarted"); EmbeddedCortexClient.Instance.OnWSConnected(true); }
+        private static void OnCortexLibIosStarted() { Debug.Log("OnCortexLibIosStarted"); EmbeddedCortexClient.Instance.OnCortexConnectionStared(true); }
         public static void RegisterCallback() { RegisterUnityResponseCallback(OnMessageReceived); RegisterUnityStartedCallback(OnCortexLibIosStarted); }
     }
     #endif
@@ -124,7 +124,7 @@ namespace EmotivUnityPlugin
         }
 
         private static void OnMessageReceivedStatic(string message) => EmbeddedCortexClient.Instance.OnMessageReceived(message);
-        private static void OnWSConnectedStatic() => EmbeddedCortexClient.Instance.OnWSConnected(true);
+        private static void OnCortexConnectionStaredStatic() => EmbeddedCortexClient.Instance.OnCortexConnectionStared(true);
 
         #if USE_EMBEDDED_LIB
         private void CortexStarted(object? sender, bool e)

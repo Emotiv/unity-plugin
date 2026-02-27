@@ -7,16 +7,6 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-#if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
-using Cdm.Authentication.Browser;
-using Cdm.Authentication.OAuth2;
-using System.Threading;
-using System.Security.Cryptography;
-using System.Text;
-using Cdm.Authentication.Clients;
-using Newtonsoft.Json;
-#endif
-
 namespace EmotivUnityPlugin
 {
     
@@ -70,7 +60,6 @@ namespace EmotivUnityPlugin
 
         private string _messageLog = "";
 
-        private bool _isWebViewOpened = false;
         private List<int> _mentalCommandActionSensitivity = new List<int>();
 
         // trained signature actions
@@ -102,7 +91,6 @@ namespace EmotivUnityPlugin
         public List<int> MentalCommandActionSensitivity { get => _mentalCommandActionSensitivity; set => _mentalCommandActionSensitivity = value; }
         public List<DateTime> DatesHavingConsumerData { get => _datesHavingConsumerData; set => _datesHavingConsumerData = value; }
         public List<MentalStateModel> MentalStateDatas { get => _mentalStateDatas; set => _mentalStateDatas = value; }
-        public bool IsWebViewOpened { get => _isWebViewOpened; set => _isWebViewOpened = value; }
         public string LoadedProfileName { get => _loadedProfileName; set => _loadedProfileName = value; }
         public string WorkingHeadsetId { get => _workingHeadsetId; set => _workingHeadsetId = value; }
         public Record RecentRecord { get => _recentRecord; set => _recentRecord = value; }
@@ -120,15 +108,6 @@ namespace EmotivUnityPlugin
             return _authorizer.CurrentEmotivId;
         }
 
-
-#if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
-        private CrossPlatformBrowser _crossPlatformBrowser;
-        private AuthenticationSession _authenticationSession;
-        private CancellationTokenSource _cancellationTokenSource; 
-        
-        private static readonly char[] HEX_ARRAY = "0123456789abcdef".ToCharArray();
-
-        #endif
 
         #if USE_EMBEDDED_LIB && UNITY_STANDALONE_WIN && !UNITY_EDITOR
         public  async Task ProcessCallback(string args)
@@ -205,7 +184,7 @@ namespace EmotivUnityPlugin
         /// <param name="emotivAppsPath">The path to Emotiv Launcher file path (optional). Only for desktop version and work with Cortex Service. </param>
         public void Init(string clientId, string clientSecret, string appName,
                          bool allowSaveLogToFile = true, bool isDataBufferUsing = true,
-                         string appUrl = "", string providerName = "", string emotivAppsPath = "")
+                         string appUrl = "wss://localhost:6868", string providerName = "", string emotivAppsPath = "")
         {
             if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
             {
@@ -224,11 +203,6 @@ namespace EmotivUnityPlugin
 
             // init logger
             MyLogger.Instance.Init(appName, allowSaveLogToFile);
-
-            // init authentication for Android and Embedded Cortex Desktop
-            #if UNITY_ANDROID || USE_EMBEDDED_LIB || UNITY_IOS
-            InitForAuthentication(clientId, clientSecret);
-            #endif
 
             _dsManager.IsDataBufferUsing = isDataBufferUsing;
             // init bcitraining
@@ -302,10 +276,6 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void Stop()
         {
-            #if USE_EMBEDDED_LIB
-            _cancellationTokenSource?.Cancel();
-            _authenticationSession?.Dispose();
-            #endif
             #if UNITY_ANDROID || UNITY_IOS
             UniWebViewManager.Instance?.Cleanup();
             #endif
@@ -1076,7 +1046,7 @@ namespace EmotivUnityPlugin
         {
             string dataText = "com data: " + data.Act + ", power: " + data.Pow.ToString() + ", time " + data.Time.ToString();
             // print out data to console
-            UnityEngine.Debug.Log(dataText);
+            //UnityEngine.Debug.Log(dataText);
             LatestMentalCommand.act = data.Act;
             LatestMentalCommand.pow = data.Pow;
         }
@@ -1284,148 +1254,6 @@ namespace EmotivUnityPlugin
             _mentalCommandActionSensitivity.Clear();
             _desiredErasingProfiles.Clear();
         }
-
-        public void OpenURL(string url)
-        {
-            #if UNITY_ANDROID || UNITY_IOS
-            _isWebViewOpened = true;
-            UniWebViewManager.Instance.OpenURL(
-                url, 
-                onClosed: (isClosed) => {
-                    Debug.Log($"UniWebView closed! isClosed: {isClosed}");
-                    _isWebViewOpened = false;
-                    
-                }
-            );
-            #else
-            Application.OpenURL(url);
-            #endif
-        }
-
-        #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
-        private string BytesToHex(byte[] bytes)
-        {
-            char[] hexChars = new char[bytes.Length * 2];
-            for (int j = 0; j < bytes.Length; ++j)
-            {
-                int v = bytes[j] & 0xFF;
-                hexChars[j * 2] = HEX_ARRAY[v >> 4];
-                hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-            }
-            return new string(hexChars);
-        }
-
-        private string Md5(string s)
-        {
-            try
-            {
-                using (var md5 = MD5.Create())
-                {
-                    byte[] inputBytes = Encoding.UTF8.GetBytes(s);
-                    byte[] hashBytes = md5.ComputeHash(inputBytes);
-                    return BytesToHex(hashBytes);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError(e);
-                return string.Empty;
-            }
-        }
-
-        private void InitForAuthentication(string clientId, string clientSecret)
-        {
-            string server = "";
- #if DEV_SERVER
-            UnityEngine.Debug.Log("Development build detected. Using development server.");
-            server = "cerebrum-dev.emotivcloud.com";
-#else
-            UnityEngine.Debug.Log("Production build detected. Using production server.");
-            server = "cerebrum.emotivcloud.com";
-#endif
-            string hash = Md5(clientId);
-            string prefixRedirectUrl = "emotiv-" + hash;
-            string redirectUrl = prefixRedirectUrl + "://authorize";
-            string serverUrl = $"https://{server}";
-            #if UNITY_ANDROID || UNITY_IOS
-            string authorizationUrl = $"https://{server}/api/oauth/authorize/?response_type=code" +
-                        $"&client_id={Uri.EscapeDataString(clientId)}" +
-                        $"&redirect_uri={redirectUrl}" + $"&hide_signup=1&hide_social_signin=1";
-            UniWebViewManager.Instance.Init(
-                authorizationUrl, 
-                prefixRedirectUrl
-            );
-            #else
-            _crossPlatformBrowser = new CrossPlatformBrowser();
-            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsEditor, new WindowsSystemBrowser());
-            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsPlayer, new WindowsSystemBrowser());
-            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXEditor, new DeepLinkBrowser());
-            _crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXPlayer, new DeepLinkBrowser());
-
-#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
-            // Deep linking is not supported on Windows (except UWP), so RegistryConfig is used to handle this case.
-            new RegistryConfig(prefixRedirectUrl).Configure();
-#endif
-
-            var configuration = new AuthorizationCodeFlow.Configuration()
-            {
-                clientId = clientId,
-                clientSecret = clientSecret,
-                redirectUri = redirectUrl,
-                scope = ""
-            };
-            var auth = new MockServerAuth(configuration, serverUrl);
-            _authenticationSession = new AuthenticationSession(auth, _crossPlatformBrowser);
-            _authenticationSession.loginTimeout = TimeSpan.FromSeconds(600);
-            #endif
-        }
-        public async Task AuthenticateAsync()
-        {
-            #if UNITY_ANDROID || UNITY_IOS
-            _isWebViewOpened = true;
-            UniWebViewManager.Instance.StartAuthorization(
-                onSuccess: (authCode) => {
-                    Debug.Log($"UniWebView Authorization succeeded! Starting login with auth code");
-                    LoginWithAuthenticationCode(authCode);
-                    _isWebViewOpened = false;
-                },
-                onError: (errorCode, errorMessage) => {
-                    Debug.LogError($"Authorization failed! Error {errorCode}: {errorMessage}");
-                    _isWebViewOpened = false;
-                    
-                }
-            );
-            #else
-            if (_authenticationSession != null)
-            {
-                _cancellationTokenSource?.Dispose();
-                _cancellationTokenSource = new CancellationTokenSource();
-                try
-                {
-                    MessageLog = "Starting authentication...";
-                    var accessTokenResponse =
-                        await _authenticationSession.AuthenticateAsync(_cancellationTokenSource.Token);
-
-                    LoginWithAuthenticationCode(accessTokenResponse.accessToken);
-                }
-                catch (AuthorizationCodeRequestException ex)
-                {
-                    Debug.LogError($"{nameof(AuthorizationCodeRequestException)} " +
-                                $"error: {ex.error.code}, description: {ex.error.description}, uri: {ex.error.uri}");
-                }
-                catch (AccessTokenRequestException ex)
-                {
-                    Debug.LogError($"{nameof(AccessTokenRequestException)} " +
-                                $"error: {ex.error.code}, description: {ex.error.description}, uri: {ex.error.uri}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError( "Exception " + ex.Message);
-                }
-            }
-            #endif
-        }
-        #endif
 
     }
 }

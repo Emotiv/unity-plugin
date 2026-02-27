@@ -26,6 +26,7 @@
 using System;
 using System.Threading;
 using Newtonsoft.Json.Linq;
+using Emotiv.Cortex.Models;
 
 using System.Collections.Generic;
 using System.Collections;
@@ -49,7 +50,7 @@ namespace EmotivUnityPlugin
         public AutoResetEvent m_MessageReceiveEvent = new AutoResetEvent(false);
         public AutoResetEvent m_OpenedEvent = new AutoResetEvent(false);
 
-        public event EventHandler<bool>  WSConnectDone;
+        public event EventHandler<bool> CortexConnectionStared;
         public event EventHandler<ErrorMsgEventArgs> ErrorMsgReceived;
         public event EventHandler<StreamDataEventArgs> StreamDataReceived;
         public event EventHandler<List<Headset>> QueryHeadsetOK;
@@ -61,11 +62,13 @@ namespace EmotivUnityPlugin
         public event EventHandler<bool> AccessRightGrantedDone;
         public event EventHandler<string> AuthorizeOK;
         public event EventHandler<UserDataInfo> GetUserLoginDone;
+        public event EventHandler<UserDataInfo> LoginDone;
         public event EventHandler<string> EULAAccepted;
         public event EventHandler<string> EULANotAccepted; // return cortexToken if user has not accept eula to proceed next step
         public event EventHandler<string> UserLoginNotify;
         public event EventHandler<string> UserLogoutNotify;
         public event EventHandler<License> GetLicenseInfoDone;
+        public event EventHandler<(CortexErrorCode error, License data)> GetLicenseInfoResult;
         public event EventHandler<SessionEventArgs> CreateSessionOK;
         public event EventHandler<SessionEventArgs> UpdateSessionOK;
         public event EventHandler<MultipleResultEventArgs> SubscribeDataDone;
@@ -103,6 +106,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<List<MentalStateModel>> QueryDayDetailOfConsumerDataDone;
         public event EventHandler<MultipleResultEventArgs> ExportRecordsFinished;
         public event EventHandler<string> DataPostProcessingFinished;
+        public string CurrentCortexToken { get; internal set; } = string.Empty;
 
         public virtual void Init(object context = null) {}
 
@@ -148,9 +152,9 @@ namespace EmotivUnityPlugin
             return request.ToString();
         }
 
-        public void OnWSConnected(bool isConnected)
+        public void OnCortexConnectionStared(bool isConnected)
         {
-            WSConnectDone(this, isConnected);
+            CortexConnectionStared(this, isConnected);
         }
 
         /// <summary>
@@ -185,6 +189,11 @@ namespace EmotivUnityPlugin
                     UnityEngine.Debug.Log("An error received: " + messageError);
                     //Send Error message event
                     ErrorMsgReceived(this, new ErrorMsgEventArgs(code, messageError, method));
+
+                    if (method == "getLicenseInfo")
+                    {
+                        GetLicenseInfoResult?.Invoke(this, (CortexErrorCode.UnknownError, null));
+                    }
                     
                 } else {
                     // handle response
@@ -302,11 +311,12 @@ namespace EmotivUnityPlugin
                 loginData.EmotivId = data["username"].ToString();
                 String message = data["message"].ToString();
                 UnityEngine.Debug.Log("login message: " + message);
-                GetUserLoginDone(this, loginData);
+                LoginDone(this, loginData);
             }
             else if (method == "logout")
             {
                 String message = data["message"].ToString();
+                CurrentCortexToken = string.Empty;
                 UserLogoutNotify(this, message);
                 // get user login info
                 GetUserLogin();
@@ -324,12 +334,14 @@ namespace EmotivUnityPlugin
             else if (method == "generateNewToken")
             {
                 string cortexToken = data["cortexToken"].ToString();
+                CurrentCortexToken = cortexToken;
                 RefreshTokenOK(this, cortexToken);
             }
             else if (method == "getLicenseInfo")
             {
                 License lic = new License(data["license"]);
-                GetLicenseInfoDone(this, lic);
+                // GetLicenseInfoDone(this, lic);
+                GetLicenseInfoResult?.Invoke(this, (CortexErrorCode.OK, lic));
             }
             else if (method == "getUserInformation")
             {
@@ -338,6 +350,7 @@ namespace EmotivUnityPlugin
             else if (method == "authorize")
             {
                 string token = (string)data["cortexToken"];
+                CurrentCortexToken = token;
                 if (data["warning"] != null)
                 {
                     JObject warning         = (JObject)data["warning"];
@@ -658,6 +671,16 @@ namespace EmotivUnityPlugin
         }
 
         // accept eula
+        public void AcceptEulaAndPrivacyPolicy()
+        {
+            if (string.IsNullOrEmpty(CurrentCortexToken))
+            {
+                UnityEngine.Debug.LogWarning("AcceptEulaAndPrivacyPolicy requested but no cortex token is available.");
+                return;
+            }
+            AcceptEulaAndPrivacyPolicy(CurrentCortexToken);
+        }
+
         public void AcceptEulaAndPrivacyPolicy(string cortexToken)
         {
             JObject param = new JObject(
@@ -667,10 +690,17 @@ namespace EmotivUnityPlugin
         }
 
         // get license information
-        public void GetLicenseInfo(string cortexToken)
+        public void GetLicenseInfo()
         {
+            if (string.IsNullOrEmpty(CurrentCortexToken))
+            {
+                UnityEngine.Debug.LogWarning("GetLicenseInfo requested but no cortex token is available.");
+                GetLicenseInfoResult?.Invoke(this, (CortexErrorCode.UnknownError, null));
+                return;
+            }
+
             JObject param = new JObject(
-                    new JProperty("cortexToken", cortexToken)
+                    new JProperty("cortexToken", CurrentCortexToken)
                 );
             SendTextMessage(param, "getLicenseInfo", true);
         }

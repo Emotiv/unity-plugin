@@ -152,7 +152,7 @@ namespace EmotivUnityPlugin
         /// </summary>
         private void WebSocketClient_Closed(object sender, EventArgs e)
         {
-            OnWSConnected(false);
+            OnCortexConnectionStared(false);
             // start connecting cortex service again
             if (_wscTimer != null)
                 _wscTimer.Start();
@@ -165,7 +165,7 @@ namespace EmotivUnityPlugin
         {
             m_OpenedEvent.Set();
             if (_wSC.State == WebSocketState.Open) {
-                OnWSConnected(true);
+                OnCortexConnectionStared(true);
                 // stop timer
                 _wscTimer.Stop();
 
@@ -183,7 +183,7 @@ namespace EmotivUnityPlugin
 
             if (e.Exception.InnerException != null) {
                 UnityEngine.Debug.Log(e.Exception.InnerException.GetType());
-                OnWSConnected(false);
+                OnCortexConnectionStared(false);
                 // start connecting cortex service again
                 _wscTimer.Start();
             }

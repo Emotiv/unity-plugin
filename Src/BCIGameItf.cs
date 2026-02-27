@@ -41,11 +41,6 @@ namespace EmotivUnityPlugin
             emotivUnityItf.LoginWithAuthenticationCode(code);
         }
 
-        public void AcceptEulaAndPrivacyPolicy()
-        {
-            emotivUnityItf.AcceptEulaAndPrivacyPolicy();
-        }
-
         /// <summary>
         /// Get detected headsets. Returns a list of detected headsets.
         /// </summary>
@@ -173,15 +168,6 @@ namespace EmotivUnityPlugin
         }
         #endif
 
-        #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
-        /// <summary>
-        /// Authenticate with Emotiv. It will open system browser to login and get the authentication code.
-        /// </summary>
-        public async Task AuthenticateAsync()
-        {
-            await emotivUnityItf.AuthenticateAsync();
-        }
-        #endif
 
         /// <summary>
         /// Initialize and start the application. It should be called when the app has granted permissions: bluetooth, location, write external storage.
@@ -390,12 +376,6 @@ namespace EmotivUnityPlugin
             emotivUnityItf.EraseMCTraining(action);
         }
 
-        // logout
-        public void Logout()
-        {
-            emotivUnityItf.Logout();
-        }
-
         /// <summary>
         /// Query the dates having consumer data within a specified date range.
         /// </summary>
@@ -412,16 +392,6 @@ namespace EmotivUnityPlugin
         /// <param name="date">The date for which to query the detailed consumer data.</param>
         public void QueryDayDetailOfConsumerData(DateTime date) {
             emotivUnityItf.QueryDayDetailOfConsumerData(date);
-        }
-
-        public void OpenURL(string url)
-        {
-            emotivUnityItf.OpenURL(url);
-        }
-
-        public bool IsWebViewOpened()
-        {
-            return emotivUnityItf.IsWebViewOpened;
         }
 
         public string LoadedProfilePlayer() {
