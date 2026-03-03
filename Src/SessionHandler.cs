@@ -111,12 +111,13 @@ namespace EmotivUnityPlugin
         /// Open a session with an EMOTIV headset.
         /// A application can open only one session at a time with a given headset.
         /// </summary>
-        public void Create(string headsetId, bool activeSession = false)
+        public void Create(string cortexToken, string headsetId, bool activeSession = false)
         {
-            if (!String.IsNullOrEmpty(headsetId))
+            if (!String.IsNullOrEmpty(cortexToken) &&
+                !String.IsNullOrEmpty(headsetId))
             {
                 string status = activeSession ? "active" : "open";
-                _ctxClient.CreateSession(headsetId, status);
+                _ctxClient.CreateSession(headsetId, status); // temporary remove cortexToken parameter since update the function of CortexClient. The SessionHanlder will be removed in future updates.
             }
             else {
                 UnityEngine.Debug.Log("CreateSession: Invalid parameters");

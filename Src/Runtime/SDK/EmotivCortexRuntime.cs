@@ -46,7 +46,7 @@ namespace Emotiv.Cortex.Service
             => _auth ??= new AuthService(_context, _client);
         
         public IHeadsetService Headset
-            => _headset ??= HeadsetService.Instance;
+            => _headset ??= new HeadsetService(_context, _client);
             
         public void Dispose()
         {

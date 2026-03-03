@@ -7,6 +7,7 @@ namespace Emotiv.Cortex.Models
         AuthorizationFailed, // Indicates that the authorization process failed overall.
         LicenseError, // Indicates that there is an issue with the license (e.g., invalid or expired license).
         HeadsetNotFound, // Indicates that the specified headset could not be found.
+        SubscriptionFailed, // Indicates that the subscription process failed.
         UnknownError
     }
 }

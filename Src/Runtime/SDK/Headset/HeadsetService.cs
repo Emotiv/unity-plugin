@@ -11,26 +11,17 @@ namespace Emotiv.Cortex.Service
 {
     public class HeadsetService : IHeadsetService
     {
-        public static HeadsetService Instance { get; } = new HeadsetService();
-
+        private readonly CortexRuntimeContext _context;
         private readonly CortexClient _client;
-        private readonly List<Headset> _headsets = new List<Headset>();
-        private bool _refreshAndQueryInProgress;
-        private bool _sessionCreated;
+        private volatile bool _refreshAndQueryInProgress;
         private readonly object _sampleLock = new object();
         private readonly Dictionary<string, IDataSample> _latestSamples = new Dictionary<string, IDataSample>(StringComparer.Ordinal);
         private readonly Dictionary<string, IReadOnlyList<string>> _streamHeaders = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
         private bool _streamDataHooked;
 
-        public HeadsetService()
+        public HeadsetService(CortexRuntimeContext context, CortexClient client)
         {
-            _client = CortexClient.Instance;
-            _client.HeadsetScanFinished += OnHeadsetScanFinished;
-            HookStreamData();
-        }
-
-        internal HeadsetService(CortexClient client)
-        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _client.HeadsetScanFinished += OnHeadsetScanFinished;
             HookStreamData();
@@ -49,7 +40,7 @@ namespace Emotiv.Cortex.Service
 
         public List<Headset> GetHeadsets()
         {
-            return new List<Headset>(_headsets);
+            return _context.Headsets;
         }
 
         public bool TakeLatestSample(string stream, out IDataSample sample)
@@ -68,10 +59,8 @@ namespace Emotiv.Cortex.Service
         
         private void OnHeadsetScanFinished(object sender, string message)
         {
-            if (!_sessionCreated) {
-                _ = RefreshAndQueryAsync();
-            }
-            
+            UnityEngine.Debug.Log("Headset scan finished with message: " + message);
+            _ = RefreshAndQueryAsync();
         }
 
         private async Task<CortexErrorCode> RefreshAndQueryAsync()
@@ -85,20 +74,24 @@ namespace Emotiv.Cortex.Service
             try
             {
                 var refreshTcs = new TaskCompletionSource<CortexErrorCode>();
-                EventHandler<(CortexErrorCode error, string message)> refreshResultHandler = null;
+                EventHandler<(CortexErrorCode error, string command)> refreshResultHandler = null;
 
                 refreshResultHandler = (sender, result) =>
                 {
+                    if (result.command != "refresh")
+                    {
+                        return;
+                    }
                     CleanupRefresh();
                     refreshTcs.TrySetResult(result.error);
                 };
 
                 void CleanupRefresh()
                 {
-                    _client.RefreshHeadsetResult -= refreshResultHandler;
+                    _client.ControlDeviceResult -= refreshResultHandler;
                 }
 
-                _client.RefreshHeadsetResult += refreshResultHandler;
+                _client.ControlDeviceResult += refreshResultHandler;
                 RefreshHeadset();
 
                 var refreshCode = await refreshTcs.Task;
@@ -120,10 +113,13 @@ namespace Emotiv.Cortex.Service
                         return;
                     }
 
-                    _headsets.Clear();
                     if (result.data != null)
                     {
-                        _headsets.AddRange(result.data);
+                        _context.SetHeadsets(result.data);
+                    }
+                    else
+                    {
+                        _context.SetHeadsets(null);
                     }
                     queryTcs.TrySetResult(CortexErrorCode.OK);
                 };
@@ -144,7 +140,6 @@ namespace Emotiv.Cortex.Service
             }
         }
 
-        
 
         public async Task<CortexResult<SessionInfo>> ConnectHeadsetAsync(
             string headsetId,
@@ -152,12 +147,11 @@ namespace Emotiv.Cortex.Service
             IReadOnlyList<string> streams = null)
         {
             // check headset exists in the list
-            var headset = _headsets.FirstOrDefault(h => string.Equals(h.HeadsetID, headsetId, StringComparison.Ordinal));
+            var headset = _context.Headsets.FirstOrDefault(h => string.Equals(h.HeadsetID, headsetId, StringComparison.Ordinal));
             if (headset == null)
             {
                 return CortexResult<SessionInfo>.Fail(CortexErrorMapper.FromErrorCode(CortexErrorCode.HeadsetNotFound));
             }
-
 
             var connectCode = await ConnectHeadsetAsync(headsetId, mappings);
             if (connectCode != CortexErrorCode.OK)
@@ -170,15 +164,18 @@ namespace Emotiv.Cortex.Service
             {
                 return CortexResult<SessionInfo>.Fail(CortexErrorMapper.FromErrorCode(sessionResult.Code));
             }
-            _sessionCreated = true;
 
             if (streams != null && streams.Count > 0)
             {
-                var subscribeCode = await SubscribeAsync(sessionResult.Data.SessionId, streams);
-                if (subscribeCode != CortexErrorCode.OK)
+                var subscribeResult = await SubscribeAsync(sessionResult.Data.SessionId, streams);
+                if (subscribeResult.IsSuccess)
                 {
                     return CortexResult<SessionInfo>.Success(sessionResult.Data);
                 }
+                else {
+                    return CortexResult<SessionInfo>.Fail(subscribeResult.Error);
+                }
+
             }
 
             return CortexResult<SessionInfo>.Success(sessionResult.Data);
@@ -192,33 +189,24 @@ namespace Emotiv.Cortex.Service
             }
 
             var tcs = new TaskCompletionSource<CortexErrorCode>();
-            EventHandler<bool> okHandler = null;
-            EventHandler<ErrorMsgEventArgs> errorHandler = null;
+            EventHandler<(CortexErrorCode error, string command)> disconnectHandler = null;
 
-            okHandler = (sender, result) =>
+            disconnectHandler = (sender, result) =>
             {
-                Cleanup();
-                tcs.TrySetResult((result ? CortexErrorCode.OK : CortexErrorCode.UnknownError));
-            };
-
-            errorHandler = (sender, error) =>
-            {
-                if (error.MethodName != "controlDevice")
+                if (result.command != "disconnect")
                 {
                     return;
                 }
                 Cleanup();
-                tcs.TrySetResult((CortexErrorCode.UnknownError));
+                tcs.TrySetResult(result.error);
             };
 
             void Cleanup()
             {
-                _client.HeadsetDisConnectedOK -= okHandler;
-                _client.ErrorMsgReceived -= errorHandler;
+                _client.ControlDeviceResult -= disconnectHandler;
             }
 
-            _client.HeadsetDisConnectedOK += okHandler;
-            _client.ErrorMsgReceived += errorHandler;
+            _client.ControlDeviceResult += disconnectHandler;
             _client.ControlDevice("disconnect", headsetId, null);
 
             var code = await tcs.Task;
@@ -230,37 +218,24 @@ namespace Emotiv.Cortex.Service
         private async Task<CortexErrorCode> ConnectHeadsetAsync(string headsetId, Dictionary<string, string> mappings)
         {
             var tcs = new TaskCompletionSource<CortexErrorCode>();
-            EventHandler<HeadsetConnectEventArgs> connectHandler = null;
-            EventHandler<ErrorMsgEventArgs> errorHandler = null;
+            EventHandler<(CortexErrorCode error, string command)> connectHandler = null;
 
-            connectHandler = (sender, info) =>
+            connectHandler = (sender, result) =>
             {
-                if (!string.Equals(info.HeadsetId, headsetId, StringComparison.Ordinal))
+                if (result.command != "connect")
                 {
                     return;
                 }
                 Cleanup();
-                tcs.TrySetResult(info.IsSuccess ? CortexErrorCode.OK : CortexErrorCode.UnknownError);
-            };
-
-            errorHandler = (sender, error) =>
-            {
-                if (error.MethodName != "controlDevice")
-                {
-                    return;
-                }
-                Cleanup();
-                tcs.TrySetResult(CortexErrorCode.UnknownError);
+                tcs.TrySetResult(result.error);
             };
 
             void Cleanup()
             {
-                _client.HeadsetConnectNotify -= connectHandler;
-                _client.ErrorMsgReceived -= errorHandler;
+                _client.ControlDeviceResult -= connectHandler;
             }
 
-            _client.HeadsetConnectNotify += connectHandler;
-            _client.ErrorMsgReceived += errorHandler;
+            _client.ControlDeviceResult += connectHandler;
 
             _client.ControlDevice("connect", headsetId, ToMappings(mappings));
             return await tcs.Task;
@@ -305,14 +280,14 @@ namespace Emotiv.Cortex.Service
             return await tcs.Task;
         }
 
-        private async Task<CortexErrorCode> SubscribeAsync(string sessionId, IReadOnlyList<string> streams)
+        private async Task<CortexResult> SubscribeAsync(string sessionId, IReadOnlyList<string> streams)
         {
             if (string.IsNullOrEmpty(sessionId))
             {
-                return CortexErrorCode.UnknownError;
+                return CortexResult.Fail(CortexErrorMapper.FromErrorCode(CortexErrorCode.SubscriptionFailed));
             }
 
-            var tcs = new TaskCompletionSource<CortexErrorCode>();
+            var tcs = new TaskCompletionSource<CortexResult>();
             EventHandler<MultipleResultEventArgs> okHandler = null;
             EventHandler<ErrorMsgEventArgs> errorHandler = null;
 
@@ -321,7 +296,7 @@ namespace Emotiv.Cortex.Service
                 CacheStreamHeaders(result);
                 Cleanup();
                 var hasSuccess = result.SuccessList != null && result.SuccessList.Count > 0;
-                tcs.TrySetResult(hasSuccess ? CortexErrorCode.OK : CortexErrorCode.UnknownError);
+                tcs.TrySetResult(hasSuccess ? CortexResult.Success() : CortexResult.Fail(CortexErrorMapper.FromErrorCode(CortexErrorCode.SubscriptionFailed)));
             };
 
             errorHandler = (sender, error) =>
@@ -331,7 +306,8 @@ namespace Emotiv.Cortex.Service
                     return;
                 }
                 Cleanup();
-                tcs.TrySetResult(CortexErrorCode.UnknownError);
+                var cortexError = new CortexError((CortexErrorCode)error.Code, error.MessageError);
+                tcs.TrySetResult(CortexResult.Fail(cortexError));
             };
 
             void Cleanup()
@@ -416,14 +392,10 @@ namespace Emotiv.Cortex.Service
             var values = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             if (headers != null)
             {
-                for (var i = 0; i < headers.Count && (i + 1) < e.Data.Count; i++)
+                for (var i = 0; i < headers.Count && i < e.Data.Count; i++)
                 {
                     var key = headers[i];
-                    if (IsNonChannelHeader(key))
-                    {
-                        continue;
-                    }
-                    var value = Convert.ToSingle(e.Data[i + 1]);
+                    var value = Convert.ToSingle(e.Data[i]);
                     values[key] = value;
                 }
             }
@@ -507,17 +479,19 @@ namespace Emotiv.Cortex.Service
         private static IReadOnlyList<string> NormalizeHeaders(string streamName, JArray header)
         {
             UnityEngine.Debug.Log("Normalizing headers for stream: " + streamName + " with header: " + header.Count);
-            if (streamName == DataStreamName.DevInfos && header.Count > 0)
+            var cols = new List<string>();
+            cols.Add("TimeStamp");
+            if (streamName == DataStreamName.DevInfos && header.Count >= 2)
             {
-                var devCols = new List<string>();
-                devCols.Add(header[0].ToString());
-                devCols.Add(header[1].ToString());
+                // the dev infos has data format kind of "Battery", "Signal", ["AF3","T7","Pz","T8","AF4","OVERALL"],"BatteryPercent"
+                cols.Add(header[0].ToString());
+                cols.Add(header[1].ToString());
 
                 if (header.Count > 2 && header[2] is JArray channelList)
                 {
                     for (var i = 0; i < channelList.Count; i++)
                     {
-                        devCols.Add(channelList[i].ToString());
+                        cols.Add(channelList[i].ToString());
                     }
                 }
 
@@ -525,31 +499,18 @@ namespace Emotiv.Cortex.Service
                 {
                     for (var id = 3; id < header.Count; id++)
                     {
-                        devCols.Add(header[id].ToString());
+                        cols.Add(header[id].ToString());
                     }
                 }
 
-                return devCols;
+                return cols;
             }
 
-            var cols = new List<string>(header.Count);
             foreach (var token in header)
             {
                 cols.Add(token.ToString());
             }
             return cols;
-        }
-
-        private static bool IsNonChannelHeader(string header)
-        {
-            if (string.IsNullOrWhiteSpace(header))
-            {
-                return true;
-            }
-
-            return header.Equals("interpolated", StringComparison.OrdinalIgnoreCase)
-                   || header.Equals("counter", StringComparison.OrdinalIgnoreCase)
-                   || header.Equals("timestamp", StringComparison.OrdinalIgnoreCase);
         }
 
         private static JObject ToMappings(Dictionary<string, string> mappings)

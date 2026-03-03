@@ -112,10 +112,12 @@ namespace EmotivUnityPlugin
         {
             _dsProcess.ProcessInit();
             _dsProcess.SubscribedOK             += OnSubscribedOK;
+            _dsProcess.HeadsetConnectNotify     += OnHeadsetConnectNotify;
             _dsProcess.StreamStopNotify         += OnStreamStopNotify;
             _dsProcess.LicenseValidTo           += OnLicenseValidTo;
             _dsProcess.SessionActivedOK         += OnSessionActivedOK;
             _dsProcess.CreateSessionFail        += OnCreateSessionFail;
+            _dsProcess.QueryHeadsetOK           += OnQueryHeadsetOK;
             _dsProcess.UserLogoutNotify         += OnUserLogoutNotify;
             _dsProcess.SessionClosedNotify      += OnSessionClosedNotify;
             _dsProcess.HeadsetScanFinished      += OnHeadsetScanFinished;
@@ -172,6 +174,8 @@ namespace EmotivUnityPlugin
                 _wantedHeadsetId    = "";
                 _connectHeadsetState = ConnectHeadsetStates.No_Connect;
                 _detectedHeadsets.Clear();
+                // start scanning headset again
+                _dsProcess.RefreshHeadset();
                 ResetDataBuffers();
             }
         }
@@ -191,6 +195,34 @@ namespace EmotivUnityPlugin
                 ResetDataBuffers();
                 // notify logout
                 UserLogoutNotify(this, message);
+            }
+        }
+
+        private void OnQueryHeadsetOK(object sender, List<Headset> headsets)
+        {
+            lock(_locker)
+            {
+                _detectedHeadsets.Clear();
+                string strOut = "";
+                foreach(var headset in headsets) {
+                    _detectedHeadsets.Add(headset);
+                    string headsetId = headset.HeadsetID;
+                    if (_readyCreateSession && headsetId == _wantedHeadsetId &&
+                        (headset.Status == "connected")) {
+                        UnityEngine.Debug.Log("The headset " + headsetId + " is connected. Start creating session.");
+                        
+                        _readyCreateSession = false;
+                        // create session
+                        _dsProcess.CreateSession(headsetId, true);
+                    }
+                    strOut += headset.HeadsetID + "-" + headset.HeadsetConnection + "-" + headset.Status + "; ";
+                }
+                UnityEngine.Debug.Log("DataStreamManager-OnQueryHeadsetOK: " + strOut);
+                if (string.IsNullOrEmpty(strOut))
+                {
+                    strOut = "No headset available at " + DateTime.Now.ToString("HH:mm:ss");
+                }
+                MessageQueryHeadsetOK(this, strOut);
             }
         }
 
@@ -218,6 +250,9 @@ namespace EmotivUnityPlugin
 
                     _connectHeadsetState = ConnectHeadsetStates.Session_Created;
 
+                    // stop query headset if session is created
+                    _dsProcess.StopQueryHeadset();
+
                     // subscribe data
                     _dsProcess.SubscribeData();
                 }
@@ -230,6 +265,10 @@ namespace EmotivUnityPlugin
 
         private void OnLicenseValidTo(object sender, DateTime validTo)
         {
+            if (!_isSessActivated) {
+                // start scanning headset again
+                _dsProcess.RefreshHeadset();
+            }
             LicenseValidTo(this, validTo);
 
         }
@@ -299,6 +338,33 @@ namespace EmotivUnityPlugin
                     }
                 }
                 StreamStopNotify(this, streams);
+            }
+        }
+
+        private void OnHeadsetConnectNotify(object sender, HeadsetConnectEventArgs e)
+        {
+            lock (_locker)
+            {
+                string headsetId = e.HeadsetId;
+                UnityEngine.Debug.Log("OnHeadsetConnectNotify for headset " + headsetId + " while wantedHeadset : " + _wantedHeadsetId + "_readyCreateSession" + _readyCreateSession);
+                if (e.IsSuccess && _readyCreateSession &&
+                    (headsetId == _wantedHeadsetId)) {
+                    UnityEngine.Debug.Log("Connect the headset " + headsetId + " successfully. Start creating session.");
+                    _readyCreateSession = false;
+                    // create session
+                    _dsProcess.CreateSession(headsetId, true);
+                }
+                else if (!e.IsSuccess && headsetId == _wantedHeadsetId) {
+                    UnityEngine.Debug.Log("Connect the headset " + headsetId + " unsuccessfully. Message : " + e.Message);
+                    HeadsetConnectFail(this, headsetId);
+                    _wantedHeadsetId = ""; // reset headsetId
+                    _isSessActivated = false;
+
+                    _connectHeadsetState = ConnectHeadsetStates.Session_Failed;
+                }
+                else {
+                    UnityEngine.Debug.Log("OnHeadsetConnectNotify:  " + headsetId + ". Message : " + e.Message);
+                }
             }
         }
 
@@ -493,6 +559,11 @@ namespace EmotivUnityPlugin
         private void OnHeadsetScanFinished(object sender, string message)
         {
             UnityEngine.Debug.Log(message);
+            if (!_isSessActivated) {
+                // start scanning headset again
+                UnityEngine.Debug.Log("Start scanning headset again.");
+                _dsProcess.RefreshHeadset();
+            }
         }
 
         /// <summary>
@@ -510,7 +581,61 @@ namespace EmotivUnityPlugin
         /// <param name="headsetId">the id of headset you want to retrieve data.</param>
         public void StartDataStream(List<string> streamNameList, string headsetId)
         {
-            
+            lock (_locker)
+            {
+                // if (!string.IsNullOrEmpty(_wantedHeadsetId)) {
+                //     UnityEngine.Debug.Log("The data streams has already started for headset "
+                //                         + _wantedHeadsetId + ". Please wait...");
+                //     return;
+                // }
+
+                if (string.IsNullOrEmpty(headsetId)) {
+                    if (_detectedHeadsets.Count > 0) {
+                        // get the first headset in the list
+                        _wantedHeadsetId = _detectedHeadsets[0].HeadsetID;
+                    }
+                    else {
+                        UnityEngine.Debug.LogError("No headset available.");
+                        // query headset
+                        // _dsProcess.QueryHeadsets("");
+                        return;
+                    }
+
+                }
+                else {
+                    bool _foundHeadset = false;
+                    foreach (var item in _detectedHeadsets) {
+                        if (item.HeadsetID == headsetId){
+                            _foundHeadset = true;
+                        }
+                    }
+                    if (_foundHeadset) {
+                        _wantedHeadsetId = headsetId;
+                    }
+                    else {
+                        UnityEngine.Debug.LogError("The headset " + headsetId + " is not found. Please check the headset Id.");
+                        return;
+                    }
+                }
+
+                UnityEngine.Debug.Log("DataStreamManager-StartDataStream: " + _wantedHeadsetId);
+
+                _connectHeadsetState = ConnectHeadsetStates.Headset_Connecting;
+
+                foreach(var curStream in streamNameList) {
+                    _dsProcess.AddStreams(curStream);
+                }
+                // check headset connected
+                if (!isConnectedHeadset(_wantedHeadsetId)) {
+                    _readyCreateSession = true;
+                    _dsProcess.StartConnectToDevice(_wantedHeadsetId);
+                }  
+                else if (!_isSessActivated) {
+                    UnityEngine.Debug.Log("The headset " + _wantedHeadsetId + " has already connected. Start creating session.");
+                    _readyCreateSession = false;
+                    _dsProcess.CreateSession(_wantedHeadsetId, true);
+                }
+            }
         }
 
         /// <summary>
@@ -866,6 +991,13 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
+        /// Query headsets.
+        /// </summary>
+        public void QueryHeadsets(string headsetId = "") {
+            _dsProcess.QueryHeadsets(headsetId);
+        }
+
+        /// <summary>
         /// Get detected headsets.
         /// </summary>
         public List<Headset> GetDetectedHeadsets() {
@@ -881,6 +1013,8 @@ namespace EmotivUnityPlugin
         public void Stop() {
             // close data stream
             CloseSession();
+            // stop query headset
+            _dsProcess.StopQueryHeadset();
             _dsProcess.CloseCortexClient();
         }
 

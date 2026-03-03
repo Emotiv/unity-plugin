@@ -69,7 +69,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> UserLogoutNotify;
         public event EventHandler<License> GetLicenseInfoDone;
         public event EventHandler<(CortexErrorCode error, License data)> GetLicenseInfoResult;
-        public event EventHandler<(CortexErrorCode error, string message)> RefreshHeadsetResult;
+        public event EventHandler<(CortexErrorCode error, string command)> ControlDeviceResult;
         public event EventHandler<(CortexErrorCode error, List<Headset> data)> QueryHeadsetResult;
         public event EventHandler<SessionEventArgs> CreateSessionOK;
         public event EventHandler<SessionEventArgs> UpdateSessionOK;
@@ -202,7 +202,8 @@ namespace EmotivUnityPlugin
                     }
                     else if (method == "controlDevice")
                     {
-                        RefreshHeadsetResult?.Invoke(this, (CortexErrorCode.UnknownError, messageError));
+                        string command =  (string)error["command"];
+                        ControlDeviceResult?.Invoke(this, (CortexErrorCode.UnknownError, command));
                     }
                     
                 } else {
@@ -300,7 +301,7 @@ namespace EmotivUnityPlugin
                 }
                 else if (command == "refresh")
                 {
-                    RefreshHeadsetResult?.Invoke(this, (CortexErrorCode.OK, command));
+                    ControlDeviceResult?.Invoke(this, (CortexErrorCode.OK, command));
                 }
             }
             else if (method == "getUserLogin")
