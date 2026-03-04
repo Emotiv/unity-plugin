@@ -79,27 +79,5 @@ namespace Emotiv.Cortex.Models
                 }
             }
         }
-
-        // Map headset id and session info
-        private Dictionary<string, SessionInfo> _sessionInfoByHeadsetId = new Dictionary<string, SessionInfo>(StringComparer.Ordinal);
-        public SessionInfo GetSessionInfoByHeadsetId(string headsetId)
-        {
-            lock (_lock)
-            {
-                if (_sessionInfoByHeadsetId.TryGetValue(headsetId, out var sessionInfo))
-                {
-                    return sessionInfo;
-                }
-                return null;
-            }
-        }
-
-        public void SetSessionInfo(string headsetId, SessionInfo sessionInfo)
-        {
-            lock (_lock)
-            {
-                _sessionInfoByHeadsetId[headsetId] = sessionInfo;
-            }
-        }
     }
 }

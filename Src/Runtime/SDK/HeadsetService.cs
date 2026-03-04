@@ -14,16 +14,18 @@ namespace Emotiv.Cortex.Service
         private readonly CortexRuntimeContext _context;
         private readonly CortexClient _client;
         private volatile bool _refreshAndQueryInProgress;
-        private readonly object _sampleLock = new object();
-        private readonly Dictionary<string, IDataSample> _latestSamples = new Dictionary<string, IDataSample>(StringComparer.Ordinal);
+        private readonly object _lock = new object();
+        private readonly Dictionary<DataSampleType, DataSample> _latestSamples = new Dictionary<DataSampleType, DataSample>();
         private readonly Dictionary<string, IReadOnlyList<string>> _streamHeaders = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
         private bool _streamDataHooked;
+        private readonly Dictionary<string, string> _workingSessions = new Dictionary<string, string>(); // mapping from sesionId to headsetId for connected headsets.
 
         public HeadsetService(CortexRuntimeContext context, CortexClient client)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _client.HeadsetScanFinished += OnHeadsetScanFinished;
+            _client.SessionClosedNotify += OnSessionClosedNotify;
             HookStreamData();
         }
 
@@ -43,17 +45,13 @@ namespace Emotiv.Cortex.Service
             return _context.Headsets;
         }
 
-        public bool TakeLatestSample(string stream, out IDataSample sample)
+        public bool TakeLatestSample(DataSampleType streamType, out DataSample sample)
         {
             sample = null;
-            if (string.IsNullOrWhiteSpace(stream))
-            {
-                return false;
-            }
 
-            lock (_sampleLock)
+            lock (_lock)
             {
-                return _latestSamples.TryGetValue(stream, out sample) && sample != null;
+                return _latestSamples.TryGetValue(streamType, out sample) && sample != null;
             }
         }
         
@@ -61,6 +59,23 @@ namespace Emotiv.Cortex.Service
         {
             UnityEngine.Debug.Log("Headset scan finished with message: " + message);
             _ = RefreshAndQueryAsync();
+        }
+
+        private void OnSessionClosedNotify(object sender, string sessionId)
+        {
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                return;
+            }
+
+            string headsetId = null;
+            lock (_lock)
+            {
+                if (_workingSessions.TryGetValue(sessionId, out headsetId))
+                {
+                    _workingSessions.Remove(sessionId);
+                }
+            }
         }
 
         private async Task<CortexErrorCode> RefreshAndQueryAsync()
@@ -74,24 +89,20 @@ namespace Emotiv.Cortex.Service
             try
             {
                 var refreshTcs = new TaskCompletionSource<CortexErrorCode>();
-                EventHandler<(CortexErrorCode error, string command)> refreshResultHandler = null;
+                EventHandler<CortexErrorCode> refreshResultHandler = null;
 
                 refreshResultHandler = (sender, result) =>
                 {
-                    if (result.command != "refresh")
-                    {
-                        return;
-                    }
                     CleanupRefresh();
-                    refreshTcs.TrySetResult(result.error);
+                    refreshTcs.TrySetResult(result);
                 };
 
                 void CleanupRefresh()
                 {
-                    _client.ControlDeviceResult -= refreshResultHandler;
+                    _client.RefreshDeviceResult -= refreshResultHandler;
                 }
 
-                _client.ControlDeviceResult += refreshResultHandler;
+                _client.RefreshDeviceResult += refreshResultHandler;
                 RefreshHeadset();
 
                 var refreshCode = await refreshTcs.Task;
@@ -141,44 +152,46 @@ namespace Emotiv.Cortex.Service
         }
 
 
-        public async Task<CortexResult<SessionInfo>> ConnectHeadsetAsync(
+        public async Task<CortexResult> ConnectHeadsetAsync(
             string headsetId,
             Dictionary<string, string> mappings = null,
-            IReadOnlyList<string> streams = null)
+            IReadOnlyList<DataSampleType> streams = null)
         {
+            UnityEngine.Debug.Log($"GAME:  ConnectHeadsetAsync {headsetId}");
             // check headset exists in the list
             var headset = _context.Headsets.FirstOrDefault(h => string.Equals(h.HeadsetID, headsetId, StringComparison.Ordinal));
             if (headset == null)
             {
-                return CortexResult<SessionInfo>.Fail(CortexErrorMapper.FromErrorCode(CortexErrorCode.HeadsetNotFound));
+                return CortexResult.Fail(CortexErrorMapper.FromErrorCode(CortexErrorCode.HeadsetNotFound));
             }
 
-            var connectCode = await ConnectHeadsetAsync(headsetId, mappings);
+            var connectCode = await ConnectToHeadsetAsync(headsetId, mappings);
             if (connectCode != CortexErrorCode.OK)
             {
-                return CortexResult<SessionInfo>.Fail(CortexErrorMapper.FromErrorCode(connectCode));
+                return CortexResult.Fail(CortexErrorMapper.FromErrorCode(connectCode));
             }
 
             var sessionResult = await CreateSessionAsync(headsetId);
             if (sessionResult.Code != CortexErrorCode.OK)
             {
-                return CortexResult<SessionInfo>.Fail(CortexErrorMapper.FromErrorCode(sessionResult.Code));
+                return CortexResult.Fail(CortexErrorMapper.FromErrorCode(sessionResult.Code));
+            }
+            //save the working session for the connected headset
+            lock (_lock)
+            {
+                _workingSessions[sessionResult.SessionId] = headsetId;
             }
 
             if (streams != null && streams.Count > 0)
             {
-                var subscribeResult = await SubscribeAsync(sessionResult.Data.SessionId, streams);
-                if (subscribeResult.IsSuccess)
+                var subscribeResult = await SubscribeAsync(sessionResult.SessionId, streams);
+                if (!subscribeResult.IsSuccess)
                 {
-                    return CortexResult<SessionInfo>.Success(sessionResult.Data);
+                    return CortexResult.Fail(subscribeResult.Error);
                 }
-                else {
-                    return CortexResult<SessionInfo>.Fail(subscribeResult.Error);
-                }
-
             }
 
-            return CortexResult<SessionInfo>.Success(sessionResult.Data);
+            return CortexResult.Success();
         }
 
         public async Task<CortexResult> DisconnectHeadsetAsync(string headsetId)
@@ -189,11 +202,12 @@ namespace Emotiv.Cortex.Service
             }
 
             var tcs = new TaskCompletionSource<CortexErrorCode>();
-            EventHandler<(CortexErrorCode error, string command)> disconnectHandler = null;
+            EventHandler<(CortexErrorCode error, string headsetId)> disconnectHandler = null;
 
             disconnectHandler = (sender, result) =>
             {
-                if (result.command != "disconnect")
+                if (!string.IsNullOrEmpty(result.headsetId) &&
+                    !string.Equals(result.headsetId, headsetId, StringComparison.Ordinal))
                 {
                     return;
                 }
@@ -203,10 +217,10 @@ namespace Emotiv.Cortex.Service
 
             void Cleanup()
             {
-                _client.ControlDeviceResult -= disconnectHandler;
+                _client.DisconnectDeviceResult -= disconnectHandler;
             }
 
-            _client.ControlDeviceResult += disconnectHandler;
+            _client.DisconnectDeviceResult += disconnectHandler;
             _client.ControlDevice("disconnect", headsetId, null);
 
             var code = await tcs.Task;
@@ -215,51 +229,81 @@ namespace Emotiv.Cortex.Service
                 : CortexResult.Fail(CortexErrorMapper.FromErrorCode(code));
         }
 
-        private async Task<CortexErrorCode> ConnectHeadsetAsync(string headsetId, Dictionary<string, string> mappings)
+        private async Task<CortexErrorCode> ConnectToHeadsetAsync(string headsetId, Dictionary<string, string> mappings)
         {
             var tcs = new TaskCompletionSource<CortexErrorCode>();
-            EventHandler<(CortexErrorCode error, string command)> connectHandler = null;
+            EventHandler<CortexErrorCode> connectHandler = null;
 
             connectHandler = (sender, result) =>
             {
-                if (result.command != "connect")
-                {
-                    return;
-                }
                 Cleanup();
-                tcs.TrySetResult(result.error);
+                tcs.TrySetResult(result);
             };
 
             void Cleanup()
             {
-                _client.ControlDeviceResult -= connectHandler;
+                _client.ConnectDeviceResult -= connectHandler;
             }
 
-            _client.ControlDeviceResult += connectHandler;
+            _client.ConnectDeviceResult += connectHandler;
 
             _client.ControlDevice("connect", headsetId, ToMappings(mappings));
-            return await tcs.Task;
+            var connectCode = await tcs.Task;
+            if (connectCode != CortexErrorCode.OK)
+            {
+                return connectCode;
+            }
+
+            var notifyTcs = new TaskCompletionSource<bool>();
+            EventHandler<HeadsetConnectEventArgs> notifyHandler = null;
+
+            notifyHandler = (sender, args) =>
+            {
+                if (args == null)
+                {
+                    return;
+                }
+
+                if (!string.IsNullOrEmpty(args.HeadsetId) &&
+                    !string.Equals(args.HeadsetId, headsetId, StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                CleanupNotify();
+                notifyTcs.TrySetResult(args.IsSuccess);
+            };
+
+            void CleanupNotify()
+            {
+                _client.HeadsetConnectNotify -= notifyHandler;
+            }
+
+            _client.HeadsetConnectNotify += notifyHandler;
+
+            var notifySuccess = await notifyTcs.Task;
+            return notifySuccess ? CortexErrorCode.OK : CortexErrorCode.CannotConnectToHeadset;
         }
 
-        private async Task<(CortexErrorCode Code, SessionInfo Data)> CreateSessionAsync(string headsetId)
+        private async Task<(CortexErrorCode Code, string SessionId)> CreateSessionAsync(string headsetId)
         {
-            var tcs = new TaskCompletionSource<(CortexErrorCode Code, SessionInfo Data)>();
+            var tcs = new TaskCompletionSource<(CortexErrorCode Code, string SessionId)>();
             EventHandler<SessionEventArgs> okHandler = null;
             EventHandler<ErrorMsgEventArgs> errorHandler = null;
 
-            okHandler = (sender, sessionInfo) =>
+            okHandler = (sender, eventArgs) =>
             {
-                if (!string.Equals(sessionInfo.HeadsetId, headsetId, StringComparison.Ordinal))
+                if (!string.Equals(eventArgs.HeadsetId, headsetId, StringComparison.Ordinal))
                 {
                     return;
                 }
                 Cleanup();
-                tcs.TrySetResult((CortexErrorCode.OK, SessionInfo.FromSessionEventArgs(sessionInfo)));
+                tcs.TrySetResult((CortexErrorCode.OK, eventArgs.SessionId));
             };
 
             errorHandler = (sender, error) =>
             {
-                if (error.MethodName != "createSession")
+                if (error.MethodName != "createSession") 
                 {
                     return;
                 }
@@ -280,12 +324,18 @@ namespace Emotiv.Cortex.Service
             return await tcs.Task;
         }
 
-        private async Task<CortexResult> SubscribeAsync(string sessionId, IReadOnlyList<string> streams)
+        private async Task<CortexResult> SubscribeAsync(string sessionId, IReadOnlyList<DataSampleType> streams)
         {
             if (string.IsNullOrEmpty(sessionId))
             {
                 return CortexResult.Fail(CortexErrorMapper.FromErrorCode(CortexErrorCode.SubscriptionFailed));
             }
+
+            // Map DataSampleType to stream names
+            var streamNames = streams
+                ?.Select(type => DataStreamMapping.GetStreamName(type))
+                .Where(name => !string.IsNullOrEmpty(name))
+                .ToList() ?? new List<string>();
 
             var tcs = new TaskCompletionSource<CortexResult>();
             EventHandler<MultipleResultEventArgs> okHandler = null;
@@ -318,7 +368,7 @@ namespace Emotiv.Cortex.Service
 
             _client.SubscribeDataDone += okHandler;
             _client.ErrorMsgReceived += errorHandler;
-            _client.Subscribe(_client.CurrentCortexToken, sessionId, streams.ToList());
+            _client.Subscribe(_client.CurrentCortexToken, sessionId, streamNames);
 
             return await tcs.Task;
         }
@@ -340,37 +390,38 @@ namespace Emotiv.Cortex.Service
             {
                 return;
             }
+            DataSampleType dataSampleType = DataStreamMapping.GetStreamType(e.StreamName) ?? DataSampleType.UnSupported;
 
-            switch (e.StreamName)
+            switch (dataSampleType)
             {
-                case DataStreamName.DevInfos:
+                case DataSampleType.CQ:
                     if (TryBuildCQSample(e, out var cqSample))
                     {
-                        SetLatestSample(DataStreamName.DevInfos, cqSample);
+                        SetLatestSample(DataSampleType.CQ, cqSample);
                     }
                     break;
-                case DataStreamName.MentalCommands:
+                case DataSampleType.MentalCommand:
                     if (TryBuildMentalCommandSample(e, out var comSample))
                     {
-                        SetLatestSample(DataStreamName.MentalCommands, comSample);
+                        SetLatestSample(DataSampleType.MentalCommand, comSample);
                     }
                     break;
             }
         }
 
-        private void SetLatestSample(string stream, IDataSample sample)
+        private void SetLatestSample(DataSampleType dataType, DataSample sample)
         {
-            if (sample == null || string.IsNullOrEmpty(stream))
+            if (sample == null)
             {
                 return;
             }
-            lock (_sampleLock)
+            lock (_lock)
             {
-                _latestSamples[stream] = sample;
+                _latestSamples[dataType] = sample;
             }
         }
 
-        private bool TryBuildCQSample(StreamDataEventArgs e, out IDataSample sample)
+        private bool TryBuildCQSample(StreamDataEventArgs e, out DataSample sample)
         {
             sample = null;
             if (e.Data == null || e.Data.Count == 0)
@@ -384,7 +435,7 @@ namespace Emotiv.Cortex.Service
             }
 
             IReadOnlyList<string> headers = null;
-            lock (_sampleLock)
+            lock (_lock)
             {
                 _streamHeaders.TryGetValue(DataStreamName.DevInfos, out headers);
             }
@@ -409,7 +460,7 @@ namespace Emotiv.Cortex.Service
             return true;
         }
 
-        private bool TryBuildMentalCommandSample(StreamDataEventArgs e, out IDataSample sample)
+        private bool TryBuildMentalCommandSample(StreamDataEventArgs e, out DataSample sample)
         {
             sample = null;
             if (e.Data == null || e.Data.Count < 3)
@@ -454,7 +505,7 @@ namespace Emotiv.Cortex.Service
                 return;
             }
 
-            lock (_sampleLock)
+            lock (_lock)
             {
                 foreach (JObject ele in result.SuccessList)
                 {

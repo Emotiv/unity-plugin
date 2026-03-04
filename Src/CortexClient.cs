@@ -69,7 +69,9 @@ namespace EmotivUnityPlugin
         public event EventHandler<string> UserLogoutNotify;
         public event EventHandler<License> GetLicenseInfoDone;
         public event EventHandler<(CortexErrorCode error, License data)> GetLicenseInfoResult;
-        public event EventHandler<(CortexErrorCode error, string command)> ControlDeviceResult;
+        public event EventHandler<CortexErrorCode> ConnectDeviceResult;
+        public event EventHandler<(CortexErrorCode error, string headsetId)> DisconnectDeviceResult;
+        public event EventHandler<CortexErrorCode> RefreshDeviceResult;
         public event EventHandler<(CortexErrorCode error, List<Headset> data)> QueryHeadsetResult;
         public event EventHandler<SessionEventArgs> CreateSessionOK;
         public event EventHandler<SessionEventArgs> UpdateSessionOK;
@@ -202,8 +204,19 @@ namespace EmotivUnityPlugin
                     }
                     else if (method == "controlDevice")
                     {
-                        string command =  (string)error["command"];
-                        ControlDeviceResult?.Invoke(this, (CortexErrorCode.UnknownError, command));
+                        string command = (string)error["command"];
+                        if (command == "connect")
+                        {
+                            ConnectDeviceResult?.Invoke(this, CortexErrorCode.UnknownError);
+                        }
+                        else if (command == "disconnect")
+                        {
+                            DisconnectDeviceResult?.Invoke(this, (CortexErrorCode.UnknownError, string.Empty));
+                        }
+                        else if (command == "refresh")
+                        {
+                            RefreshDeviceResult?.Invoke(this, CortexErrorCode.UnknownError);
+                        }
                     }
                     
                 } else {
@@ -295,13 +308,18 @@ namespace EmotivUnityPlugin
             else if (method == "controlDevice")
             {
                 string command = (string)data["command"];
-                if (command == "disconnect")
+                string headsetId = data["headset"]?.ToString() ?? string.Empty;
+                if (command == "connect")
                 {
-                    HeadsetDisConnectedOK(this, true);
+                    ConnectDeviceResult?.Invoke(this, CortexErrorCode.OK);
+                }
+                else if (command == "disconnect")
+                {
+                    DisconnectDeviceResult?.Invoke(this, (CortexErrorCode.OK, headsetId));
                 }
                 else if (command == "refresh")
                 {
-                    ControlDeviceResult?.Invoke(this, (CortexErrorCode.OK, command));
+                    RefreshDeviceResult?.Invoke(this, CortexErrorCode.OK);
                 }
             }
             else if (method == "getUserLogin")
