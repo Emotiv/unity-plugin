@@ -117,7 +117,7 @@ namespace EmotivUnityPlugin
                 !String.IsNullOrEmpty(headsetId))
             {
                 string status = activeSession ? "active" : "open";
-                _ctxClient.CreateSession(headsetId, status); // temporary remove cortexToken parameter since update the function of CortexClient. The SessionHanlder will be removed in future updates.
+                _ctxClient.CreateSession(headsetId, status); // temporary remove cortexToken parameter since update the function of CortexClient. The SessionHandler will be removed in future updates.
             }
             else {
                 UnityEngine.Debug.Log("CreateSession: Invalid parameters");

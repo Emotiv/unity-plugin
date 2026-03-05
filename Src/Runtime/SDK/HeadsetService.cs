@@ -11,6 +11,11 @@ namespace Emotiv.Cortex.Service
 {
     public class HeadsetService : IHeadsetService
     {
+        private static readonly Dictionary<DataSampleType, string> _streamMap = new Dictionary<DataSampleType, string>
+        {
+            { DataSampleType.DevInfo, "dev" },
+            { DataSampleType.MentalCommand, "com" }
+        };
         private readonly CortexRuntimeContext _context;
         private readonly CortexClient _client;
         private volatile bool _refreshAndQueryInProgress;
@@ -18,7 +23,7 @@ namespace Emotiv.Cortex.Service
         private readonly Dictionary<DataSampleType, DataSample> _latestSamples = new Dictionary<DataSampleType, DataSample>();
         private readonly Dictionary<string, IReadOnlyList<string>> _streamHeaders = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
         private bool _streamDataHooked;
-        private readonly Dictionary<string, string> _workingSessions = new Dictionary<string, string>(); // mapping from sesionId to headsetId for connected headsets.
+        private readonly Dictionary<string, string> _workingSessions = new Dictionary<string, string>(); // mapping from sessionId to headsetId for connected headsets.
 
         public HeadsetService(CortexRuntimeContext context, CortexClient client)
         {
@@ -51,7 +56,14 @@ namespace Emotiv.Cortex.Service
 
             lock (_lock)
             {
-                return _latestSamples.TryGetValue(streamType, out sample) && sample != null;
+                if (!_latestSamples.TryGetValue(streamType, out sample) || sample == null)
+                {
+                    sample = null;
+                    return false;
+                }
+
+                _latestSamples.Remove(streamType);
+                return true;
             }
         }
         
@@ -157,7 +169,6 @@ namespace Emotiv.Cortex.Service
             Dictionary<string, string> mappings = null,
             IReadOnlyList<DataSampleType> streams = null)
         {
-            UnityEngine.Debug.Log($"GAME:  ConnectHeadsetAsync {headsetId}");
             // check headset exists in the list
             var headset = _context.Headsets.FirstOrDefault(h => string.Equals(h.HeadsetID, headsetId, StringComparison.Ordinal));
             if (headset == null)
@@ -333,7 +344,7 @@ namespace Emotiv.Cortex.Service
 
             // Map DataSampleType to stream names
             var streamNames = streams
-                ?.Select(type => DataStreamMapping.GetStreamName(type))
+                ?.Select(type => GetStreamName(type))
                 .Where(name => !string.IsNullOrEmpty(name))
                 .ToList() ?? new List<string>();
 
@@ -356,7 +367,7 @@ namespace Emotiv.Cortex.Service
                     return;
                 }
                 Cleanup();
-                var cortexError = new CortexError((CortexErrorCode)error.Code, error.MessageError);
+                var cortexError = CortexErrorMapper.FromRawCortex(error.Code, error.MessageError);
                 tcs.TrySetResult(CortexResult.Fail(cortexError));
             };
 
@@ -390,14 +401,18 @@ namespace Emotiv.Cortex.Service
             {
                 return;
             }
-            DataSampleType dataSampleType = DataStreamMapping.GetStreamType(e.StreamName) ?? DataSampleType.UnSupported;
-
-            switch (dataSampleType)
+            var dataSampleType = GetStreamType(e.StreamName);
+            if (dataSampleType == null)
             {
-                case DataSampleType.CQ:
+                throw new NotSupportedException($"Unsupported stream type: {e.StreamName}");
+            }
+
+            switch (dataSampleType.Value)
+            {
+                case DataSampleType.DevInfo:
                     if (TryBuildCQSample(e, out var cqSample))
                     {
-                        SetLatestSample(DataSampleType.CQ, cqSample);
+                        SetLatestSample(DataSampleType.DevInfo, cqSample);
                     }
                     break;
                 case DataSampleType.MentalCommand:
@@ -406,6 +421,8 @@ namespace Emotiv.Cortex.Service
                         SetLatestSample(DataSampleType.MentalCommand, comSample);
                     }
                     break;
+                default:
+                    throw new NotSupportedException($"Unsupported data sample type: {dataSampleType.Value}");
             }
         }
 
@@ -456,7 +473,7 @@ namespace Emotiv.Cortex.Service
                 return false;
             }
 
-            sample = new CQDataSample(timestamp, values);
+            sample = new DeviceInformationSample(timestamp, values);
             return true;
         }
 
@@ -524,6 +541,21 @@ namespace Emotiv.Cortex.Service
                     _streamHeaders[streamName] = NormalizeHeaders(streamName, header);
                 }
             }
+        }
+
+        private static string GetStreamName(DataSampleType type)
+            => _streamMap.TryGetValue(type, out var name) ? name : null;
+
+        private static DataSampleType? GetStreamType(string streamName)
+        {
+            foreach (var kvp in _streamMap)
+            {
+                if (string.Equals(kvp.Value, streamName, StringComparison.Ordinal))
+                {
+                    return kvp.Key;
+                }
+            }
+            return null;
         }
 
 
