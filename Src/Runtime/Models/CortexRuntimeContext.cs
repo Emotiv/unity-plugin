@@ -1,4 +1,6 @@
+using System;
 using EmotivUnityPlugin; // TODO (Tung Nguyen): remove this line when move all old code to new SDK   
+using System.Collections.Generic;
 namespace Emotiv.Cortex.Models
 {
     public sealed class CortexRuntimeContext
@@ -51,5 +53,31 @@ namespace Emotiv.Cortex.Models
             }
         }
 
+        // ------------------------
+        // Headsets
+        // ------------------------
+        private List<Headset> _headsets = new List<Headset>();
+        public List<Headset> Headsets
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return new List<Headset>(_headsets);
+                }
+            }
+        }
+
+        public void SetHeadsets(List<Headset> headsets)
+        {
+            lock (_lock)
+            {
+                _headsets.Clear();
+                if (headsets != null)
+                {
+                    _headsets.AddRange(headsets);
+                }
+            }
+        }
     }
 }

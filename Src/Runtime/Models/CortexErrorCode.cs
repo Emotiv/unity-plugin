@@ -6,6 +6,9 @@ namespace Emotiv.Cortex.Models
         NoUserLogin, // Indicates that there is no user logged in.
         AuthorizationFailed, // Indicates that the authorization process failed overall.
         LicenseError, // Indicates that there is an issue with the license (e.g., invalid or expired license).
+        HeadsetNotFound, // Indicates that the specified headset could not be found.
+        CannotConnectToHeadset, // Indicates that the connection to the headset could not be established.
+        SubscriptionFailed, // Indicates that the subscription process failed.
         UnknownError
     }
 }
