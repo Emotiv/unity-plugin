@@ -145,8 +145,7 @@ namespace EmotivUnityPlugin
         public void QueryProfile()
         {
             // query profiles
-            string cortexToken = _authorizer.CortexToken;
-            _ctxClient.QueryProfile(cortexToken);
+            _ctxClient.QueryProfile();
         }
         
         /// <summary>
@@ -166,62 +165,50 @@ namespace EmotivUnityPlugin
             _ctxClient.GetCurrentProfile(_authorizer.CortexToken, headsetId);
         }
 
-        public void DoTraining(string action, string status, string detection)
+        public void DoTraining(string action, string status, string detection, string headsetId)
         {
             UnityEngine.Debug.Log(status + " " + action + " training.");
             //Do training
-            string cortexToken  = _authorizer.CortexToken;
-            string sessionId    = _sessionHandler.SessionId;
-            _ctxClient.Training(cortexToken, sessionId, status, detection, action);
+            _ctxClient.Training(headsetId, status, detection, action);
         }
 
         public void CreateProfile(string profileName, string headsetId)
         {
-            string cortexToken  = _authorizer.CortexToken;
-            _ctxClient.SetupProfile(cortexToken, profileName, "create", headsetId);
+            _ctxClient.SetupProfile(profileName, "create", headsetId);
         }
 
         public void LoadProfile(string profileName, string headsetId)
         {
             
-            string cortexToken = _authorizer.CortexToken;
-            _ctxClient.SetupProfile(cortexToken, profileName, "load", headsetId);
+            _ctxClient.SetupProfile(profileName, "load", headsetId);
         }
 
         public void UnLoadProfile(string profileName, string headsetId)
         {
-            string cortexToken = _authorizer.CortexToken;
-            _ctxClient.SetupProfile(cortexToken, profileName, "unload", headsetId);
+            _ctxClient.SetupProfile(profileName, "unload", headsetId);
         }
 
         public void SaveProfile(string profileName, string headsetId)
         {
-            string cortexToken = _authorizer.CortexToken;
-            _ctxClient.SetupProfile(cortexToken, profileName, "save", headsetId);
+            _ctxClient.SetupProfile(profileName, "save", headsetId);
         }
 
         // set mental command sensitivity
-        public void SetMentalCommandSensitivity(string profileName, List<int> levels)
+        public void SetMentalCommandSensitivity(string profileName, List<int> levels, string headsetId)
         {
-            string cortexToken = _authorizer.CortexToken;
-            string sessionId    = _sessionHandler.SessionId;
-            _ctxClient.MentalCommandActionSensitivity(cortexToken, "set", sessionId, profileName, levels);
+            _ctxClient.MentalCommandActionSensitivity("set", headsetId, profileName, levels);
         }
 
         // get mental command sensitivity
-        public void GetMentalCommandSensitivity(string profileName)
+        public void GetMentalCommandSensitivity(string profileName, string headsetId)
         {
-            string cortexToken = _authorizer.CortexToken;
-            string sessionId    = _sessionHandler.SessionId;
-            _ctxClient.MentalCommandActionSensitivity(cortexToken, "get", sessionId, profileName);
+            _ctxClient.MentalCommandActionSensitivity("get", headsetId, profileName);
         }
 
         // get trained signature actions
-        public void GetTrainedSignatureActions(string detection, string profileName = "")
+        public void GetTrainedSignatureActions(string detection, string headsetId, string profileName = "")
         {
-            string cortexToken = _authorizer.CortexToken;
-            string sessionId    = _sessionHandler.SessionId;
-            _ctxClient.GetTrainedSignatureActions(cortexToken, detection, sessionId, profileName);
+            _ctxClient.GetTrainedSignatureActions(detection, headsetId, profileName);
         }
     }
 }

@@ -79,5 +79,45 @@ namespace Emotiv.Cortex.Models
                 }
             }
         }
+
+        // connected headset ids
+        private HashSet<string> _connectedHeadsetIds = new HashSet<string>();
+        public HashSet<string> ConnectedHeadsetIds
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return new HashSet<string>(_connectedHeadsetIds);
+                }
+            }
+        }
+
+        public void AddConnectedHeadsetId(string headsetId)
+        {
+            lock (_lock)
+            {
+                if (!_connectedHeadsetIds.Add(headsetId))
+                {
+                    // Handle the case where the headsetId was already present, if needed
+                    UnityEngine.Debug.LogWarning($"Headset ID {headsetId} is already in the connected headset list.");
+                }
+            }
+        }
+        // clear connected headset id or clear all connected headset
+        public void ClearConnectedHeadsetId(string headsetId = null)
+        {
+            lock (_lock)
+            {
+                if (headsetId == null)
+                {
+                    _connectedHeadsetIds.Clear();
+                }
+                else
+                {
+                    _connectedHeadsetIds.Remove(headsetId);
+                }
+            }
+        }
     }
 }

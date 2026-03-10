@@ -14,7 +14,8 @@ namespace Emotiv.Cortex.Service
         private static readonly Dictionary<DataSampleType, string> _streamMap = new Dictionary<DataSampleType, string>
         {
             { DataSampleType.DevInfo, "dev" },
-            { DataSampleType.MentalCommand, "com" }
+            { DataSampleType.MentalCommand, "com" },
+            { DataSampleType.SysEvent, "sys" } // "sys" stream is for system event data, and it will be removed in v5
         };
         private readonly CortexRuntimeContext _context;
         private readonly CortexClient _client;
@@ -88,6 +89,8 @@ namespace Emotiv.Cortex.Service
                     _workingSessions.Remove(sessionId);
                 }
             }
+            // remove the disconnected headsetId from connected list in context
+            _context.ClearConnectedHeadsetId(headsetId);
         }
 
         private async Task<CortexErrorCode> RefreshAndQueryAsync()
@@ -187,6 +190,9 @@ namespace Emotiv.Cortex.Service
             {
                 return CortexResult.Fail(CortexErrorMapper.FromErrorCode(sessionResult.Code));
             }
+            // save connected headsetId to context
+            _context.AddConnectedHeadsetId(headsetId);
+
             //save the working session for the connected headset
             lock (_lock)
             {
@@ -420,6 +426,10 @@ namespace Emotiv.Cortex.Service
                     {
                         SetLatestSample(DataSampleType.MentalCommand, comSample);
                     }
+                    break;
+                case DataSampleType.SysEvent:
+                    // ignore sys event, it will be removed in v5, now handle at SimpleBCIService for training result notification
+                    UnityEngine.Debug.Log("Received sys event data, which is currently ignored. It will be removed in v5.");
                     break;
                 default:
                     throw new NotSupportedException($"Unsupported data sample type: {dataSampleType.Value}");

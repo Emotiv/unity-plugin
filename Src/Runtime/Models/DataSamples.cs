@@ -6,7 +6,8 @@ namespace Emotiv.Cortex.Models
     public enum DataSampleType
     {
         DevInfo, // for device information data stream (contains contact quality, battery level, etc.)
-        MentalCommand // for Mental Command data stream
+        MentalCommand, // for Mental Command data stream
+        SysEvent, // for "sys" (system event) data stream but it will be removed at v5
     }
 
     public abstract class DataSample

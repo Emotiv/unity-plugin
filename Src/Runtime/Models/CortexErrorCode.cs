@@ -9,6 +9,8 @@ namespace Emotiv.Cortex.Models
         HeadsetNotFound, // Indicates that the specified headset could not be found.
         CannotConnectToHeadset, // Indicates that the connection to the headset could not be established.
         SubscriptionFailed, // Indicates that the subscription process failed.
+        NoConnectedHeadset, // Indicates that there is no connected headset.
+        TrainingFailed, // Indicates that the training process failed.
         UnknownError
     }
 }

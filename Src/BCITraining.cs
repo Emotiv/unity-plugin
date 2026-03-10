@@ -151,7 +151,7 @@ namespace EmotivUnityPlugin
         public void StartTraining(string action, string detection)
         {
             _currAction = action;
-            _trainingHandler.DoTraining(action, "start", detection);
+            _trainingHandler.DoTraining(action, "start", detection, _workingHeadsetId);
         }
 
         /// <summary>
@@ -165,7 +165,7 @@ namespace EmotivUnityPlugin
             }
             else
             {
-                _trainingHandler.DoTraining(_currAction, "accept", detection);
+                _trainingHandler.DoTraining(_currAction, "accept", detection, _workingHeadsetId);
             }
             
         }
@@ -181,7 +181,7 @@ namespace EmotivUnityPlugin
             }
             else
             {
-                _trainingHandler.DoTraining(_currAction, "reject", detection);
+                _trainingHandler.DoTraining(_currAction, "reject", detection, _workingHeadsetId);
             }
         }
 
@@ -190,7 +190,7 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void EraseTraining(string action, string detection)
         {
-            _trainingHandler.DoTraining(action, "erase", detection);
+            _trainingHandler.DoTraining(action, "erase", detection, _workingHeadsetId);
         }
 
         /// <summary>
@@ -198,26 +198,26 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void ResetTraining(string action, string detection)
         {
-            _trainingHandler.DoTraining(action, "reset", detection);
+            _trainingHandler.DoTraining(action, "reset", detection, _workingHeadsetId);
         }
 
 
         // Set sensitivity for mental command
         public void SetMentalCommandActionSensitivity(string profileName, List<int> levels)
         {
-            _trainingHandler.SetMentalCommandSensitivity( profileName, levels);
+            _trainingHandler.SetMentalCommandSensitivity(profileName, levels, _workingHeadsetId);
         }
 
         // get sensitivity for mental command
         public void GetMentalCommandActionSensitivity(string profileName)
         {
-            _trainingHandler.GetMentalCommandSensitivity(profileName);
+            _trainingHandler.GetMentalCommandSensitivity(profileName, _workingHeadsetId);
         }
 
         // get trained signature actions
         public void GetTrainedSignatureActions(string detection, string profileName = "")
         {
-            _trainingHandler.GetTrainedSignatureActions(detection, profileName);
+            _trainingHandler.GetTrainedSignatureActions(detection, _workingHeadsetId, profileName);
         }
 
         // Event handers
