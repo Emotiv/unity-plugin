@@ -97,11 +97,7 @@ namespace Emotiv.Cortex.Models
         {
             lock (_lock)
             {
-                if (!_connectedHeadsetIds.Add(headsetId))
-                {
-                    // Handle the case where the headsetId was already present, if needed
-                    UnityEngine.Debug.LogWarning($"Headset ID {headsetId} is already in the connected headset list.");
-                }
+                _connectedHeadsetIds.Add(headsetId);
             }
         }
         // clear connected headset id or clear all connected headset
