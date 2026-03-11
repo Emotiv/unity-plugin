@@ -55,6 +55,10 @@ namespace Emotiv.Cortex.Service
         public void Dispose()
         {
             _client.CortexConnectionStared -= OnCortexConnectionStared;
+            if (_simpleBCI is IDisposable disposableSimpleBci)
+            {
+                disposableSimpleBci.Dispose();
+            }
         }
 
         private void InitConfigFromAppConfig()

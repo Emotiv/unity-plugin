@@ -10,7 +10,7 @@ namespace Emotiv.Cortex.Service
     /// supported headset and manages one internal profile bound to that headset type so
     /// users do not need to manage profile details.
     /// </summary>
-    public interface ISimpleBCIService
+    public interface ISimpleBCIService : IDisposable
     {
         /// <summary>
         /// Creates and loads a training profile for the first connected headset. The

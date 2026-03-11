@@ -12,6 +12,7 @@ namespace Emotiv.Cortex.Service
     {
         private const string DefaultDetection = "mentalCommand";
         private const int ProfileOperationTimeoutMs = 5000;
+        private const int TrainingOperationTimeoutMs = 15000;
         private readonly CortexRuntimeContext _context;
         private readonly CortexClient _client;
         private readonly object _lock = new object();
@@ -19,6 +20,8 @@ namespace Emotiv.Cortex.Service
         private readonly Dictionary<string, string> _loadedProfilesByHeadsetId = new Dictionary<string, string>(StringComparer.Ordinal);
 
         private string _currentHeadsetId;
+        private string _currentTrainingAction;
+        private bool _disposed;
 
         public SimpleBCIService(CortexRuntimeContext context, CortexClient client)
         {
@@ -27,9 +30,15 @@ namespace Emotiv.Cortex.Service
             _client.StreamDataReceived += OnStreamDataReceived;
         }
 
-        ~SimpleBCIService()
+        public void Dispose()
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             _client.StreamDataReceived -= OnStreamDataReceived;
+            _disposed = true;
         }
 
         public async Task<CortexResult<EmoProfile>> LoadProfileAsync()
@@ -162,33 +171,46 @@ namespace Emotiv.Cortex.Service
             return await tcs.Task;
         }
 
-        public Task<CortexResult> StartTrainingAsync(string action, bool autoAccept = true)
+        public async Task<CortexResult> StartTrainingAsync(string action, bool autoAccept = true)
         {
             if (string.IsNullOrWhiteSpace(action))
             {
-                return Task.FromResult(CortexResult.Fail(
-                    new CortexError(CortexErrorCode.TrainingFailed, "Training action is required")));
+                return CortexResult.Fail(
+                    new CortexError(CortexErrorCode.TrainingFailed, "Training action is required"));
             }
 
             string headsetId;
             lock (_lock)
             {
                 headsetId = _currentHeadsetId;
+                _currentTrainingAction = action;
             }
 
             if (string.IsNullOrEmpty(headsetId))
             {
-                return Task.FromResult(CortexResult.Fail(
-                    CortexErrorMapper.FromErrorCode(CortexErrorCode.NoConnectedHeadset)));
+                return CortexResult.Fail(
+                    CortexErrorMapper.FromErrorCode(CortexErrorCode.NoConnectedHeadset));
             }
 
             var tcs = new TaskCompletionSource<CortexResult>();
             EventHandler<SysEventArgs> handler = null;
+            EventHandler<ErrorMsgEventArgs> errorHandler = null;
 
             void Cleanup()
             {
                 SysEventsReceived -= handler;
+                _client.ErrorMsgReceived -= errorHandler;
             }
+
+            void TryComplete(CortexResult result)
+            {
+                Cleanup();
+                tcs.TrySetResult(result);
+            }
+
+            void CompleteSuccess() => TryComplete(CortexResult.Success());
+
+            void CompleteFailure(CortexError error) => TryComplete(CortexResult.Fail(error));
 
             handler = (sender, e) =>
             {
@@ -208,38 +230,61 @@ namespace Emotiv.Cortex.Service
                             AcceptTraining(headsetId, action);
                             return;
                         }
-                        tcs.TrySetResult(CortexResult.Success());
+                        CompleteSuccess();
                         return;
                     case "MC_Failed":
-                        Cleanup();
-                        tcs.TrySetResult(CortexResult.Fail(
-                            new CortexError(CortexErrorCode.TrainingFailed, "Training failed")));
+                        _currentTrainingAction = string.Empty;
+                        CompleteFailure(new CortexError(CortexErrorCode.TrainingFailed, "Training failed"));
                         return;
                     case "MC_Completed":
-                        Cleanup();
-                        tcs.TrySetResult(CortexResult.Success());
+                        _currentTrainingAction = string.Empty;
+                        CompleteSuccess();
                         return;
                     default:
                         UnityEngine.Debug.Log($"Unknown training event: {e.EventMessage}");
-                        Cleanup();
-                        tcs.TrySetResult(CortexResult.Fail(
-                            CortexErrorMapper.FromErrorCode(CortexErrorCode.TrainingFailed)));
+                        _currentTrainingAction = string.Empty;
+                        CompleteFailure(CortexErrorMapper.FromErrorCode(CortexErrorCode.TrainingFailed));
                         return;
                 }
             };
 
+            errorHandler = (sender, error) =>
+            {
+                if (error == null)
+                {
+                    return;
+                }
+
+                if (error.MethodName != "training")
+                {
+                    return;
+                }
+
+                var cortexError = CortexErrorMapper.FromRawCortex(error.Code, error.MessageError);
+                CompleteFailure(cortexError);
+            };
+
             SysEventsReceived += handler;
+            _client.ErrorMsgReceived += errorHandler;
             StartTraining(headsetId, action);
 
-            return tcs.Task;
+            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(TrainingOperationTimeoutMs));
+            if (completedTask != tcs.Task)
+            {
+                CompleteFailure(new CortexError(CortexErrorCode.TrainingFailed, "Training operation timed out"));
+            }
+
+            return await tcs.Task;
         }
 
         public Task<CortexResult> AcceptTrainingAsync()
         {
             string headsetId;
+            string trainingAction;
             lock (_lock)
             {
                 headsetId = _currentHeadsetId;
+                trainingAction = _currentTrainingAction;
             }
 
             if (string.IsNullOrEmpty(headsetId))
@@ -264,6 +309,7 @@ namespace Emotiv.Cortex.Service
                 }
 
                 Cleanup();
+                _currentTrainingAction = string.Empty;
 
                 if (e.EventMessage == "MC_Completed")
                 {
@@ -277,7 +323,7 @@ namespace Emotiv.Cortex.Service
             };
 
             SysEventsReceived += handler;
-            AcceptTraining(headsetId, string.Empty);
+            AcceptTraining(headsetId, trainingAction ?? string.Empty);
 
             return tcs.Task;
         }
@@ -285,9 +331,11 @@ namespace Emotiv.Cortex.Service
         public Task<CortexResult> RejectTrainingAsync()
         {
             string headsetId;
+            string trainingAction;
             lock (_lock)
             {
                 headsetId = _currentHeadsetId;
+                trainingAction = _currentTrainingAction;
             }
 
             if (string.IsNullOrEmpty(headsetId))
@@ -312,7 +360,7 @@ namespace Emotiv.Cortex.Service
                 }
 
                 Cleanup();
-
+                _currentTrainingAction = string.Empty;
                 if (e.EventMessage == "MC_Rejected")
                 {
                     tcs.TrySetResult(CortexResult.Success());
@@ -325,7 +373,7 @@ namespace Emotiv.Cortex.Service
             };
 
             SysEventsReceived += handler;
-            RejectTraining(headsetId, string.Empty);
+            RejectTraining(headsetId, trainingAction ?? string.Empty);
 
             return tcs.Task;
         }
