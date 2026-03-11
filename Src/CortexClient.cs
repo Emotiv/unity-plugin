@@ -316,6 +316,7 @@ namespace EmotivUnityPlugin
                 }
                 else if (command == "disconnect")
                 {
+                    RemoveSessionMapping(headsetId);
                     DisconnectDeviceResult?.Invoke(this, (CortexErrorCode.OK, headsetId));
                 }
                 else if (command == "refresh")
@@ -609,6 +610,7 @@ namespace EmotivUnityPlugin
             }
             else if (code == WarningCode.SessionAutoClosed ) {
                 string sessionId = messageData["sessionId"].ToString();
+                RemoveSessionMappingBySessionId(sessionId);
                SessionClosedNotify(this, sessionId);
             }
             else if (code == WarningCode.AccessRightGranted)
@@ -1201,7 +1203,7 @@ namespace EmotivUnityPlugin
         private bool TryGetSessionId(string headsetId, out string sessionId)
         {
             sessionId = null;
-            if (string.IsNullOrWhiteSpace(headsetId))
+            if (string.IsNullOrEmpty(headsetId))
             {
                 return false;
             }
@@ -1209,6 +1211,45 @@ namespace EmotivUnityPlugin
             lock (_locker)
             {
                 return _sessionIdByHeadsetId.TryGetValue(headsetId, out sessionId);
+            }
+        }
+
+        private void RemoveSessionMapping(string headsetId)
+        {
+            if (string.IsNullOrEmpty(headsetId))
+            {
+                return;
+            }
+
+            lock (_locker)
+            {
+                _sessionIdByHeadsetId.Remove(headsetId);
+            }
+        }
+
+        private void RemoveSessionMappingBySessionId(string sessionId)
+        {
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                return;
+            }
+
+            lock (_locker)
+            {
+                string headsetToRemove = null;
+                foreach (var kvp in _sessionIdByHeadsetId)
+                {
+                    if (string.Equals(kvp.Value, sessionId, StringComparison.Ordinal))
+                    {
+                        headsetToRemove = kvp.Key;
+                        break;
+                    }
+                }
+
+                if (headsetToRemove != null)
+                {
+                    _sessionIdByHeadsetId.Remove(headsetToRemove);
+                }
             }
         }
 

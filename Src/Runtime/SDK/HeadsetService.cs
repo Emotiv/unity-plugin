@@ -90,7 +90,10 @@ namespace Emotiv.Cortex.Service
                 }
             }
             // remove the disconnected headsetId from connected list in context
-            _context.ClearConnectedHeadsetId(headsetId);
+            if (!string.IsNullOrEmpty(headsetId))
+            {
+                _context.ClearConnectedHeadsetId(headsetId);
+            }
         }
 
         private async Task<CortexErrorCode> RefreshAndQueryAsync()
@@ -429,7 +432,6 @@ namespace Emotiv.Cortex.Service
                     break;
                 case DataSampleType.SysEvent:
                     // ignore sys event, it will be removed in v5, now handle at SimpleBCIService for training result notification
-                    UnityEngine.Debug.Log("Received sys event data, which is currently ignored. It will be removed in v5.");
                     break;
                 default:
                     throw new NotSupportedException($"Unsupported data sample type: {dataSampleType.Value}");

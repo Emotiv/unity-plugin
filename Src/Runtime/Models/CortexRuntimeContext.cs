@@ -81,7 +81,7 @@ namespace Emotiv.Cortex.Models
         }
 
         // connected headset ids
-        private HashSet<string> _connectedHeadsetIds = new HashSet<string>();
+        private HashSet<string> _connectedHeadsetIds = new HashSet<string>(StringComparer.Ordinal);
         public HashSet<string> ConnectedHeadsetIds
         {
             get

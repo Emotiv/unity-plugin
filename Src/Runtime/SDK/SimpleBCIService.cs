@@ -11,6 +11,7 @@ namespace Emotiv.Cortex.Service
     public class SimpleBCIService : ISimpleBCIService
     {
         private const string DefaultDetection = "mentalCommand";
+        private const int ProfileOperationTimeoutMs = 5000;
         private readonly CortexRuntimeContext _context;
         private readonly CortexClient _client;
         private readonly object _lock = new object();
@@ -24,6 +25,11 @@ namespace Emotiv.Cortex.Service
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _client.StreamDataReceived += OnStreamDataReceived;
+        }
+
+        ~SimpleBCIService()
+        {
+            _client.StreamDataReceived -= OnStreamDataReceived;
         }
 
         public async Task<CortexResult<EmoProfile>> LoadProfileAsync()
@@ -43,25 +49,36 @@ namespace Emotiv.Cortex.Service
             EventHandler<JArray> queryHandler = null;
             EventHandler<string> createHandler = null;
             EventHandler<string> loadHandler = null;
+            EventHandler<ErrorMsgEventArgs> errorHandler = null;
+            var completionLock = new object();
+            var completed = false;
 
             void Cleanup()
             {
                 _client.QueryProfileOK -= queryHandler;
                 _client.CreateProfileOK -= createHandler;
                 _client.LoadProfileOK -= loadHandler;
+                _client.ErrorMsgReceived -= errorHandler;
             }
 
-            void CompleteSuccess(EmoProfile profile)
+            void TryComplete(CortexResult<EmoProfile> result)
             {
+                lock (completionLock)
+                {
+                    if (completed)
+                    {
+                        return;
+                    }
+                    completed = true;
+                }
+
                 Cleanup();
-                 tcs.TrySetResult(CortexResult<EmoProfile>.Success(profile));
+                tcs.TrySetResult(result);
             }
 
-            void CompleteFailure(CortexError error)
-            {
-                Cleanup();
-                tcs.TrySetResult(CortexResult<EmoProfile>.Fail(error));
-            }
+            void CompleteSuccess(EmoProfile profile) => TryComplete(CortexResult<EmoProfile>.Success(profile));
+
+            void CompleteFailure(CortexError error) => TryComplete(CortexResult<EmoProfile>.Fail(error));
 
             loadHandler = (sender, loadedProfileName) =>
             {
@@ -112,12 +129,35 @@ namespace Emotiv.Cortex.Service
                 CreateProfile(profileName, headsetId);
             };
 
+            errorHandler = (sender, error) =>
+            {
+                if (error == null)
+                {
+                    return;
+                }
+
+                if (error.MethodName != "queryProfile" && error.MethodName != "setupProfile")
+                {
+                    return;
+                }
+
+                var cortexError = CortexErrorMapper.FromRawCortex(error.Code, error.MessageError);
+                CompleteFailure(cortexError);
+            };
+
             _client.QueryProfileOK += queryHandler;
             _client.CreateProfileOK += createHandler;
             _client.LoadProfileOK += loadHandler;
+            _client.ErrorMsgReceived += errorHandler;
 
             // query profile
             _client.QueryProfile();
+
+            var completedTask = await Task.WhenAny(tcs.Task, Task.Delay(ProfileOperationTimeoutMs));
+            if (completedTask != tcs.Task)
+            {
+                CompleteFailure(new CortexError(CortexErrorCode.UnknownError, "Profile operation timed out"));
+            }
 
             return await tcs.Task;
         }
@@ -373,13 +413,18 @@ namespace Emotiv.Cortex.Service
 
             if (e.StreamName == "sys" && e.Data != null)
             {
+                if (e.Data.Count < 3)
+                {
+                    return;
+                }
+
                 double time         = Convert.ToDouble(e.Data[0]);
                 string detection    = Convert.ToString(e.Data[1]);
                 string eventMsg     = Convert.ToString(e.Data[2]);
                 UnityEngine.Debug.Log($"Sys event received: time={time}, detection={detection}, eventMsg={eventMsg}");
                 SysEventArgs sysEvent = new SysEventArgs(time, detection, eventMsg);
                 
-                SysEventsReceived(this, sysEvent);
+                SysEventsReceived?.Invoke(this, sysEvent);
             }
 
         }
