@@ -11,6 +11,7 @@ namespace Emotiv.Cortex.Service
         private CortexClient _client;
         private IAuthService _auth;
         private IHeadsetService _headset;
+        private ISimpleBCIService _simpleBCI;
         
         public EmotivCortexRuntime()
         {
@@ -47,10 +48,17 @@ namespace Emotiv.Cortex.Service
         
         public IHeadsetService Headset
             => _headset ??= new HeadsetService(_context, _client);
+
+        public ISimpleBCIService SimpleBCI
+            => _simpleBCI ??= new SimpleBCIService(_context, _client);
             
         public void Dispose()
         {
             _client.CortexConnectionStared -= OnCortexConnectionStared;
+            if (_simpleBCI is IDisposable disposableSimpleBci)
+            {
+                disposableSimpleBci.Dispose();
+            }
         }
 
         private void InitConfigFromAppConfig()

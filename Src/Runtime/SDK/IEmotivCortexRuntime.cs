@@ -6,5 +6,6 @@ namespace Emotiv.Cortex.Service
     {
         IAuthService Auth { get; }
         IHeadsetService Headset { get; }
+        ISimpleBCIService SimpleBCI { get; }
     }
 }

@@ -79,5 +79,41 @@ namespace Emotiv.Cortex.Models
                 }
             }
         }
+
+        // connected headset ids
+        private HashSet<string> _connectedHeadsetIds = new HashSet<string>(StringComparer.Ordinal);
+        public HashSet<string> ConnectedHeadsetIds
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return new HashSet<string>(_connectedHeadsetIds);
+                }
+            }
+        }
+
+        public void AddConnectedHeadsetId(string headsetId)
+        {
+            lock (_lock)
+            {
+                _connectedHeadsetIds.Add(headsetId);
+            }
+        }
+        // clear connected headset id or clear all connected headset
+        public void ClearConnectedHeadsetId(string headsetId = null)
+        {
+            lock (_lock)
+            {
+                if (headsetId == null)
+                {
+                    _connectedHeadsetIds.Clear();
+                }
+                else
+                {
+                    _connectedHeadsetIds.Remove(headsetId);
+                }
+            }
+        }
     }
 }

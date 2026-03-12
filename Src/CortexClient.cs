@@ -38,6 +38,7 @@ namespace EmotivUnityPlugin
     public abstract class CortexClient
     {
         protected Dictionary<int, string> _methodForRequestId = new Dictionary<int, string>();
+        private readonly Dictionary<string, string> _sessionIdByHeadsetId = new Dictionary<string, string>(StringComparer.Ordinal);
 
         static readonly object _locker = new object();
 
@@ -315,6 +316,7 @@ namespace EmotivUnityPlugin
                 }
                 else if (command == "disconnect")
                 {
+                    RemoveSessionMapping(headsetId);
                     DisconnectDeviceResult?.Invoke(this, (CortexErrorCode.OK, headsetId));
                 }
                 else if (command == "refresh")
@@ -411,6 +413,13 @@ namespace EmotivUnityPlugin
                 string appId        = (string)data["appId"];
                 JObject headset     = (JObject)data["headset"];
                 string headsetId    = headset["id"].ToString();
+                lock (_locker)
+                {
+                    if (!string.IsNullOrEmpty(headsetId))
+                    {
+                        _sessionIdByHeadsetId[headsetId] = sessionId;
+                    }
+                }
                 CreateSessionOK(this, new SessionEventArgs(sessionId, status, appId, headsetId));
             }
             else if (method == "updateSession")
@@ -601,6 +610,7 @@ namespace EmotivUnityPlugin
             }
             else if (code == WarningCode.SessionAutoClosed ) {
                 string sessionId = messageData["sessionId"].ToString();
+                RemoveSessionMappingBySessionId(sessionId);
                SessionClosedNotify(this, sessionId);
             }
             else if (code == WarningCode.AccessRightGranted)
@@ -1053,11 +1063,16 @@ namespace EmotivUnityPlugin
         }
         // setupProfile
         // Required params: cortexToken, profile, status
-        public void SetupProfile(string cortexToken, string profile, string status, string headsetId = null, string newProfileName = null)
+        public void SetupProfile(string profile, string status, string headsetId = null, string newProfileName = null)
         {
+            if (string.IsNullOrEmpty(CurrentCortexToken))
+            {
+                throw new ArgumentException("SetupProfile requested but no cortex token is available.", nameof(CurrentCortexToken));
+            }
+
             JObject param = new JObject();
             param.Add("profile", profile);
-            param.Add("cortexToken", cortexToken);
+            param.Add("cortexToken", CurrentCortexToken);
             param.Add("status", status);
             if (headsetId != null) {
                 param.Add("headset", headsetId);
@@ -1069,29 +1084,54 @@ namespace EmotivUnityPlugin
         }
         // queryProfile
         // Required params: cortexToken
-        public void QueryProfile(string cortexToken)
+        public void QueryProfile()
         {
+            if (string.IsNullOrEmpty(CurrentCortexToken))
+            {
+                throw new ArgumentException("QueryProfile requested but no cortex token is available.", nameof(CurrentCortexToken));
+            }
+
             JObject param = new JObject();
-            param.Add("cortexToken", cortexToken);
+            param.Add("cortexToken", CurrentCortexToken);
             SendTextMessage(param, "queryProfile", true);
         }
         // getTrainingTime
         // Required params: cortexToken
-        public void GetTrainingTime(string cortexToken, string detection, string sessionId)
+        public void GetTrainingTime(string detection, string headsetId)
         {
+            if (string.IsNullOrEmpty(CurrentCortexToken))
+            {
+                throw new ArgumentException("GetTrainingTime requested but no cortex token is available.", nameof(CurrentCortexToken));
+            }
+
+            if (!TryGetSessionId(headsetId, out var sessionId))
+            {
+                throw new ArgumentException("GetTrainingTime requested but no session is available for the headset.", nameof(headsetId));
+            }
+
             JObject param = new JObject();
-            param.Add("cortexToken", cortexToken);
+            param.Add("cortexToken", CurrentCortexToken);
             param.Add("detection", detection);
             param.Add("session", sessionId);
             SendTextMessage(param, "getTrainingTime", true);
         }
         // training
         // Required params: cortexToken, profile, status
-        public void Training(string cortexToken, string sessionId, string status, string detection, string action)
+        public void Training(string headsetId, string status, string detection, string action)
         {
+            if (string.IsNullOrEmpty(CurrentCortexToken))
+            {
+                throw new ArgumentException("Training requested but no cortex token is available.", nameof(CurrentCortexToken));
+            }
+
+            if (!TryGetSessionId(headsetId, out var sessionId))
+            {
+                throw new ArgumentException("Training requested but no session is available for the headset.", nameof(headsetId));
+            }
+
             JObject param = new JObject();
             param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
+            param.Add("cortexToken", CurrentCortexToken);
             param.Add("status", status);
             param.Add("detection", detection);
             param.Add("action", action);
@@ -1101,28 +1141,48 @@ namespace EmotivUnityPlugin
 
         // getTrainedSignatureActions
         // Required params: cortexToken, detection, sessionId or profileName
-        public void GetTrainedSignatureActions(string cortexToken, string detection, string sessionId, string profileName)
+        public void GetTrainedSignatureActions(string detection, string headsetId, string profileName)
         {
+            if (string.IsNullOrEmpty(CurrentCortexToken))
+            {
+                throw new ArgumentException("GetTrainedSignatureActions requested but no cortex token is available.", nameof(CurrentCortexToken));
+            }
+
             JObject param = new JObject();
-            param.Add("cortexToken", cortexToken);
+            param.Add("cortexToken", CurrentCortexToken);
             param.Add("detection", detection);
-            // if (sessionId != "")
-            //     param.Add("session", sessionId);
+            if (TryGetSessionId(headsetId, out var sessionId))
+            {
+                param.Add("session", sessionId);
+            }
+            else if (string.IsNullOrEmpty(profileName))
+            {
+                throw new ArgumentException("GetTrainedSignatureActions requested but no session is available for the headset.", nameof(headsetId));
+            }
 
             if (profileName != "")
                 param.Add("profile", profileName);
             SendTextMessage(param, "getTrainedSignatureActions", true);
         }
 
-        public void MentalCommandActionSensitivity (string cortexToken, string status, string sessionId, string profileName, List<int> values = null)
+        public void MentalCommandActionSensitivity (string status, string headsetId, string profileName, List<int> values = null)
         {
+            if (string.IsNullOrEmpty(CurrentCortexToken))
+            {
+                throw new ArgumentException("MentalCommandActionSensitivity requested but no cortex token is available.", nameof(CurrentCortexToken));
+            }
+
             JObject param = new JObject();
-            param.Add("cortexToken", cortexToken);
+            param.Add("cortexToken", CurrentCortexToken);
             param.Add("status", status);
 
             // check session id is empty
-            if (sessionId != "")
+            if (TryGetSessionId(headsetId, out var sessionId))
                 param.Add("session", sessionId);
+            else if (string.IsNullOrEmpty(profileName))
+            {
+                throw new ArgumentException("MentalCommandActionSensitivity requested but no session is available for the headset.", nameof(headsetId));
+            }
 
             // check profile name is empty
             if (profileName != "")
@@ -1138,6 +1198,59 @@ namespace EmotivUnityPlugin
                 
             }
             SendTextMessage(param, "mentalCommandActionSensitivity", true);
+        }
+
+        private bool TryGetSessionId(string headsetId, out string sessionId)
+        {
+            sessionId = null;
+            if (string.IsNullOrEmpty(headsetId))
+            {
+                return false;
+            }
+
+            lock (_locker)
+            {
+                return _sessionIdByHeadsetId.TryGetValue(headsetId, out sessionId);
+            }
+        }
+
+        private void RemoveSessionMapping(string headsetId)
+        {
+            if (string.IsNullOrEmpty(headsetId))
+            {
+                return;
+            }
+
+            lock (_locker)
+            {
+                _sessionIdByHeadsetId.Remove(headsetId);
+            }
+        }
+
+        private void RemoveSessionMappingBySessionId(string sessionId)
+        {
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                return;
+            }
+
+            lock (_locker)
+            {
+                string headsetToRemove = null;
+                foreach (var kvp in _sessionIdByHeadsetId)
+                {
+                    if (string.Equals(kvp.Value, sessionId, StringComparison.Ordinal))
+                    {
+                        headsetToRemove = kvp.Key;
+                        break;
+                    }
+                }
+
+                if (headsetToRemove != null)
+                {
+                    _sessionIdByHeadsetId.Remove(headsetToRemove);
+                }
+            }
         }
 
         public void QueryDatesHavingConsumerData(string cortexToken, DateTime start, DateTime end)
