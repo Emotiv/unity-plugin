@@ -58,6 +58,13 @@ public class PostProcessBuild
             rootDict.SetString("NSBluetoothAlwaysUsageDescription", "This will allow app to find and connect to Bluetooth accessories.");
             rootDict.SetBoolean("ITSAppUsesNonExemptEncryption", false);
 
+            // Add CFBundleURLTypes for custom URL scheme (uses bundle ID from Player Settings)
+            string bundleId = PlayerSettings.applicationIdentifier;
+            PlistElementArray urlTypes = rootDict.CreateArray("CFBundleURLTypes");
+            PlistElementDict urlSchemeDict = urlTypes.AddDict();
+            PlistElementArray urlSchemes = urlSchemeDict.CreateArray("CFBundleURLSchemes");
+            urlSchemes.AddString(bundleId);
+
             plist.WriteToFile(plistPath);
         }
     }
