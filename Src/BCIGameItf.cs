@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace EmotivUnityPlugin
 {
@@ -13,9 +14,15 @@ namespace EmotivUnityPlugin
         private static BCIGameItf _instance;
         private EmotivUnityItf emotivUnityItf = EmotivUnityItf.Instance;
 
+        public event EventHandler<Record> RecordStarted;
+        public event EventHandler<Record> RecordStopped;
+        public event EventHandler<Marker> MarkerReceived;
+
         private BCIGameItf()
         {
-            // Private constructor to prevent instantiation
+            emotivUnityItf.RecordStarted += (sender, record) => RecordStarted?.Invoke(this, record);
+            emotivUnityItf.RecordStopped += (sender, record) => RecordStopped?.Invoke(this, record);
+            emotivUnityItf.MarkerReceived += (sender, marker) => MarkerReceived?.Invoke(this, marker);
         }
 
         public static BCIGameItf Instance
@@ -431,5 +438,70 @@ namespace EmotivUnityPlugin
         public string GetWorkingHeadsetId() {
             return emotivUnityItf.WorkingHeadsetId;
         }
+
+
+        /// <summary>
+        /// Create a record.
+        /// </summary>
+        /// <param name="title">The title of the record.</param>
+        /// <param name="description">The description of the record (optional).</param>
+        /// <param name="subjectName">The subject name (optional).</param>
+        /// <param name="tags">The tags associated with the record (optional).</param>
+        public void StartRecord(string title, string description = null,
+                                string subjectName = null, List<string> tags = null)
+        {
+            emotivUnityItf.StartRecord(title, description, subjectName, tags);
+        }
+
+        /// <summary>
+        /// Stops the current recording.
+        /// </summary>
+        public void StopRecord()
+        {
+            emotivUnityItf.StopRecord();
+        }
+
+        /// <summary>
+        /// Checks if there is an active recording in progress.
+        /// </summary>
+        /// <returns></returns>
+        public bool IsRecording()
+        {
+            return emotivUnityItf.IsRecording;
+        }
+
+        /// <summary>
+        /// Injects an instance marker into the current record.
+        /// </summary>
+        /// <param name="markerLabel">The label of the marker.</param>
+        /// <param name="markerValue">The value of the marker.</param>
+        /// <param name="port">The port associated with the marker (optional).</param>
+        /// <param name="extras">Additional information for the marker (optional).</param>
+        public void InjectMarker(string markerLabel, string markerValue, string port = null, JObject extras = null)
+        {
+            emotivUnityItf.InjectMarker(markerLabel, markerValue, port, extras);
+        }
+
+        /// <summary>
+        /// Updates the marker to make it is interval marker with the end time is current time and add extra information for the marker.
+        /// If the markerId is null, it will update the most recent marker. Otherwise, it will update the marker with specific markerId.
+        /// </summary>
+        public void UpdateMarker(string markerId = null, JObject extras = null)
+        {
+            emotivUnityItf.UpdateMarker(markerId, extras);
+        }
+
+        /// <summary>
+        /// Gets the most recent marker that was injected or updated. It returns null if no markers have been injected.
+        /// Before injecting a new marker, the most recent marker will be reset to null. 
+        /// So if the returned marker is not null, it means a new marker has been injected.
+        /// </summary>
+        /// <returns>The most recent marker or null if no markers have been injected.</returns>
+        public Marker GetRecentAddedMarker()
+        {
+            return emotivUnityItf.GetRecentAddedMarker();
+        }
+
+
     }
 }

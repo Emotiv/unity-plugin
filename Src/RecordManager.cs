@@ -24,7 +24,8 @@ namespace EmotivUnityPlugin
         public event EventHandler<Record> informStartRecordResult;
         public event EventHandler<Record> informStopRecordResult;
 
-        public event EventHandler<JObject> informMarkerResult;
+        public event EventHandler<Marker> MarkerInjected;
+        public event EventHandler<Marker> MarkerUpdated;
 
         public event EventHandler<string> DataPostProcessingFinished
         {
@@ -51,22 +52,21 @@ namespace EmotivUnityPlugin
         {
             UnityEngine.Debug.Log("RecordManager: OnStopRecordOK recordId: " + record.Uuid +
                                    " at: " + record.EndDateTime);
-            informStopRecordResult(this, record);
+            informStopRecordResult?.Invoke(this, record);
         }
 
         private void OnCreateRecordOK(object sender, Record record)
         {
-            informStopRecordResult(this, record);
-            informStartRecordResult(this, record);
+            informStartRecordResult?.Invoke(this, record);
         }
         private void OnInjectMarkerOK(object sender, JObject markerObj)
         {
             _currMarkerId = markerObj["uuid"].ToString();
-            informMarkerResult(this, markerObj);
+            MarkerInjected?.Invoke(this, new Marker(markerObj));
         }
         private void OnUpdateMarkerOK(object sender, JObject markerObj)
         {
-            informMarkerResult(this, markerObj);
+            MarkerUpdated?.Invoke(this, new Marker(markerObj));
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace EmotivUnityPlugin
         /// <summary>
         /// inject marker
         /// </summary>
-        public void InjectMarker(string markerLabel, string markerValue)
+        public void InjectMarker(string markerLabel, string markerValue, string port = null, JObject extras = null)
         {
             lock(_locker)
             {
@@ -105,22 +105,30 @@ namespace EmotivUnityPlugin
                 string sessionId = _sessionHandler.SessionId;
 
                 // inject marker
-                _ctxClient.InjectMarker(cortexToken, sessionId, markerLabel, markerValue, Utils.GetEpochTimeNow());
+                _ctxClient.InjectMarker(cortexToken, sessionId, markerLabel, markerValue, Utils.GetEpochTimeNow(), port, extras);
             }
         }
 
         /// <summary>
         /// update marker to set the end date time of a marker, turning an "instance" marker into an "interval" marker
         /// </summary>
-        public void UpdateMarker()
+        /// <param name="markerId">The ID of the marker to update. If null, the most recent marker will be updated.</param>
+        /// <param name="extras">Additional information for the marker (optional).</param>
+        public void UpdateMarker(string markerId = null, JObject extras = null)
         {
             lock(_locker)
             {
                 string cortexToken  = _authorizer.CortexToken;
                 string sessionId = _sessionHandler.SessionId;
 
+                // use the current marker id if the input marker id is null or empty
+                if (string.IsNullOrEmpty(markerId))
+                {
+                   markerId = _currMarkerId;
+                }
+
                 // update marker
-                _ctxClient.UpdateMarker(cortexToken, sessionId, _currMarkerId, Utils.GetEpochTimeNow());
+                _ctxClient.UpdateMarker(cortexToken, sessionId, markerId, Utils.GetEpochTimeNow(), extras);
             }
         }
         
