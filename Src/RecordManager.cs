@@ -121,14 +121,21 @@ namespace EmotivUnityPlugin
                 string cortexToken  = _authorizer.CortexToken;
                 string sessionId = _sessionHandler.SessionId;
 
-                // use the current marker id if the input marker id is null or empty
-                if (string.IsNullOrEmpty(markerId))
+                if (string.IsNullOrEmpty(markerId) && string.IsNullOrEmpty(_currMarkerId))
                 {
-                   markerId = _currMarkerId;
+                    Debug.LogError("UpdateMarker was called without a valid markerId, and no current marker is available.");
                 }
-
-                // update marker
-                _ctxClient.UpdateMarker(cortexToken, sessionId, markerId, Utils.GetEpochTimeNow(), extras);
+                else if (!string.IsNullOrEmpty(markerId))
+                {
+                    // update marker
+                    _ctxClient.UpdateMarker(cortexToken, sessionId, markerId, Utils.GetEpochTimeNow(), extras);
+                }
+                else
+                {
+                    // update the most recent marker if markerId is not provided
+                    _ctxClient.UpdateMarker(cortexToken, sessionId, _currMarkerId, Utils.GetEpochTimeNow(), extras);
+                }
+                
             }
         }
         

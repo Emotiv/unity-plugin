@@ -524,7 +524,7 @@ namespace EmotivUnityPlugin
             _markers       = (JArray)obj["markers"];
 
             _tags = new List<string>();
-            foreach (var tag in obj["tags"])
+            foreach (var tag in obj["tags"] ?? new JArray())
             {
                 _tags.Add((string)tag);
             }

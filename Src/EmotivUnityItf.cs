@@ -663,15 +663,17 @@ namespace EmotivUnityPlugin
         /// </summary>
         public void UpdateMarker(string markerId = null, JObject extras = null)
         {
+            // reset recent added marker before update marker
+             _recentAddedMarker = null;
             _recordMgr.UpdateMarker(markerId, extras);
         }
 
         /// <summary>
-        /// Gets the most recent marker that was injected or updated. It returns null if no markers have been injected.
-        /// Before injecting a new marker, the most recent marker will be reset to null. 
-        /// So if the returned marker is not null, it means a new marker has been injected.
+        /// Gets the most recent marker that was injected or updated.
+        /// It returns null if no markers have been injected or updated.
+        /// Before injecting a new marker or updating marker, the most recent marker will be reset to null.
         /// </summary>
-        /// <returns>The most recent marker or null if no markers have been injected.</returns>
+        /// <returns>The most recent injected or updated marker, or null if no markers have been injected or updated.</returns>
         public Marker GetRecentAddedMarker()
         {
             return _recentAddedMarker;
