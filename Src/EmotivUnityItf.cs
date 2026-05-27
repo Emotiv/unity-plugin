@@ -52,6 +52,8 @@ namespace EmotivUnityPlugin
         bool _isAuthorizedOK = false;
         bool _isRecording = false;
         Record _recentRecord = null; // the most recent record created and just stopped
+        Marker _recentAddedMarker = null; // the most recent injected or updated marker
+
         bool _isAutoAcceptTraining = false;
 
         bool _isAutoSaveProfile = false;
@@ -110,6 +112,9 @@ namespace EmotivUnityPlugin
 
         // Events
         public event EventHandler<ErrorMsgEventArgs> ErrorMsgReceived;
+        public event EventHandler<Record>RecordStarted;
+        public event EventHandler<Record> RecordStopped;
+        public event EventHandler<Marker> MarkerReceived;
 
         /// <summary>
         /// Gets the current Emotiv ID of the logged-in user.
@@ -261,7 +266,8 @@ namespace EmotivUnityPlugin
             _dsManager.BTLEPermissionGrantedNotify += onBTLEPermissionGrantedNotify;
 
             // bind to record manager 
-            _recordMgr.informMarkerResult += OnInformMarkerResult;
+            _recordMgr.MarkerInjected += OnMarkerInjected;
+            _recordMgr.MarkerUpdated += OnMarkerUpdated;
             _recordMgr.informStartRecordResult += OnInformStartRecordResult;
             _recordMgr.informStopRecordResult += OnInformStopRecordResult;
             _recordMgr.DataPostProcessingFinished += OnDataPostProcessingFinished;
@@ -642,17 +648,35 @@ namespace EmotivUnityPlugin
         /// </summary>
         /// <param name="markerLabel">The label of the marker.</param>
         /// <param name="markerValue">The value of the marker.</param>
-        public void InjectMarker(string markerLabel, string markerValue)
+        /// <param name="port">The port associated with the marker (optional).</param>
+        /// <param name="extras">Additional information for the marker (optional).</param>
+        public void InjectMarker(string markerLabel, string markerValue, string port = null, JObject extras = null)
         {
-            _recordMgr.InjectMarker(markerLabel, markerValue);
+            // reset recent added marker before inject new marker
+            _recentAddedMarker = null;
+            _recordMgr.InjectMarker(markerLabel, markerValue, port, extras);
         }
 
         /// <summary>
-        /// Updates the current marker to make it is interval marker with the end time is current time.
+        /// Updates the marker to make it is interval marker with the end time is current time and add extra information for the marker.
+        /// If the markerId is null, it will update the most recent marker. Otherwise, it will update the marker with specific markerId.
         /// </summary>
-        public void UpdateMarker()
+        public void UpdateMarker(string markerId = null, JObject extras = null)
         {
-            _recordMgr.UpdateMarker(); // TODO: add tags as parameter for update marker
+            // reset recent added marker before update marker
+             _recentAddedMarker = null;
+            _recordMgr.UpdateMarker(markerId, extras);
+        }
+
+        /// <summary>
+        /// Gets the most recent marker that was injected or updated.
+        /// It returns null if no markers have been injected or updated.
+        /// Before injecting a new marker or updating marker, the most recent marker will be reset to null.
+        /// </summary>
+        /// <returns>The most recent injected or updated marker, or null if no markers have been injected or updated.</returns>
+        public Marker GetRecentAddedMarker()
+        {
+            return _recentAddedMarker;
         }
 
         /// <summary>
@@ -934,7 +958,7 @@ namespace EmotivUnityPlugin
             _isRecording = true;
             _recentRecord = record; // store the recent record
             _messageLog = "The record " + record.Title + " is created at " + record.StartDateTime;
-
+            RecordStarted?.Invoke(this, record);
         }
 
         private void OnInformStopRecordResult(object sender, Record record)
@@ -944,15 +968,28 @@ namespace EmotivUnityPlugin
             _isRecording = false;
             _recentRecord = record; // update the recent record
             _messageLog = "The record " + record.Title + " is ended at " + record.EndDateTime;
-
+            RecordStopped?.Invoke(this, record);
         }
 
-        private void OnInformMarkerResult(object sender, JObject markerObj)
+        private void OnMarkerInjected(object sender, Marker marker)
         {
-            UnityEngine.Debug.Log("OnInformMarkerResult");
-            _messageLog = "The marker " + markerObj["uuid"].ToString() + ", label: " 
-                + markerObj["label"].ToString() + ", value: " + markerObj["value"].ToString()
-                + ", type: " + markerObj["type"].ToString() + ", started at: " + markerObj["startDatetime"].ToString();
+            string message = "The Injected marker: " + marker.Uuid + ", label: " 
+                + marker.Label + ", value: " + marker.Value
+                + ", type: " + marker.Type + ", started at: " + marker.StartDateTime + ", port: " + marker.Port + ", extras: " + marker.Extras;
+            Debug.Log(message);
+            _messageLog = message;
+            _recentAddedMarker = marker; // store the recent marker
+            MarkerReceived?.Invoke(this, marker);
+        }
+
+        private void OnMarkerUpdated(object sender, Marker marker)
+        {
+            string message = "The Updated marker: " + marker.Uuid + ", type: " + marker.Type + ", started at: " + marker.StartDateTime +
+                ", end time: " + marker.EndDateTime + ", extras: " + marker.Extras;
+            Debug.Log(message);
+            _messageLog = message;
+            _recentAddedMarker = marker; // update the recent marker
+            MarkerReceived?.Invoke(this, marker);
         }
 
         private void OnMessageQueryHeadsetOK(object sender, string headsetsInfo)
@@ -1264,6 +1301,9 @@ namespace EmotivUnityPlugin
         {
             _isAuthorizedOK = false;
             _workingHeadsetId = "";
+            _recentAddedMarker = null;
+            _recentRecord = null;
+            _isRecording = false;
             ResetProfileAndTrainingData();
         }
         

@@ -522,11 +522,44 @@ namespace EmotivUnityPlugin
             _startDateTime = (string)obj["startDatetime"];
             _endDateTime   = (string)obj["endDatetime"];
             _markers       = (JArray)obj["markers"];
-            _tags          = obj["tags"].ToObject<List<string>>();
+
+            _tags = new List<string>();
+            foreach (var tag in obj["tags"] ?? new JArray())
+            {
+                _tags.Add((string)tag);
+            }
         }
         public void PrintOut()
         {
             UnityEngine.Debug.Log("id: " + _uuid + ", title: " + _title + ", startDatetime: " + _startDateTime + ", endDatetime: " + _endDateTime);
+        }
+    }
+
+    public class Marker
+    {
+        public JObject Extras { get; set; }
+        public string Label { get; set; }
+        public string Port { get; set; }
+        public string StartDateTime { get; set; }
+        public string EndDateTime { get; set; }
+        public string Type { get; set; }
+        public string Uuid { get; set; }
+        public JToken Value { get; set; }
+
+        public Marker()
+        {
+        }
+
+        public Marker(JObject obj)
+        {
+            Extras = obj["extras"] as JObject;
+            Label = (string)obj["label"];
+            Port = (string)obj["port"];
+            StartDateTime = (string)obj["startDatetime"];
+            EndDateTime = (string)obj["endDatetime"];
+            Type = (string)obj["type"];
+            Uuid = (string)obj["uuid"];
+            Value = obj["value"];
         }
     }
 
