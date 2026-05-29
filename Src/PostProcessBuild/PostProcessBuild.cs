@@ -42,9 +42,9 @@ public class PostProcessBuild
             // Ensure "Code Sign On Copy" is enabled for the framework
             PBXProjectExtensions.AddFileToEmbedFrameworks(pbxProject, targetGuid, fileGuid);
 
-            pbxProject.AddBuildProperty(targetGuid, "FRAMEWORK_SEARCH_PATHS", "$(PROJECT_DIR)/Frameworks");
+            pbxProject.AddBuildProperty(targetGuid, "FRAMEWORK_SEARCH_PATHS", "$(PROJECT_DIR)/Frameworks/EmotivUnityPlugin/IosPlugin");
             pbxProject.AddBuildProperty(targetGuid, "OTHER_LDFLAGS", "-framework EmotivCortexLib");
-            pbxProject.AddBuildProperty(unityFrameworkTargetGuid, "FRAMEWORK_SEARCH_PATHS", "$(PROJECT_DIR)/Frameworks");
+            pbxProject.AddBuildProperty(unityFrameworkTargetGuid, "FRAMEWORK_SEARCH_PATHS", "$(PROJECT_DIR)/Frameworks/EmotivUnityPlugin/IosPlugin");
             pbxProject.AddBuildProperty(unityFrameworkTargetGuid, "OTHER_LDFLAGS", "-framework EmotivCortexLib");
 
             pbxProject.WriteToFile(pbxProjectPath);
