@@ -502,6 +502,26 @@ namespace EmotivUnityPlugin
             return emotivUnityItf.GetRecentAddedMarker();
         }
 
+        /// <summary>
+        /// Gets the current number of band power samples in the data buffer.
+        /// </summary>
+        /// <returns>The number of band power samples.</returns>
+        public int GetNumberBandPowerSamples()
+        {
+            return emotivUnityItf.GetNumberPowerBandSamples();
+        }
+
+        /// <summary>
+        /// Gets the band power data for a specific channel and band. Should call after check GetNumberBandPowerSamples() > 0 to make sure the data is ready.
+        /// </summary>
+        /// <param name="chan">The channel such as Channel_t.CHAN_T7, Channel_t.CHAN_T8, etc.</param>
+        /// <param name="band">The band power type such as BandPowerType.Thetal, BandPowerType.Alpha, BandPowerType.BetalL, BandPowerType.BetalH, BandPowerType.Gamma.</param>
+        /// <returns>The band power data.</returns>
+        public double GetBandPower(Channel_t chan, BandPowerType _band)
+        {
+            return emotivUnityItf.GetBandPower(chan, _band);
+        }
+
 
     }
 }
