@@ -12,7 +12,7 @@ def get_cortex_job_build(is_build_product) {
     def cortex_parent_job = 'Cortex-Lib-Mobile-Unity'
     if(!is_build_product)
     {
-        def job_name = 'develop'
+        def job_name = 'dev_hernan'
         return ["${cortex_parent_job}/${job_name}",
         "${env.JENKINS_URL}/job/${cortex_parent_job}/job/${job_name}"]
     }
@@ -66,7 +66,7 @@ pipeline {
     stages {
         stage('Build unity plugin develop version') {
             when {
-                branch 'develop'
+                branch 'dev_hernan'
             }
             environment {
                 build_type = "Debug"
