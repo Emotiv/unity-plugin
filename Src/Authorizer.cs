@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading.Tasks;
 using System.Timers;
 
 namespace EmotivUnityPlugin
@@ -17,6 +18,8 @@ namespace EmotivUnityPlugin
         private string _licenseID = "";
         private static int _debitNo = 5000; // default value
         private static double _currentLoginTime = 0; // store current login time
+        private TaskCompletionSource<AIDataConsent> _getAiDataConsentTcs; // pending GetAIDataConsent request
+        private TaskCompletionSource<AIDataConsent> _setAiDataConsentTcs; // pending SetAIDataConsent request
 
         /// <summary>
         /// Timer for waiting a user login
@@ -77,6 +80,8 @@ namespace EmotivUnityPlugin
             _ctxClient.EULANotAccepted          += OnEULANotAccepted;
             _ctxClient.RefreshTokenOK           += OnRefreshTokenOK;
             _ctxClient.GetLicenseInfoDone       += OnGetLicenseInfoDone;
+            _ctxClient.GetAiDataConsentDone     += OnGetAiDataConsentDone;
+            _ctxClient.SetAiDataConsentDone     += OnSetAiDataConsentDone;
             _ctxClient.ErrorMsgReceived        += OnErrorMsgReceived;
         }
 
@@ -100,6 +105,12 @@ namespace EmotivUnityPlugin
         {
 
             UnityEngine.Debug.Log($"OnErrorMsgReceived: Code={errorInfo.Code}, Message={errorInfo.MessageError}, Method={errorInfo.MethodName}");
+
+            // fault pending AI data consent requests so callers awaiting them do not hang
+            if (errorInfo.MethodName == "getAiDataConsent")
+                _getAiDataConsentTcs?.TrySetException(new Exception(errorInfo.MessageError));
+            else if (errorInfo.MethodName == "setAiDataConsent")
+                _setAiDataConsentTcs?.TrySetException(new Exception(errorInfo.MessageError));
 
 #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
             // For mobile and embedded lib platforms
@@ -202,6 +213,42 @@ namespace EmotivUnityPlugin
                     AuthorizedFailed(this, "");
                 }
             }
+        }
+
+        /// <summary>
+        /// Request AI data usage consent information for the current logged-in user directly from Cortex, and waits for the response.
+        /// </summary>
+        public async Task<AIDataConsent> GetAIDataConsent() {
+            string cortexToken = CortexToken;
+            if (String.IsNullOrEmpty(cortexToken))
+                return null;
+            _getAiDataConsentTcs = new TaskCompletionSource<AIDataConsent>();
+            _ctxClient.GetAiDataConsent(cortexToken);
+            return await _getAiDataConsentTcs.Task;
+        }
+
+        private void OnGetAiDataConsentDone(object sender, AIDataConsent consent)
+        {
+            UnityEngine.Debug.Log("OnGetAiDataConsentDone: " + consent.Accepted);
+            _getAiDataConsentTcs?.TrySetResult(consent);
+        }
+
+        /// <summary>
+        /// Set user's consent to the use of their data for AI training purposes, and waits for the response from Cortex.
+        /// </summary>
+        public async Task<AIDataConsent> SetAIDataConsent(bool accepted) {
+            string cortexToken = CortexToken;
+            if (String.IsNullOrEmpty(cortexToken))
+                return null;
+            _setAiDataConsentTcs = new TaskCompletionSource<AIDataConsent>();
+            _ctxClient.SetAiDataConsent(cortexToken, accepted);
+            return await _setAiDataConsentTcs.Task;
+        }
+
+        private void OnSetAiDataConsentDone(object sender, AIDataConsent consent)
+        {
+            UnityEngine.Debug.Log("OnSetAiDataConsentDone: " + consent.Accepted);
+            _setAiDataConsentTcs?.TrySetResult(consent);
         }
 
         private void OnRefreshTokenOK(object sender, string cortexToken)

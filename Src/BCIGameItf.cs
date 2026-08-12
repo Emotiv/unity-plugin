@@ -356,6 +356,23 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
+        /// Requests the AI data usage consent directly from Cortex and waits for the response.
+        /// </summary>
+        public async Task<AIDataConsent> GetAIDataConsent()
+        {
+            return await emotivUnityItf.GetAIDataConsent();
+        }
+
+        /// <summary>
+        /// Sets user's consent to the use of their data for AI training purposes, and waits for the response.
+        /// <param name="accepted">True if the user consents, false otherwise.</param>
+        /// </summary>
+        public async Task<AIDataConsent> SetAIDataConsent(bool accepted)
+        {
+            return await emotivUnityItf.SetAIDataConsent(accepted);
+        }
+
+        /// <summary>
         /// Get the mental command action sensitivity for the first trained action except neutral (pull action).
         /// Should be called after training is completed. Default sensitivity is 5
         /// </summary>
