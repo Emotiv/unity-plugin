@@ -12,21 +12,15 @@ def get_cortex_job_build(is_build_product) {
     def cortex_parent_job = 'Cortex-Lib-Mobile-Unity'
     if(!is_build_product)
     {
-        def job_name = 'develop'
+        def job_name = 'main'
         return ["${cortex_parent_job}/${job_name}",
         "${env.JENKINS_URL}/job/${cortex_parent_job}/job/${job_name}"]
     }
     else
     {
-        if (env.BRANCH_NAME == 'master') {
-            def job_name = 'master'
-            return ["${cortex_parent_job}/${job_name}",
-            "${env.JENKINS_URL}/job/${cortex_parent_job}/job/${job_name}"]
-        } else {
-            def job_name = "${env.BRANCH_NAME}".replace("/", "%2F")
-            return ["${cortex_parent_job}/${job_name}",
-            "${env.JENKINS_URL}/job/${cortex_parent_job}/job/${job_name}"]
-        }
+        def job_name = "${env.BRANCH_NAME}".replace("/", "%2F")
+        return ["${cortex_parent_job}/${job_name}",
+        "${env.JENKINS_URL}/job/${cortex_parent_job}/job/${job_name}"]
     }
 }
 
@@ -59,6 +53,15 @@ pipeline {
         copyArtifactPermission '*'
         parallelsAlwaysFailFast() 
     }
+    triggers {
+        upstream(
+            upstreamProjects: (env.BRANCH_NAME == 'develop')
+                ? 'Cortex-Lib-Mobile-Unity/main'
+                : "Cortex-Lib-Mobile-Unity/${env.BRANCH_NAME.replace('/', '%2F')}",
+            threshold: hudson.model.Result.SUCCESS
+        )
+    }
+
     environment {
         custom_workspace = "workspace/emotiv-unity-plugin"
         UNITY_PATH_MAC = "/Applications/Unity/Hub/Editor/6000.0.58f2/Unity.app/Contents/MacOS/Unity"
@@ -66,7 +69,15 @@ pipeline {
     stages {
         stage('Build unity plugin develop version') {
             when {
-                branch 'develop'
+                beforeAgent true
+                allOf {
+                    branch 'develop'
+                    anyOf {
+                        triggeredBy 'UserIdCause'
+                        triggeredBy 'UpstreamCause'
+                        triggeredBy 'BranchEventCause'
+                    }
+                }
             }
             environment {
                 build_type = "Debug"
@@ -94,36 +105,17 @@ pipeline {
                 }
             }
         }
-        stage('Build unity plugin master version') {
-            when {
-                branch 'master'
-            }
-            agent {
-                node {
-                    label 'mac_m2'
-                    customWorkspace env.custom_workspace
-                }
-            }
-            steps {
-                echo 'Building code from branch ' + env.BRANCH_NAME
-                script {
-                    build_unity_plugin(app_unity)
-                }
-            }
-            post { 
-                success { 
-                    archiveArtifacts artifacts: '**/*.unitypackage', 
-                    followSymlinks: false,
-                    fingerprint: true
-                }
-                cleanup {
-                    clean_build_folder(app_unity)
-                }
-            }
-        }
         stage('Build unity plugin release version') {
             when {
-                branch 'release/**'
+                beforeAgent true
+                allOf {
+                    branch 'release/**'
+                    anyOf {
+                        triggeredBy 'UserIdCause'
+                        triggeredBy 'UpstreamCause'
+                        triggeredBy 'BranchEventCause'
+                    }
+                }
             }
             agent {
                 node {
