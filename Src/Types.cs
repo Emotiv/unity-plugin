@@ -378,8 +378,8 @@ namespace EmotivUnityPlugin
                 : null;
             Url      = consentObj["licenseUrl"] != null ? consentObj["licenseUrl"].ToString() : "";
         }
-        public bool? Accepted { get; set; }
-        public string Url { get; set; }
+        public bool? Accepted { get; private set; }
+        public string Url { get; private set; }
     }
 
     // contain data and time of data. For example, login time and user login or token and time for token

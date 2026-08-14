@@ -336,7 +336,7 @@ namespace EmotivUnityPlugin
             else if (method == "getAiDataConsent")
             {
                 AIDataConsent consent = new AIDataConsent(data["aiDataConsent"]);
-                GetAiDataConsentDone(this, consent);
+                GetAiDataConsentDone?.Invoke(this, consent);
             }
             else if (method == "authorize")
             {
@@ -363,7 +363,7 @@ namespace EmotivUnityPlugin
             else if (method == "setAiDataConsent")
             {
                 AIDataConsent consent = new AIDataConsent(data["aiDataConsent"]);
-                SetAiDataConsentDone(this, consent);
+                SetAiDataConsentDone?.Invoke(this, consent);
             }
             else if (method == "createSession")
             {

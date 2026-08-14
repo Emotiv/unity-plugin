@@ -365,8 +365,8 @@ namespace EmotivUnityPlugin
 
         /// <summary>
         /// Sets user's consent to the use of their data for AI training purposes, and waits for the response.
-        /// <param name="accepted">True if the user consents, false otherwise.</param>
         /// </summary>
+        /// <param name="accepted">True to accept, false to decline.</param>
         public async Task<AIDataConsent> SetAIDataConsent(bool accepted)
         {
             return await emotivUnityItf.SetAIDataConsent(accepted);

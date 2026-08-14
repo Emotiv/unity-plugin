@@ -108,9 +108,15 @@ namespace EmotivUnityPlugin
 
             // fault pending AI data consent requests so callers awaiting them do not hang
             if (errorInfo.MethodName == "getAiDataConsent")
+            {
                 _getAiDataConsentTcs?.TrySetException(new Exception(errorInfo.MessageError));
+                _getAiDataConsentTcs = null;
+            }
             else if (errorInfo.MethodName == "setAiDataConsent")
+            {
                 _setAiDataConsentTcs?.TrySetException(new Exception(errorInfo.MessageError));
+                _setAiDataConsentTcs = null;
+            }
 
 #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
             // For mobile and embedded lib platforms
@@ -222,7 +228,10 @@ namespace EmotivUnityPlugin
             string cortexToken = CortexToken;
             if (String.IsNullOrEmpty(cortexToken))
                 return null;
-            _getAiDataConsentTcs = new TaskCompletionSource<AIDataConsent>();
+            // avoid overwriting a pending request's TCS, which would leave its caller awaiting forever
+            if (_getAiDataConsentTcs != null && !_getAiDataConsentTcs.Task.IsCompleted)
+                throw new InvalidOperationException("A GetAIDataConsent request is already in progress.");
+            _getAiDataConsentTcs = new TaskCompletionSource<AIDataConsent>(TaskCreationOptions.RunContinuationsAsynchronously);
             _ctxClient.GetAiDataConsent(cortexToken);
             return await _getAiDataConsentTcs.Task;
         }
@@ -240,7 +249,10 @@ namespace EmotivUnityPlugin
             string cortexToken = CortexToken;
             if (String.IsNullOrEmpty(cortexToken))
                 return null;
-            _setAiDataConsentTcs = new TaskCompletionSource<AIDataConsent>();
+            // avoid overwriting a pending request's TCS, which would leave its caller awaiting forever
+            if (_setAiDataConsentTcs != null && !_setAiDataConsentTcs.Task.IsCompleted)
+                throw new InvalidOperationException("A SetAIDataConsent request is already in progress.");
+            _setAiDataConsentTcs = new TaskCompletionSource<AIDataConsent>(TaskCreationOptions.RunContinuationsAsynchronously);
             _ctxClient.SetAiDataConsent(cortexToken, accepted);
             return await _setAiDataConsentTcs.Task;
         }
