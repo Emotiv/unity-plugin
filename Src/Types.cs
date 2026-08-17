@@ -369,6 +369,19 @@ namespace EmotivUnityPlugin
         public int totalDebit = 0;
     }
 
+    public class AIDataConsent
+    {
+        public AIDataConsent(JToken consentObj) {
+            // null means AI Data Consent has not been accepted/declined for the latest policy version
+            Accepted = consentObj["accepted"] != null && consentObj["accepted"].Type != JTokenType.Null
+                ? (bool?)consentObj["accepted"]
+                : null;
+            Url      = consentObj["licenseUrl"] != null ? consentObj["licenseUrl"].ToString() : "";
+        }
+        public bool? Accepted { get; private set; }
+        public string Url { get; private set; }
+    }
+
     // contain data and time of data. For example, login time and user login or token and time for token
     [Serializable()]
     public class UserDataInfo : ISerializable

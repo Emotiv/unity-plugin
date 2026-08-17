@@ -125,6 +125,22 @@ namespace EmotivUnityPlugin
             return _authorizer.CurrentEmotivId;
         }
 
+        /// <summary>
+        /// Requests the AI data usage consent directly from Cortex and waits for the response.
+        /// </summary>
+        public async Task<AIDataConsent> GetAIDataConsent()
+        {
+            return await _authorizer.GetAIDataConsent();
+        }
+
+        /// <summary>
+        /// Sets user's consent to the use of their data for AI training purposes, and waits for the response.
+        /// </summary>
+        public async Task<AIDataConsent> SetAIDataConsent(bool accepted)
+        {
+            return await _authorizer.SetAIDataConsent(accepted);
+        }
+
 
 #if USE_EMBEDDED_LIB || UNITY_ANDROID || UNITY_IOS
         private CrossPlatformBrowser _crossPlatformBrowser;

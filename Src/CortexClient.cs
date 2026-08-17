@@ -61,8 +61,10 @@ namespace EmotivUnityPlugin
         public event EventHandler<bool> AccessRightGrantedDone;
         public event EventHandler<string> AuthorizeOK;
         public event EventHandler<UserDataInfo> GetUserLoginDone;
+        public event EventHandler<AIDataConsent> GetAiDataConsentDone;
         public event EventHandler<string> EULAAccepted;
         public event EventHandler<string> EULANotAccepted; // return cortexToken if user has not accept eula to proceed next step
+        public event EventHandler<AIDataConsent> SetAiDataConsentDone;
         public event EventHandler<string> UserLoginNotify;
         public event EventHandler<string> UserLogoutNotify;
         public event EventHandler<License> GetLicenseInfoDone;
@@ -331,9 +333,10 @@ namespace EmotivUnityPlugin
                 License lic = new License(data["license"]);
                 GetLicenseInfoDone(this, lic);
             }
-            else if (method == "getUserInformation")
+            else if (method == "getAiDataConsent")
             {
-                //TODO
+                AIDataConsent consent = new AIDataConsent(data["aiDataConsent"]);
+                GetAiDataConsentDone?.Invoke(this, consent);
             }
             else if (method == "authorize")
             {
@@ -356,6 +359,11 @@ namespace EmotivUnityPlugin
             {
                 string message = data["message"].ToString();
                 EULAAccepted(this, message);
+            }
+            else if (method == "setAiDataConsent")
+            {
+                AIDataConsent consent = new AIDataConsent(data["aiDataConsent"]);
+                SetAiDataConsentDone?.Invoke(this, consent);
             }
             else if (method == "createSession")
             {
@@ -674,12 +682,23 @@ namespace EmotivUnityPlugin
                 );
             SendTextMessage(param, "getLicenseInfo", true);
         }
-        public void GetUserInformation(string cortexToken)
+        // get user's consent to the use of their data for AI training purposes
+        public void GetAiDataConsent(string cortexToken)
         {
             JObject param = new JObject(
                     new JProperty("cortexToken", cortexToken)
                 );
-            SendTextMessage(param, "getUserInformation", true);
+            SendTextMessage(param, "getAiDataConsent", true);
+        }
+
+        // set user's consent to the use of their data for AI training purposes
+        public void SetAiDataConsent(string cortexToken, bool accepted)
+        {
+            JObject param = new JObject(
+                    new JProperty("cortexToken", cortexToken),
+                    new JProperty("accepted", accepted)
+                );
+            SendTextMessage(param, "setAiDataConsent", true);
         }
 
         // Login
