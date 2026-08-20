@@ -839,8 +839,16 @@ namespace EmotivUnityPlugin
         }
 
         // QueryRecord
-        // Required params: cortexToken, query
-        public void QueryRecord(string cortexToken, JObject query, JArray orderBy = null, JToken offset = null, JToken limit = null)
+        // Required params: cortexToken, query, orderBy
+        // Optional params: limit, offset (pagination - see "limit and offset" at the link below),
+        //                  includeMarkers, includeSyncStatusInfo
+        // Returns a list of records owned by the current user, filtered/sorted/paged by the params above.
+        // query fields: licenseId, applicationId, keyword, startDatetime, modifiedDatetime, duration.
+        // orderBy: array of single-attribute objects, e.g. [{ "startDatetime": "DESC" }]; sortable by
+        //          title, description, startDatetime, modifiedDatetime, duration, subjectName, applicationId.
+        // See https://emotiv.gitbook.io/cortex-api/records/queryrecords for full documentation.
+        public void QueryRecord(string cortexToken, JObject query, JArray orderBy = null, JToken offset = null, JToken limit = null,
+                                bool includeMarkers = true, bool includeSyncStatusInfo = true)
         {
             JObject param = new JObject();
             param.Add("query", query);
@@ -854,6 +862,8 @@ namespace EmotivUnityPlugin
             if (limit != null) {
                 param.Add("limit", (long)limit);
             }
+            param.Add("includeMarkers", includeMarkers);
+            param.Add("includeSyncStatusInfo", includeSyncStatusInfo);
             SendTextMessage(param, "queryRecords", true);
         }
 

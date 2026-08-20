@@ -17,12 +17,14 @@ namespace EmotivUnityPlugin
         public event EventHandler<Record> RecordStarted;
         public event EventHandler<Record> RecordStopped;
         public event EventHandler<Marker> MarkerReceived;
+        public event EventHandler<MultipleResultEventArgs> ExportRecordsFinished;
 
         private BCIGameItf()
         {
             emotivUnityItf.RecordStarted += (sender, record) => RecordStarted?.Invoke(this, record);
             emotivUnityItf.RecordStopped += (sender, record) => RecordStopped?.Invoke(this, record);
             emotivUnityItf.MarkerReceived += (sender, marker) => MarkerReceived?.Invoke(this, marker);
+            emotivUnityItf.ExportRecordsFinished += (sender, e) => ExportRecordsFinished?.Invoke(this, e);
         }
 
         public static BCIGameItf Instance
@@ -476,6 +478,76 @@ namespace EmotivUnityPlugin
         public void StopRecord()
         {
             emotivUnityItf.StopRecord();
+        }
+
+        /// <summary>
+        /// Export one or more records to a specified folder with customizable options. Fire-and-forget; kept for backward compatibility.
+        /// This call does not return the export result. Use <see cref="ExportRecordAsync"/> if you need to await the result.
+        /// See https://emotiv.gitbook.io/cortex-api/records/exportrecord for details.
+        /// </summary>
+        /// <param name="records">List of record UUIDs to export</param>
+        /// <param name="folderPath">Absolute path to the folder for exported files</param>
+        /// <param name="streamTypes">List of stream types to include (e.g., "EEG", "MOTION")</param>
+        /// <param name="format">Export file format ("EDF", "EDFPLUS", "BDFPLUS", "CSV")</param>
+        /// <param name="version">Optional. For "CSV" format, use "V1" or "V2"</param>
+        /// <param name="licenseIds">Optional. License IDs for exporting records from other apps</param>
+        /// <param name="includeDemographics">Include demographic info</param>
+        /// <param name="includeMarkerExtraInfos">Include extra marker info</param>
+        /// <param name="includeSurvey">Include survey data</param>
+        /// <param name="includeDeprecatedPM">Include deprecated performance metrics</param>
+        public void ExportRecord(List<string> records, string folderPath,
+                                 List<string> streamTypes, string format, string version = null,
+                                 List<string> licenseIds = null, bool includeDemographics = false,
+                                 bool includeMarkerExtraInfos = false, bool includeSurvey = false,
+                                 bool includeDeprecatedPM = false)
+        {
+            emotivUnityItf.ExportRecord(records, folderPath, streamTypes, format, version,
+                                    licenseIds, includeDemographics, includeMarkerExtraInfos,
+                                    includeSurvey, includeDeprecatedPM);
+        }
+
+        /// <summary>
+        /// Export one or more records to a specified folder with customizable options, and waits for the response.
+        /// Unlike <see cref="ExportRecord"/>, this returns the ids of records that were exported successfully, and the failed ones with error details.
+        /// See https://emotiv.gitbook.io/cortex-api/records/exportrecord for details.
+        /// </summary>
+        /// <param name="records">List of record UUIDs to export</param>
+        /// <param name="folderPath">Absolute path to the folder for exported files</param>
+        /// <param name="streamTypes">List of stream types to include (e.g., "EEG", "MOTION")</param>
+        /// <param name="format">Export file format ("EDF", "EDFPLUS", "BDFPLUS", "CSV")</param>
+        /// <param name="version">Optional. For "CSV" format, use "V1" or "V2"</param>
+        /// <param name="licenseIds">Optional. License IDs for exporting records from other apps</param>
+        /// <param name="includeDemographics">Include demographic info</param>
+        /// <param name="includeMarkerExtraInfos">Include extra marker info</param>
+        /// <param name="includeSurvey">Include survey data</param>
+        /// <param name="includeDeprecatedPM">Include deprecated performance metrics</param>
+        /// <returns>The ids of records that were exported successfully, and the failed ones with error details.</returns>
+        public async Task<ExportRecordResult> ExportRecordAsync(List<string> records, string folderPath,
+                                 List<string> streamTypes, string format, string version = null,
+                                 List<string> licenseIds = null, bool includeDemographics = false,
+                                 bool includeMarkerExtraInfos = false, bool includeSurvey = false,
+                                 bool includeDeprecatedPM = false)
+        {
+            return await emotivUnityItf.ExportRecordAsync(records, folderPath, streamTypes, format, version,
+                                     licenseIds, includeDemographics, includeMarkerExtraInfos,
+                                     includeSurvey, includeDeprecatedPM);
+        }
+
+        /// <summary>
+        /// Query records owned by the current user, and waits for the response.
+        /// See https://emotiv.gitbook.io/cortex-api/records/queryrecords for query/orderBy field details.
+        /// </summary>
+        /// <param name="query">Filter fields (e.g. licenseId, applicationId, keyword, startDatetime, modifiedDatetime, duration). Defaults to no filter.</param>
+        /// <param name="orderBy">Sort fields, e.g. [{ "startDatetime": "DESC" }]. Defaults to newest first.</param>
+        /// <param name="limit">Maximum number of records to return. Defaults to 10.</param>
+        /// <param name="offset">Number of records to skip, for pagination. Defaults to 0.</param>
+        /// <param name="includeMarkers">Include the markers linked to each record. Defaults to true.</param>
+        /// <param name="includeSyncStatusInfo">Include the "syncStatus" field of each record. Defaults to true.</param>
+        /// <returns>The list of records matching the query.</returns>
+        public async Task<List<Record>> QueryRecords(JObject query = null, JArray orderBy = null, int limit = 10, int offset = 0,
+                                                      bool includeMarkers = true, bool includeSyncStatusInfo = true)
+        {
+            return await emotivUnityItf.QueryRecords(query, orderBy, limit, offset, includeMarkers, includeSyncStatusInfo);
         }
 
         /// <summary>
