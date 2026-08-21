@@ -93,6 +93,7 @@ namespace EmotivUnityPlugin
             {
                 _isExportRecordAsyncPending = false;
                 _exportRecordTcs?.TrySetResult(new ExportRecordResult(successRecordIds, failedRecords));
+                _exportRecordTcs = null;
             }
             else
             {
