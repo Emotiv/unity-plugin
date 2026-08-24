@@ -78,15 +78,33 @@ namespace EmotivUnityPlugin
         private void OnExportRecordsFinished(object sender, MultipleResultEventArgs e)
         {
             List<string> successRecordIds = new List<string>();
-            foreach (JObject item in e.SuccessList ?? new JArray())
+            foreach (var token in e.SuccessList ?? new JArray())
             {
-                successRecordIds.Add((string)item["recordId"]);
+                var obj = token as JObject;
+                if (obj != null)
+                {
+                    string recordId = obj["recordId"]?.ToString();
+                    if (!string.IsNullOrEmpty(recordId))
+                        successRecordIds.Add(recordId);
+                    continue;
+                }
+
+                string fallbackRecordId = token?.ToString();
+                if (!string.IsNullOrEmpty(fallbackRecordId))
+                    successRecordIds.Add(fallbackRecordId);
             }
 
             List<ExportRecordFailure> failedRecords = new List<ExportRecordFailure>();
-            foreach (JObject item in e.FailList ?? new JArray())
+            foreach (var token in e.FailList ?? new JArray())
             {
-                failedRecords.Add(new ExportRecordFailure((string)item["recordId"], (int)item["code"], (string)item["message"]));
+                var obj = token as JObject;
+                if (obj == null)
+                    continue;
+
+                failedRecords.Add(new ExportRecordFailure(
+                    obj["recordId"]?.ToString(),
+                    obj.Value<int?>("code") ?? 0,
+                    obj.Value<string>("message")));
             }
 
             if (_isExportRecordAsyncPending)
@@ -238,12 +256,28 @@ namespace EmotivUnityPlugin
             if (_exportRecordTcs != null && !_exportRecordTcs.Task.IsCompleted)
                 throw new InvalidOperationException("An ExportRecord request is already in progress.");
 
+            if (records == null)
+                throw new ArgumentNullException(nameof(records));
+            if (streamTypes == null)
+                throw new ArgumentNullException(nameof(streamTypes));
+
             _exportRecordTcs = new TaskCompletionSource<ExportRecordResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _isExportRecordAsyncPending = true;
-            _ctxClient.ExportRecord(_authorizer.CortexToken, records, folderPath,
-                                    streamTypes, format, version, licenseIds,
-                                    includeDemographics, includeMarkerExtraInfos,
-                                    includeSurvey, includeDeprecatedPM);
+
+            try
+            {
+                _isExportRecordAsyncPending = true;
+                _ctxClient.ExportRecord(_authorizer.CortexToken, records, folderPath,
+                                        streamTypes, format, version, licenseIds,
+                                        includeDemographics, includeMarkerExtraInfos,
+                                        includeSurvey, includeDeprecatedPM);
+            }
+            catch
+            {
+                _isExportRecordAsyncPending = false;
+                _exportRecordTcs = null;
+                throw;
+            }
+
             return await _exportRecordTcs.Task;
         }
 
