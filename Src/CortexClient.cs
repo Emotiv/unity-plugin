@@ -848,7 +848,7 @@ namespace EmotivUnityPlugin
         //          title, description, startDatetime, modifiedDatetime, duration, subjectName, applicationId.
         // See https://emotiv.gitbook.io/cortex-api/records/queryrecords for full documentation.
         public void QueryRecord(string cortexToken, JObject query, JArray orderBy = null, JToken offset = null, JToken limit = null,
-                                bool includeMarkers = true, bool includeSyncStatusInfo = true)
+                                bool includeMarkers = false, bool includeSyncStatusInfo = false)
         {
             JObject param = new JObject();
             param.Add("query", query);

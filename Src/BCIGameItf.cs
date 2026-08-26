@@ -541,11 +541,11 @@ namespace EmotivUnityPlugin
         /// <param name="orderBy">Sort fields, e.g. [{ "startDatetime": "DESC" }]. Defaults to newest first.</param>
         /// <param name="limit">Maximum number of records to return. Defaults to 10.</param>
         /// <param name="offset">Number of records to skip, for pagination. Defaults to 0.</param>
-        /// <param name="includeMarkers">Include the markers linked to each record. Defaults to true.</param>
-        /// <param name="includeSyncStatusInfo">Include the "syncStatus" field of each record. Defaults to true.</param>
+        /// <param name="includeMarkers">Include the markers linked to each record. Defaults to false.</param>
+        /// <param name="includeSyncStatusInfo">Include the "syncStatus" field of each record. Defaults to false.</param>
         /// <returns>The list of records matching the query.</returns>
         public async Task<List<Record>> QueryRecords(JObject query = null, JArray orderBy = null, int limit = 10, int offset = 0,
-                                                      bool includeMarkers = true, bool includeSyncStatusInfo = true)
+                                                      bool includeMarkers = false, bool includeSyncStatusInfo = false)
         {
             return await emotivUnityItf.QueryRecords(query, orderBy, limit, offset, includeMarkers, includeSyncStatusInfo);
         }
