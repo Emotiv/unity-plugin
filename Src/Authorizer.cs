@@ -18,8 +18,8 @@ namespace EmotivUnityPlugin
         private string _licenseID = "";
         private static int _debitNo = 5000; // default value
         private static double _currentLoginTime = 0; // store current login time
-        private TaskCompletionSource<AIDataConsent> _getAiDataConsentTcs; // pending GetAIDataConsent request
-        private TaskCompletionSource<AIDataConsent> _setAiDataConsentTcs; // pending SetAIDataConsent request
+        private TaskCompletionSource<AIAcknowledgement> _getAiAcknowledgementTcs; // pending GetAIAcknowledgement request
+        private TaskCompletionSource<AIAcknowledgement> _setAiAcknowledgementTcs; // pending SetAIAcknowledgement request
 
         /// <summary>
         /// Timer for waiting a user login
@@ -80,8 +80,8 @@ namespace EmotivUnityPlugin
             _ctxClient.EULANotAccepted          += OnEULANotAccepted;
             _ctxClient.RefreshTokenOK           += OnRefreshTokenOK;
             _ctxClient.GetLicenseInfoDone       += OnGetLicenseInfoDone;
-            _ctxClient.GetAiDataConsentDone     += OnGetAiDataConsentDone;
-            _ctxClient.SetAiDataConsentDone     += OnSetAiDataConsentDone;
+            _ctxClient.GetAiAcknowledgementDone += OnGetAiAcknowledgementDone;
+            _ctxClient.SetAiAcknowledgementDone += OnSetAiAcknowledgementDone;
             _ctxClient.ErrorMsgReceived        += OnErrorMsgReceived;
         }
 
@@ -106,16 +106,16 @@ namespace EmotivUnityPlugin
 
             UnityEngine.Debug.Log($"OnErrorMsgReceived: Code={errorInfo.Code}, Message={errorInfo.MessageError}, Method={errorInfo.MethodName}");
 
-            // fault pending AI data consent requests so callers awaiting them do not hang
-            if (errorInfo.MethodName == "getAiDataConsent")
+            // fault pending AI acknowledgement requests so callers awaiting them do not hang
+            if (errorInfo.MethodName == "getAiAcknowledgement")
             {
-                _getAiDataConsentTcs?.TrySetException(new Exception(errorInfo.MessageError));
-                _getAiDataConsentTcs = null;
+                _getAiAcknowledgementTcs?.TrySetException(new Exception(errorInfo.MessageError));
+                _getAiAcknowledgementTcs = null;
             }
-            else if (errorInfo.MethodName == "setAiDataConsent")
+            else if (errorInfo.MethodName == "setAiAcknowledgement")
             {
-                _setAiDataConsentTcs?.TrySetException(new Exception(errorInfo.MessageError));
-                _setAiDataConsentTcs = null;
+                _setAiAcknowledgementTcs?.TrySetException(new Exception(errorInfo.MessageError));
+                _setAiAcknowledgementTcs = null;
             }
 
 #if UNITY_ANDROID || UNITY_IOS || USE_EMBEDDED_LIB
@@ -222,45 +222,45 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Request AI data usage consent information for the current logged-in user directly from Cortex, and waits for the response.
+        /// Request the AI acknowledgement information for the current logged-in user directly from Cortex, and waits for the response.
         /// </summary>
-        public async Task<AIDataConsent> GetAIDataConsent() {
+        public async Task<AIAcknowledgement> GetAIAcknowledgement() {
             string cortexToken = CortexToken;
             if (String.IsNullOrEmpty(cortexToken))
                 return null;
             // avoid overwriting a pending request's TCS, which would leave its caller awaiting forever
-            if (_getAiDataConsentTcs != null && !_getAiDataConsentTcs.Task.IsCompleted)
-                throw new InvalidOperationException("A GetAIDataConsent request is already in progress.");
-            _getAiDataConsentTcs = new TaskCompletionSource<AIDataConsent>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _ctxClient.GetAiDataConsent(cortexToken);
-            return await _getAiDataConsentTcs.Task;
+            if (_getAiAcknowledgementTcs != null && !_getAiAcknowledgementTcs.Task.IsCompleted)
+                throw new InvalidOperationException("A GetAIAcknowledgement request is already in progress.");
+            _getAiAcknowledgementTcs = new TaskCompletionSource<AIAcknowledgement>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _ctxClient.GetAiAcknowledgement(cortexToken);
+            return await _getAiAcknowledgementTcs.Task;
         }
 
-        private void OnGetAiDataConsentDone(object sender, AIDataConsent consent)
+        private void OnGetAiAcknowledgementDone(object sender, AIAcknowledgement ack)
         {
-            UnityEngine.Debug.Log("OnGetAiDataConsentDone: " + consent.Accepted);
-            _getAiDataConsentTcs?.TrySetResult(consent);
+            UnityEngine.Debug.Log("OnGetAiAcknowledgementDone: " + ack.Accepted);
+            _getAiAcknowledgementTcs?.TrySetResult(ack);
         }
 
         /// <summary>
-        /// Set user's consent to the use of their data for AI training purposes, and waits for the response from Cortex.
+        /// Set user's acknowledgement of the use of their data for AI training purposes, and waits for the response from Cortex.
         /// </summary>
-        public async Task<AIDataConsent> SetAIDataConsent(bool accepted) {
+        public async Task<AIAcknowledgement> SetAIAcknowledgement(bool accepted) {
             string cortexToken = CortexToken;
             if (String.IsNullOrEmpty(cortexToken))
                 return null;
             // avoid overwriting a pending request's TCS, which would leave its caller awaiting forever
-            if (_setAiDataConsentTcs != null && !_setAiDataConsentTcs.Task.IsCompleted)
-                throw new InvalidOperationException("A SetAIDataConsent request is already in progress.");
-            _setAiDataConsentTcs = new TaskCompletionSource<AIDataConsent>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _ctxClient.SetAiDataConsent(cortexToken, accepted);
-            return await _setAiDataConsentTcs.Task;
+            if (_setAiAcknowledgementTcs != null && !_setAiAcknowledgementTcs.Task.IsCompleted)
+                throw new InvalidOperationException("A SetAIAcknowledgement request is already in progress.");
+            _setAiAcknowledgementTcs = new TaskCompletionSource<AIAcknowledgement>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _ctxClient.SetAiAcknowledgement(cortexToken, accepted);
+            return await _setAiAcknowledgementTcs.Task;
         }
 
-        private void OnSetAiDataConsentDone(object sender, AIDataConsent consent)
+        private void OnSetAiAcknowledgementDone(object sender, AIAcknowledgement ack)
         {
-            UnityEngine.Debug.Log("OnSetAiDataConsentDone: " + consent.Accepted);
-            _setAiDataConsentTcs?.TrySetResult(consent);
+            UnityEngine.Debug.Log("OnSetAiAcknowledgementDone: " + ack.Accepted);
+            _setAiAcknowledgementTcs?.TrySetResult(ack);
         }
 
         private void OnRefreshTokenOK(object sender, string cortexToken)
