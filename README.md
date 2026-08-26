@@ -141,6 +141,20 @@ See `EmotivUnityItf.cs` for more training and profile management functions.
 
 ---
 
+## AI Acknowledgement
+
+You can query and set the user's acknowledgement of the use of their data for AI training purposes. These APIs require a valid cortex token, so they must be called after authorizing is done (i.e. `IsAuthorizedOK` is true).
+
+```csharp
+// Get the current AI acknowledgement
+AIAcknowledgement ack = await EmotivUnityItf.Instance.GetAIAcknowledgement();
+// ack.Accepted: true/false/null (null means not yet accepted/declined for the latest policy version)
+// ack.Preference: the application id the acknowledgement applies to
+
+// Set the AI acknowledgement
+AIAcknowledgement result = await EmotivUnityItf.Instance.SetAIAcknowledgement(true);
+```
+
 ## Additional Notes
 - For mobile builds, ensure all required permissions (Bluetooth, etc.) are set in your Unity project.
 - For Option 2, both the Embedded Library and UniWebView are private and require Emotiv approval for access.

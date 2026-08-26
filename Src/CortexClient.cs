@@ -61,10 +61,10 @@ namespace EmotivUnityPlugin
         public event EventHandler<bool> AccessRightGrantedDone;
         public event EventHandler<string> AuthorizeOK;
         public event EventHandler<UserDataInfo> GetUserLoginDone;
-        public event EventHandler<AIDataConsent> GetAiDataConsentDone;
+        public event EventHandler<AIAcknowledgement> GetAiAcknowledgementDone;
         public event EventHandler<string> EULAAccepted;
         public event EventHandler<string> EULANotAccepted; // return cortexToken if user has not accept eula to proceed next step
-        public event EventHandler<AIDataConsent> SetAiDataConsentDone;
+        public event EventHandler<AIAcknowledgement> SetAiAcknowledgementDone;
         public event EventHandler<string> UserLoginNotify;
         public event EventHandler<string> UserLogoutNotify;
         public event EventHandler<License> GetLicenseInfoDone;
@@ -333,10 +333,10 @@ namespace EmotivUnityPlugin
                 License lic = new License(data["license"]);
                 GetLicenseInfoDone(this, lic);
             }
-            else if (method == "getAiDataConsent")
+            else if (method == "getAiAcknowledgement")
             {
-                AIDataConsent consent = new AIDataConsent(data["aiDataConsent"]);
-                GetAiDataConsentDone?.Invoke(this, consent);
+                AIAcknowledgement ack = new AIAcknowledgement(data);
+                GetAiAcknowledgementDone?.Invoke(this, ack);
             }
             else if (method == "authorize")
             {
@@ -360,10 +360,10 @@ namespace EmotivUnityPlugin
                 string message = data["message"].ToString();
                 EULAAccepted(this, message);
             }
-            else if (method == "setAiDataConsent")
+            else if (method == "setAiAcknowledgement")
             {
-                AIDataConsent consent = new AIDataConsent(data["aiDataConsent"]);
-                SetAiDataConsentDone?.Invoke(this, consent);
+                AIAcknowledgement ack = new AIAcknowledgement(data);
+                SetAiAcknowledgementDone?.Invoke(this, ack);
             }
             else if (method == "createSession")
             {
@@ -682,23 +682,23 @@ namespace EmotivUnityPlugin
                 );
             SendTextMessage(param, "getLicenseInfo", true);
         }
-        // get user's consent to the use of their data for AI training purposes
-        public void GetAiDataConsent(string cortexToken)
+        // get user's acknowledgement of the use of their data for AI training purposes
+        public void GetAiAcknowledgement(string cortexToken)
         {
             JObject param = new JObject(
                     new JProperty("cortexToken", cortexToken)
                 );
-            SendTextMessage(param, "getAiDataConsent", true);
+            SendTextMessage(param, "getAiAcknowledgement", true);
         }
 
-        // set user's consent to the use of their data for AI training purposes
-        public void SetAiDataConsent(string cortexToken, bool accepted)
+        // set user's acknowledgement of the use of their data for AI training purposes
+        public void SetAiAcknowledgement(string cortexToken, bool accepted)
         {
             JObject param = new JObject(
                     new JProperty("cortexToken", cortexToken),
                     new JProperty("accepted", accepted)
                 );
-            SendTextMessage(param, "setAiDataConsent", true);
+            SendTextMessage(param, "setAiAcknowledgement", true);
         }
 
         // Login

@@ -356,20 +356,20 @@ namespace EmotivUnityPlugin
         }
 
         /// <summary>
-        /// Requests the AI data usage consent directly from Cortex and waits for the response.
+        /// Requests the AI acknowledgement directly from Cortex and waits for the response. Must be called after authorizing is done.
         /// </summary>
-        public async Task<AIDataConsent> GetAIDataConsent()
+        public async Task<AIAcknowledgement> GetAIAcknowledgement()
         {
-            return await emotivUnityItf.GetAIDataConsent();
+            return await emotivUnityItf.GetAIAcknowledgement();
         }
 
         /// <summary>
-        /// Sets user's consent to the use of their data for AI training purposes, and waits for the response.
+        /// Sets user's acknowledgement of the use of their data for AI training purposes, and waits for the response. Must be called after authorizing is done.
         /// </summary>
         /// <param name="accepted">True to accept, false to decline.</param>
-        public async Task<AIDataConsent> SetAIDataConsent(bool accepted)
+        public async Task<AIAcknowledgement> SetAIAcknowledgement(bool accepted)
         {
-            return await emotivUnityItf.SetAIDataConsent(accepted);
+            return await emotivUnityItf.SetAIAcknowledgement(accepted);
         }
 
         /// <summary>

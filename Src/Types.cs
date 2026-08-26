@@ -369,17 +369,17 @@ namespace EmotivUnityPlugin
         public int totalDebit = 0;
     }
 
-    public class AIDataConsent
+    public class AIAcknowledgement
     {
-        public AIDataConsent(JToken consentObj) {
-            // null means AI Data Consent has not been accepted/declined for the latest policy version
-            Accepted = consentObj["accepted"] != null && consentObj["accepted"].Type != JTokenType.Null
-                ? (bool?)consentObj["accepted"]
+        public AIAcknowledgement(JToken ackObj) {
+            // null means the AI acknowledgement has not been accepted/declined for the latest policy version
+            Accepted = ackObj["accepted"] != null && ackObj["accepted"].Type != JTokenType.Null
+                ? (bool?)ackObj["accepted"]
                 : null;
-            Url      = consentObj["licenseUrl"] != null ? consentObj["licenseUrl"].ToString() : "";
+            Preference = ackObj["preference"] != null ? ackObj["preference"].ToString() : "";
         }
         public bool? Accepted { get; private set; }
-        public string Url { get; private set; }
+        public string Preference { get; private set; }
     }
 
     // contain data and time of data. For example, login time and user login or token and time for token
