@@ -149,7 +149,7 @@ You can query and set the user's acknowledgement of the use of their data for AI
 // Get the current AI acknowledgement
 AIAcknowledgement ack = await EmotivUnityItf.Instance.GetAIAcknowledgement();
 // ack.Accepted: true/false/null (null means not yet accepted/declined for the latest policy version)
-// ack.Preference: the application id the acknowledgement applies to
+// ack.Preference: the application id the acknowledgement applies to, or null if not accepted
 
 // Set the AI acknowledgement
 AIAcknowledgement result = await EmotivUnityItf.Instance.SetAIAcknowledgement(true);

@@ -376,10 +376,13 @@ namespace EmotivUnityPlugin
             Accepted = ackObj["accepted"] != null && ackObj["accepted"].Type != JTokenType.Null
                 ? (bool?)ackObj["accepted"]
                 : null;
-            Preference = ackObj["preference"] != null ? ackObj["preference"].ToString() : "";
+            // preference is only present in the result when accepted is true
+            Preference = ackObj["preference"] != null && ackObj["preference"].Type != JTokenType.Null
+                ? ackObj["preference"].ToString()
+                : null;
         }
         public bool? Accepted { get; private set; }
-        public string Preference { get; private set; }
+        public string? Preference { get; private set; }
     }
 
     // contain data and time of data. For example, login time and user login or token and time for token
