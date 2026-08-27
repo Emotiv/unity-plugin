@@ -423,6 +423,7 @@ namespace EmotivUnityPlugin
         private string _endDateTime;
         private JArray _markers;
         private List<string> _tags;
+        private string _syncStatus;
 
         // Properties
         public string Uuid
@@ -524,6 +525,17 @@ namespace EmotivUnityPlugin
                 _tags = value;
             }
         }
+
+        public string SyncStatus
+        {
+            get {
+                return _syncStatus;
+            }
+
+            set {
+                _syncStatus = value;
+            }
+        }
         //Constructor
         public Record()
         {
@@ -544,10 +556,12 @@ namespace EmotivUnityPlugin
             {
                 _tags.Add((string)tag);
             }
+
+            _syncStatus = (string)obj["syncStatus"]?["status"];
         }
         public void PrintOut()
         {
-            UnityEngine.Debug.Log("id: " + _uuid + ", title: " + _title + ", startDatetime: " + _startDateTime + ", endDatetime: " + _endDateTime);
+            UnityEngine.Debug.Log("id: " + _uuid + ", title: " + _title + ", startDatetime: " + _startDateTime + ", endDatetime: " + _endDateTime + ", syncStatus: " + _syncStatus);
         }
     }
 
@@ -596,6 +610,37 @@ namespace EmotivUnityPlugin
         }
         public JArray SuccessList { get; set; }
         public JArray FailList { get; set; }
+    }
+
+    /// <summary>
+    /// The result of an ExportRecord call: the ids of exported records, and the failed ones with error details.
+    /// See https://emotiv.gitbook.io/cortex-api/records/exportrecord for the raw "success"/"failure" fields this is parsed from.
+    /// </summary>
+    public class ExportRecordResult
+    {
+        public ExportRecordResult(List<string> successRecordIds, List<ExportRecordFailure> failedRecords)
+        {
+            SuccessRecordIds = successRecordIds;
+            FailedRecords = failedRecords;
+        }
+        public List<string> SuccessRecordIds { get; set; }
+        public List<ExportRecordFailure> FailedRecords { get; set; }
+    }
+
+    /// <summary>
+    /// Describes why a single record failed to export.
+    /// </summary>
+    public class ExportRecordFailure
+    {
+        public ExportRecordFailure(string recordId, int code, string message)
+        {
+            RecordId = recordId;
+            Code = code;
+            Message = message;
+        }
+        public string RecordId { get; set; }
+        public int Code { get; set; }
+        public string Message { get; set; }
     }
 
     // Event for createSession and updateSession

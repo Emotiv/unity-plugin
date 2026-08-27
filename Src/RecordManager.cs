@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace EmotivUnityPlugin
 {
@@ -17,6 +18,10 @@ namespace EmotivUnityPlugin
         private SessionHandler _sessionHandler  = SessionHandler.Instance;
 
         private string _currMarkerId;
+
+        private TaskCompletionSource<List<Record>> _queryRecordsTcs; // pending QueryRecords request
+        private TaskCompletionSource<ExportRecordResult> _exportRecordTcs; // pending ExportRecord request
+        private bool _isExportRecordAsyncPending; // true while an ExportRecordAsync request is awaiting its response
 
         public static RecordManager Instance { get; } = new RecordManager();
 
@@ -33,12 +38,7 @@ namespace EmotivUnityPlugin
             remove { _ctxClient.DataPostProcessingFinished -= value; }
         }
 
-        public event EventHandler<MultipleResultEventArgs> ExportRecordsFinished
-        {
-            add { _ctxClient.ExportRecordsFinished += value; }
-            remove { _ctxClient.ExportRecordsFinished -= value; }
-        }
-
+        public event EventHandler<MultipleResultEventArgs> ExportRecordsFinished;
         // Constructor
         public RecordManager ()
         {
@@ -46,6 +46,9 @@ namespace EmotivUnityPlugin
             _sessionHandler.StopRecordOK    += OnStopRecordOK;
             _ctxClient.InjectMarkerOK += OnInjectMarkerOK;
             _ctxClient.UpdateMarkerOK += OnUpdateMarkerOK;
+            _ctxClient.QueryRecordsDone += OnQueryRecordsDone;
+            _ctxClient.ExportRecordsFinished += OnExportRecordsFinished;
+            _ctxClient.ErrorMsgReceived += OnErrorMsgReceived;
         }
 
         private void OnStopRecordOK(object sender, Record record)
@@ -67,6 +70,68 @@ namespace EmotivUnityPlugin
         private void OnUpdateMarkerOK(object sender, JObject markerObj)
         {
             MarkerUpdated?.Invoke(this, new Marker(markerObj));
+        }
+        private void OnQueryRecordsDone(object sender, List<Record> records)
+        {
+            _queryRecordsTcs?.TrySetResult(records);
+        }
+        private void OnExportRecordsFinished(object sender, MultipleResultEventArgs e)
+        {
+            List<string> successRecordIds = new List<string>();
+            foreach (var token in e.SuccessList ?? new JArray())
+            {
+                var obj = token as JObject;
+                if (obj != null)
+                {
+                    string recordId = obj["recordId"]?.ToString();
+                    if (!string.IsNullOrEmpty(recordId))
+                        successRecordIds.Add(recordId);
+                    continue;
+                }
+
+                string fallbackRecordId = token?.ToString();
+                if (!string.IsNullOrEmpty(fallbackRecordId))
+                    successRecordIds.Add(fallbackRecordId);
+            }
+
+            List<ExportRecordFailure> failedRecords = new List<ExportRecordFailure>();
+            foreach (var token in e.FailList ?? new JArray())
+            {
+                var obj = token as JObject;
+                if (obj == null)
+                    continue;
+
+                failedRecords.Add(new ExportRecordFailure(
+                    obj["recordId"]?.ToString(),
+                    obj.Value<int?>("code") ?? 0,
+                    obj.Value<string>("message")));
+            }
+
+            if (_isExportRecordAsyncPending)
+            {
+                _isExportRecordAsyncPending = false;
+                _exportRecordTcs?.TrySetResult(new ExportRecordResult(successRecordIds, failedRecords));
+                _exportRecordTcs = null;
+            }
+            else
+            {
+                // only raised for the non-async ExportRecord fire-and-forget call
+                ExportRecordsFinished?.Invoke(this, e);
+            }
+        }
+        private void OnErrorMsgReceived(object sender, ErrorMsgEventArgs errorInfo)
+        {
+            if (errorInfo.MethodName == "queryRecords")
+            {
+                _queryRecordsTcs?.TrySetException(new Exception(errorInfo.MessageError));
+                _queryRecordsTcs = null;
+            }
+            else if (errorInfo.MethodName == "exportRecord")
+            {
+                _isExportRecordAsyncPending = false;
+                _exportRecordTcs?.TrySetException(new Exception(errorInfo.MessageError));
+                _exportRecordTcs = null;
+            }
         }
 
         /// <summary>
@@ -139,6 +204,21 @@ namespace EmotivUnityPlugin
             }
         }
         
+        /// <summary>
+        /// Exports one or more records to a folder. Fire-and-forget; kept for backward compatibility.
+        /// This call does not return the export result. Use <see cref="ExportRecordAsync"/> if you need to await the result.
+        /// See https://emotiv.gitbook.io/cortex-api/records/exportrecord for details.
+        /// </summary>
+        /// <param name="records">List of record UUIDs to export</param>
+        /// <param name="folderPath">Absolute path to the folder for exported files</param>
+        /// <param name="streamTypes">List of stream types to include (e.g., "EEG", "MOTION")</param>
+        /// <param name="format">Export file format ("EDF", "EDFPLUS", "BDFPLUS", "CSV")</param>
+        /// <param name="version">Optional. For "CSV" format, use "V1" or "V2"</param>
+        /// <param name="licenseIds">Optional. License IDs for exporting records from other apps</param>
+        /// <param name="includeDemographics">Include demographic info</param>
+        /// <param name="includeMarkerExtraInfos">Include extra marker info</param>
+        /// <param name="includeSurvey">Include survey data</param>
+        /// <param name="includeDeprecatedPM">Include deprecated performance metrics</param>
         public void ExportRecord(List<string> records, string folderPath,
                                  List<string> streamTypes, string format, string version = null,
                                  List<string> licenseIds = null, bool includeDemographics = false,
@@ -149,6 +229,81 @@ namespace EmotivUnityPlugin
                                     streamTypes, format, version, licenseIds,
                                     includeDemographics, includeMarkerExtraInfos,
                                     includeSurvey, includeDeprecatedPM);
+        }
+
+        /// <summary>
+        /// Exports one or more records to a folder, and waits for the response.
+        /// Unlike <see cref="ExportRecord"/>, this returns the ids of records that were exported successfully, and the failed ones with error details.
+        /// See https://emotiv.gitbook.io/cortex-api/records/exportrecord for details.
+        /// </summary>
+        /// <param name="records">List of record UUIDs to export</param>
+        /// <param name="folderPath">Absolute path to the folder for exported files</param>
+        /// <param name="streamTypes">List of stream types to include (e.g., "EEG", "MOTION")</param>
+        /// <param name="format">Export file format ("EDF", "EDFPLUS", "BDFPLUS", "CSV")</param>
+        /// <param name="version">Optional. For "CSV" format, use "V1" or "V2"</param>
+        /// <param name="licenseIds">Optional. License IDs for exporting records from other apps</param>
+        /// <param name="includeDemographics">Include demographic info</param>
+        /// <param name="includeMarkerExtraInfos">Include extra marker info</param>
+        /// <param name="includeSurvey">Include survey data</param>
+        /// <param name="includeDeprecatedPM">Include deprecated performance metrics</param>
+        /// <returns>The ids of records that were exported successfully, and the failed ones with error details.</returns>
+        public async Task<ExportRecordResult> ExportRecordAsync(List<string> records, string folderPath,
+                                 List<string> streamTypes, string format, string version = null,
+                                 List<string> licenseIds = null, bool includeDemographics = false,
+                                 bool includeMarkerExtraInfos = false, bool includeSurvey = false,
+                                 bool includeDeprecatedPM = false)
+        {
+            if (_exportRecordTcs != null && !_exportRecordTcs.Task.IsCompleted)
+                throw new InvalidOperationException("An ExportRecord request is already in progress.");
+
+            if (records == null)
+                throw new ArgumentNullException(nameof(records));
+            if (streamTypes == null)
+                throw new ArgumentNullException(nameof(streamTypes));
+
+            _exportRecordTcs = new TaskCompletionSource<ExportRecordResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            try
+            {
+                _isExportRecordAsyncPending = true;
+                _ctxClient.ExportRecord(_authorizer.CortexToken, records, folderPath,
+                                        streamTypes, format, version, licenseIds,
+                                        includeDemographics, includeMarkerExtraInfos,
+                                        includeSurvey, includeDeprecatedPM);
+            }
+            catch
+            {
+                _isExportRecordAsyncPending = false;
+                _exportRecordTcs = null;
+                throw;
+            }
+
+            return await _exportRecordTcs.Task;
+        }
+
+        /// <summary>
+        /// Query records owned by the current user, and waits for the response.
+        /// See https://emotiv.gitbook.io/cortex-api/records/queryrecords for query/orderBy field details.
+        /// </summary>
+        /// <param name="query">Filter fields (e.g. licenseId, applicationId, keyword, startDatetime, modifiedDatetime, duration). Defaults to no filter.</param>
+        /// <param name="orderBy">Sort fields, e.g. [{ "startDatetime": "DESC" }]. Defaults to newest first.</param>
+        /// <param name="limit">Maximum number of records to return. Defaults to 10.</param>
+        /// <param name="offset">Number of records to skip, for pagination. Defaults to 0.</param>
+        /// <param name="includeMarkers">Include the markers linked to each record. Defaults to false.</param>
+        /// <param name="includeSyncStatusInfo">Include the "syncStatus" field of each record. Defaults to false.</param>
+        /// <returns>The list of records matching the query.</returns>
+        public async Task<List<Record>> QueryRecords(JObject query = null, JArray orderBy = null, int limit = 10, int offset = 0,
+                                                      bool includeMarkers = false, bool includeSyncStatusInfo = false)
+        {
+            if (_queryRecordsTcs != null && !_queryRecordsTcs.Task.IsCompleted)
+                throw new InvalidOperationException("A QueryRecords request is already in progress.");
+
+            query ??= new JObject();
+            orderBy ??= new JArray(new JObject(new JProperty("startDatetime", "DESC")));
+
+            _queryRecordsTcs = new TaskCompletionSource<List<Record>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _ctxClient.QueryRecord(_authorizer.CortexToken, query, orderBy, offset, limit, includeMarkers, includeSyncStatusInfo);
+            return await _queryRecordsTcs.Task;
         }
 
     }

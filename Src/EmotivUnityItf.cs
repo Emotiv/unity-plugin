@@ -115,6 +115,7 @@ namespace EmotivUnityPlugin
         public event EventHandler<Record>RecordStarted;
         public event EventHandler<Record> RecordStopped;
         public event EventHandler<Marker> MarkerReceived;
+        public event EventHandler<MultipleResultEventArgs> ExportRecordsFinished;
 
         /// <summary>
         /// Gets the current Emotiv ID of the logged-in user.
@@ -287,7 +288,7 @@ namespace EmotivUnityPlugin
             _recordMgr.informStartRecordResult += OnInformStartRecordResult;
             _recordMgr.informStopRecordResult += OnInformStopRecordResult;
             _recordMgr.DataPostProcessingFinished += OnDataPostProcessingFinished;
-            _recordMgr.ExportRecordsFinished += OnExportRecordsFinished;
+            _recordMgr.ExportRecordsFinished += (sender, e) => ExportRecordsFinished?.Invoke(this, e);
 
             // bci training
             _bciTraining.InformLoadProfileDone += OnInformLoadProfileDone;
@@ -635,7 +636,8 @@ namespace EmotivUnityPlugin
 
 
         /// <summary>
-        /// Export one or more records to a specified folder with customizable options.
+        /// Export one or more records to a specified folder with customizable options. Fire-and-forget; kept for backward compatibility.
+        /// This call does not return the export result. Use <see cref="ExportRecordAsync"/> if you need to await the result.
         /// </summary>
         /// <param name="records">List of record UUIDs to export</param>
         /// <param name="folderPath">Absolute path to the folder for exported files</param>
@@ -655,8 +657,52 @@ namespace EmotivUnityPlugin
                                  bool includeDeprecatedPM = false)
         {
             _recordMgr.ExportRecord(records, folderPath, streamTypes, format, version,
+                                    licenseIds, includeDemographics, includeMarkerExtraInfos,
+                                    includeSurvey, includeDeprecatedPM);
+        }
+
+        /// <summary>
+        /// Export one or more records to a specified folder with customizable options, and waits for the response.
+        /// Unlike <see cref="ExportRecord"/>, this returns the ids of records that were exported successfully, and the failed ones with error details.
+        /// </summary>
+        /// <param name="records">List of record UUIDs to export</param>
+        /// <param name="folderPath">Absolute path to the folder for exported files</param>
+        /// <param name="streamTypes">List of stream types to include (e.g., "EEG", "MOTION")</param>
+        /// <param name="format">Export file format ("EDF", "EDFPLUS", "BDFPLUS", "CSV")</param>
+        /// <param name="version">Optional. For "CSV" format, use "V1" or "V2"</param>
+        /// <param name="licenseIds">Optional. License IDs for exporting records from other apps</param>
+        /// <param name="includeDemographics">Include demographic info</param>
+        /// <param name="includeMarkerExtraInfos">Include extra marker info</param>
+        /// <param name="includeSurvey">Include survey data</param>
+        /// <param name="includeDeprecatedPM">Include deprecated performance metrics</param>
+        /// <remarks>See https://emotiv.gitbook.io/cortex-api/records/exportrecord for details</remarks>
+        /// <returns>The ids of records that were exported successfully, and the failed ones with error details.</returns>
+        public async Task<ExportRecordResult> ExportRecordAsync(List<string> records, string folderPath,
+                                 List<string> streamTypes, string format, string version = null,
+                                 List<string> licenseIds = null, bool includeDemographics = false,
+                                 bool includeMarkerExtraInfos = false, bool includeSurvey = false,
+                                 bool includeDeprecatedPM = false)
+        {
+            return await _recordMgr.ExportRecordAsync(records, folderPath, streamTypes, format, version,
                                      licenseIds, includeDemographics, includeMarkerExtraInfos,
                                      includeSurvey, includeDeprecatedPM);
+        }
+
+        /// <summary>
+        /// Query records owned by the current user, and waits for the response.
+        /// See https://emotiv.gitbook.io/cortex-api/records/queryrecords for query/orderBy field details.
+        /// </summary>
+        /// <param name="query">Filter fields (e.g. licenseId, applicationId, keyword, startDatetime, modifiedDatetime, duration). Defaults to no filter.</param>
+        /// <param name="orderBy">Sort fields, e.g. [{ "startDatetime": "DESC" }]. Defaults to newest first.</param>
+        /// <param name="limit">Maximum number of records to return. Defaults to 10.</param>
+        /// <param name="offset">Number of records to skip, for pagination. Defaults to 0.</param>
+        /// <param name="includeMarkers">Include the markers linked to each record. Defaults to false.</param>
+        /// <param name="includeSyncStatusInfo">Include the "syncStatus" field of each record. Defaults to false.</param>
+        /// <returns>The list of records matching the query.</returns>
+        public async Task<List<Record>> QueryRecords(JObject query = null, JArray orderBy = null, int limit = 10, int offset = 0,
+                                                      bool includeMarkers = false, bool includeSyncStatusInfo = false)
+        {
+            return await _recordMgr.QueryRecords(query, orderBy, limit, offset, includeMarkers, includeSyncStatusInfo);
         }
 
         /// <summary>
@@ -1277,28 +1323,6 @@ namespace EmotivUnityPlugin
             _messageLog = "License expired. Please contact Emotiv to renew your license. \n" +
                           "Please relogin to apply new license.";
 
-        }
-
-        private void OnExportRecordsFinished(object sender, MultipleResultEventArgs e)
-        {
-            // get successful list
-            JArray successfulList = e.SuccessList;
-            // check _recentRecordId is in the successful list
-            bool exportRecentRecordSuccess = false;
-            if (successfulList != null && successfulList.Count > 0)
-            {
-                foreach (var record in successfulList)
-                {
-                    if (record is JObject recordObj && recordObj["recordId"]?.ToString() == _recentRecord?.Uuid)
-                    {
-                        exportRecentRecordSuccess = true;
-                        break;
-                    }
-                }
-            }
-
-            _messageLog = "Export record  " + _recentRecord?.Title + (exportRecentRecordSuccess ? " successfully. " : " failed. ") +
-                          " The recordId: " + _recentRecord?.Uuid;
         }
 
         private void OnDataPostProcessingFinished(object sender, string recordId)

@@ -115,7 +115,9 @@ After creating a session, you can start recording EEG data, inject markers, and 
    ```csharp
    EmotivUnityItf.Instance.StopRecord();
    ```
-- Export multiple records (after data processing is complete):
+- Export multiple records (after data processing is complete). Two APIs are available:
+  - `ExportRecord(...)`: fire-and-forget, kept for backward compatibility, does not return the export result.
+  - `ExportRecordAsync(...)`: awaitable, returns an `ExportRecordResult` with the exported record ids and any failures.
    ```csharp
     // Export a record to the desktop
      string folderPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
@@ -123,7 +125,21 @@ After creating a session, you can start recording EEG data, inject markers, and 
      List<string> streamTypes = new List<string> { "EEG", "MOTION" }; // Specify the stream types you want to export
      string format = "CSV"; // or "CSV", "EDFPLUS", "BDFPLUS"
      string version = "V2"; // Optional, specify if needed
+     // Async: await the result
+     ExportRecordResult result = await EmotivUnityItf.Instance.ExportRecordAsync(recordsToExport, folderPath, streamTypes, format, version);
+     // Or fire-and-forget (kept for backward compatibility, no result returned)
      EmotivUnityItf.Instance.ExportRecord(recordsToExport, folderPath, streamTypes, format, version);
+   ```
+- Query records owned by the current user with `QueryRecords(...)`:
+   ```csharp
+     JObject query = new JObject(
+         new JProperty("keyword", "MyRecordTitle")
+     );
+     List<Record> records = await EmotivUnityItf.Instance.QueryRecords(query, null, 100, 0, true, true);
+     foreach (Record record in records)
+     {
+         // process record
+     }
    ```
 
 ## Profile Management and Training
